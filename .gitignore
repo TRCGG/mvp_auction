@@ -1,0 +1,24 @@
+# 의존성
+/node_modules/
+
+# Wrangler 로컬 상태·빌드 캐시 (배포와 무관, 재생성됨)
+/.wrangler/
+
+# 로컬 시크릿·환경변수 (Cloudflare secret은 대시보드에 저장되므로 여기 없음)
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# 빌드 산출물
+/dist/
+
+# OS·에디터 잡파일
+.DS_Store
+Thumbs.db
+*.log
+
+# 임시 파일
+*.tmp
+*.bak
+*~

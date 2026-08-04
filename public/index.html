@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>실시간 경매</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A1017; --panel:#141C26; --panel2:#1B2733; --line:#26343F;
+  --gold:#D4A94E; --gold-soft:rgba(212,169,78,.14);
+  --text:#E6ECF2; --muted:#7E90A2; --danger:#D9534F; --ok:#5FA86B;
+  --top:#E07A5F; --jgl:#7BB661; --mid:#6FA8DC; --adc:#E0B04A; --sup:#B58ADB; --none:#7E90A2;
+  --sans:'IBM Plex Sans KR',system-ui,sans-serif; --num:'Bebas Neue','IBM Plex Sans KR',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans)}
+body{padding:18px;min-height:100vh}
+button,input,textarea,select{font-family:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+::selection{background:var(--gold);color:#0A1017}
+.wrap{max-width:1440px;margin:0 auto}
+.num{font-family:var(--num);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.65}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
+input[type=text],input[type=number],input[type=password],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);
+  border-radius:7px;padding:9px 11px;font-size:14px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+textarea{resize:vertical;line-height:1.65;font-size:13.5px}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 15px;
+  font-size:13.5px;font-weight:500;transition:.13s}
+.btn:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#0A1017;font-weight:700}
+.btn.gold:hover:not(:disabled){filter:brightness(1.12);color:#0A1017}
+.btn.ghost{background:none}
+.btn:disabled{opacity:.32;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.1em;padding:3px 7px;border-radius:4px;border:1px solid currentColor}
+.t-TOP{color:var(--top)}.t-JGL{color:var(--jgl)}.t-MID{color:var(--mid)}
+.t-ADC{color:var(--adc)}.t-SUP{color:var(--sup)}.t-{color:var(--none)}
+
+/* 상단바 */
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);
+  padding-bottom:14px;margin-bottom:18px}
+.brand{font-weight:700;font-size:17px;letter-spacing:-.02em}
+.brand span{color:var(--gold)}
+.code{font-family:var(--num);font-size:22px;color:var(--gold);letter-spacing:.14em}
+.who{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:4px 11px}
+.conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--danger)}
+.dot.on{background:var(--ok)}
+
+/* 랜딩 */
+.landing{max-width:560px;margin:8vh auto;text-align:center}
+.landing h1{font-size:34px;font-weight:700;letter-spacing:-.03em;margin-bottom:10px}
+.landing .hint{margin-bottom:28px}
+.join{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.join input{font-family:var(--num);font-size:24px;text-align:center;letter-spacing:.24em;text-transform:uppercase}
+
+/* 설정 */
+.setup{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.leader-row{display:grid;grid-template-columns:1fr 76px 76px 34px;gap:8px;margin-bottom:8px}
+.leader-row input[type=number]{font-family:var(--num);font-size:16px;text-align:center;padding:6px}
+.leader-row input[type=number]::placeholder{font-family:var(--sans);font-size:12px}
+.leader-row button{color:var(--muted);font-size:18px;border:1px solid var(--line);border-radius:7px}
+.leader-row button:hover{color:var(--danger);border-color:var(--danger)}
+
+/* 관리자 */
+.rooms{display:flex;flex-direction:column;gap:9px}
+.room{display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.room .rc{font-family:var(--num);font-size:26px;color:var(--gold);letter-spacing:.12em}
+.room .rt{font-weight:600;font-size:14.5px;margin-bottom:3px}
+.room .rs{font-size:12px;color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
+.pill{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.p-ready{color:var(--muted)} .p-live{color:var(--gold)} .p-done{color:var(--ok)} .p-gone{color:var(--danger)}
+/* 관리자: 경매방 요약 바 · 코드별 그룹 · 카드 상태 강조 */
+.room-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.room-sum .s{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted)}
+.room-sum .s b{font-family:var(--num);font-size:17px;margin-left:4px;color:var(--text)}
+.room-sum .s.live b{color:var(--gold)} .room-sum .s.done b{color:var(--ok)} .room-sum .s.warn{color:var(--danger)} .room-sum .s.warn b{color:var(--danger)}
+.room-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0 9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.room-group .gc{font-family:var(--num);font-size:18px;color:var(--gold);letter-spacing:.1em}
+.room-group .gk{font-size:10px;font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:99px;border:1px solid currentColor}
+.room-group .gk.mgr{color:var(--gold)} .room-group .gk.direct,.room-group .gk.gone{color:var(--muted)}
+.room-group .gm{font-size:12px;color:var(--muted)}
+.room-group .gn{margin-left:auto;font-size:12px;color:var(--muted)}
+.room.st-live{box-shadow:inset 4px 0 0 var(--gold)} .room.st-done{box-shadow:inset 4px 0 0 var(--ok)}
+.room.st-ready{box-shadow:inset 4px 0 0 var(--muted)} .room.st-gone{box-shadow:inset 4px 0 0 var(--danger);opacity:.6}
+.room .rbar{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-top:7px;max-width:200px}
+.room .rbar i{display:block;height:100%;background:var(--ok)}
+.room .rs .warn{color:var(--danger)}
+.empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:13.5px;line-height:1.9}
+
+/* 참가자 목록 */
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;
+  transition:.15s;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--gold);background:var(--gold-soft)}
+.drop b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
+.plist{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;margin-top:12px}
+.prow{display:grid;grid-template-columns:1fr 62px 84px 1fr 26px;gap:9px;align-items:center;
+  background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px}
+.prow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .nm i{font-style:normal;color:var(--muted);font-weight:400;font-size:11px}
+.prow .tr{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .ch{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow button{color:var(--muted);font-size:15px;line-height:1}
+.prow button:hover{color:var(--danger)}
+.prow.dup{border-color:var(--danger)}
+.psum{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.psum b{font-family:var(--num);font-size:20px;color:var(--gold)}
+
+/* 링크 배포 */
+.link-row{display:grid;grid-template-columns:130px 1fr auto;gap:9px;align-items:center;margin-bottom:8px}
+.link-row code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;
+  font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace}
+.link-row b{font-size:13px;font-weight:600}
+
+/* 경매장 */
+.stage{display:grid;grid-template-columns:minmax(320px,410px) 1fr;gap:16px;align-items:start}
+.lot{position:relative;overflow:hidden}
+.lot-empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:14px;line-height:1.85}
+.lot-no{font-family:var(--num);font-size:13px;color:var(--gold);letter-spacing:.2em}
+.lot-img{display:block;width:100%;height:240px;object-fit:cover;object-position:center 22%;
+  border-radius:10px;border:1px solid var(--line);margin-bottom:14px;background:var(--panel2)}
+@media(max-width:520px){.lot-img{height:180px}}
+.lot-name{font-size:clamp(30px,4.6vw,50px);font-weight:700;letter-spacing:-.035em;line-height:1.05;
+  margin:10px 0 12px;word-break:keep-all}
+.lot-meta{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+
+.tier{font-size:12px;font-weight:600;color:var(--gold);border:1px solid var(--gold);
+  border-radius:4px;padding:2px 8px}
+.champs{display:flex;gap:5px;flex-wrap:wrap;margin:-4px 0 12px}
+.champs span{font-size:11.5px;color:var(--muted);background:var(--panel2);
+  border-radius:5px;padding:4px 9px}
+.high{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:15px;margin-bottom:12px}
+.high.mine{border-color:var(--gold);background:var(--gold-soft)}
+.high .who-bid{font-size:13px;font-weight:600;margin-bottom:3px}
+.high .amt{font-family:var(--num);font-size:52px;line-height:1;color:var(--gold)}
+.high .none{font-size:14px;color:var(--muted);padding:6px 0}
+
+.clock{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.clock b{font-family:var(--num);font-size:38px;line-height:1;min-width:60px}
+.clock.hot b{color:var(--danger)}
+.bar{flex:1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);transition:width .25s linear}
+.clock.hot .bar i{background:var(--danger)}
+
+.bidpad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
+.bidpad button{padding:13px 0;font-size:14px;font-weight:700;background:var(--panel2);
+  border:1px solid var(--line);border-radius:8px}
+.bidpad button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.bidpad button:disabled{opacity:.3;cursor:not-allowed}
+.custom{display:grid;grid-template-columns:1fr auto;gap:6px}
+.custom input{font-family:var(--num);font-size:20px;text-align:center}
+
+/* 팀 보드 */
+.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:12px}
+.team{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px;
+  display:flex;flex-direction:column;gap:11px;transition:.15s}
+.team.me{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
+.my-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:1px 7px;border-radius:999px;vertical-align:middle;box-shadow:0 0 6px -1px var(--gold)}
+.team.top{background:linear-gradient(var(--gold-soft),var(--panel))}
+.team.full{opacity:.55}
+/* 드래그 배정: 드래그 중 드롭 가능한 팀 강조 */
+button.pcard[draggable]{cursor:grab}
+button.pcard[draggable]:active{cursor:grabbing}
+body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offset:2px}
+.team.drop-ok{outline:2px solid var(--gold)!important;outline-offset:2px;background:var(--gold-soft)}
+.team-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.team-nm{font-weight:700;font-size:15.5px;letter-spacing:-.02em;line-height:1.3}
+.team-lead{font-size:11.5px;color:var(--muted);margin-top:2px}
+.team-pt{text-align:right;flex-shrink:0}
+.team-pt b{font-family:var(--num);font-size:29px;color:var(--gold);line-height:1}
+.team-pt i{display:block;font-style:normal;font-size:10px;color:var(--muted);letter-spacing:.1em;margin-top:1px}
+.gauge{height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.gauge i{display:block;height:100%;background:var(--gold);transition:width .35s ease}
+.slots{display:flex;gap:4px}
+.slot{flex:1;height:26px;border-radius:5px;border:1px dashed var(--line);display:grid;place-items:center;
+  font-size:9px;color:var(--muted);letter-spacing:.06em}
+.slot.on{border:1px solid transparent;background:var(--panel2);color:var(--text)}
+.roster{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.roster div{display:flex;justify-content:space-between;gap:8px;color:var(--muted)}
+.roster div b{font-weight:500;color:var(--text)}
+.roster div span{font-family:var(--num);font-size:14px;color:var(--gold)}
+.roster .lead b{color:var(--gold)}
+
+.log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:12.5px}
+.log-list div{color:var(--muted);display:flex;gap:9px}
+.log-list div b{font-weight:500;color:var(--text)}
+.log-list em{font-family:var(--num);font-size:14px;color:var(--gold);font-style:normal}
+
+.pool{display:flex;gap:7px;flex-wrap:wrap}
+/* 남은 매물 칩 — 2줄 카드. 테두리 색 = 등급 구간(롤 티어색). 라인 색은 없음. */
+.pcard{display:flex;flex-direction:column;gap:4px;min-width:132px;background:var(--bg);
+  border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;line-height:1.2;color:var(--text);text-align:left}
+button.pcard{cursor:pointer;transition:.12s}
+button.pcard:hover:not(:disabled){background:var(--panel2)}
+button.pcard:disabled{opacity:.45;cursor:not-allowed}
+.pc-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.pc-nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-gr{font-family:var(--num);font-weight:700;font-size:15px;flex:none}
+.pc-pass{color:var(--danger);font-size:9.5px;font-weight:700;flex:none}
+.pc-bot{display:flex;justify-content:space-between;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:4px;font-size:11px;color:var(--muted)}
+.pc-line{font-weight:700;letter-spacing:.03em}
+.pc-sub{font-weight:400;color:var(--muted);font-size:10px}
+.pc-tier{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
+/* 정렬/그룹 토글 */
+.psort{display:inline-flex;gap:2px;margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:2px}
+.psort button{font-size:11px;padding:3px 9px;border-radius:5px;color:var(--muted);letter-spacing:0}
+.psort button.on{background:var(--panel2);color:var(--gold)}
+.pgroup{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:10px 0 5px}
+/* 실력 등급 뱃지 (등급 1~5 → 색인덱스 gr0~gr4) — 롤 티어색(챌·그마·마스터·다이아·에메) */
+.gr{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.02em;padding:2px 5px;border-radius:4px;color:#0A1017;white-space:nowrap}
+.gr0{background:#e6c14a}.gr1{background:#e0554f}.gr2{background:#b06fe0}.gr3{background:#4aa3e0}.gr4{background:#2fae5f}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:99;background:var(--gold);
+  color:#0A1017;font-weight:600;font-size:13.5px;padding:11px 20px;border-radius:8px;opacity:0;
+  pointer-events:none;transition:.25s;max-width:90vw;text-align:center}
+.toast.on{opacity:1;bottom:34px}
+.toast.bad{background:var(--danger);color:#fff}
+
+.flash{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
+  background:rgba(10,16,23,.92);opacity:0}
+.flash b{font-family:var(--num);font-size:56px;color:var(--gold);border:4px solid var(--gold);
+  padding:6px 24px;transform:rotate(-8deg);letter-spacing:.06em;text-align:center}
+.flash.go{animation:st 1.2s ease-out forwards}
+@keyframes st{0%{opacity:0;transform:scale(1.4)}16%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0}}
+.sfx-btn{background:none;border:1px solid var(--line);border-radius:7px;padding:2px 8px;font-size:14px;line-height:1.4;cursor:pointer}
+.sfx-btn.off{opacity:.45}
+
+@media(max-width:900px){.setup,.stage{grid-template-columns:1fr}body{padding:12px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LINES=['TOP','JGL','MID','ADC','SUP'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* 티어 색·순위, 등급 뱃지 — 목록에서 실력대를 한눈에 보게 합니다.
+   각 티어는 한글·영문·흔한 약어/오탈자 키워드로 인식하고, 숫자는:
+   마스터~챌린저는 LP(클수록 상위), 그 외는 단수(작을수록 상위)로 정렬에 반영. */
+const TIERS=[
+  {k:['챌린저','챌','challenger','chall'],c:'#e6c14a',apex:1},
+  {k:['그랜드마스터','그마','grandmaster'],c:'#e0554f',apex:1},   // 'gm'은 아래 /^gm/ 앵커로만(부분일치 오탐 방지)
+  {k:['마스터','master','마스타'],c:'#b06fe0',apex:1},
+  {k:['다이아몬드','다이아','다야','diamond','dia'],c:'#4aa3e0'},
+  {k:['에메랄드','에메','emerald','emer'],c:'#2fae5f'},
+  {k:['플래티넘','플래','플랫','플레','platinum','plat'],c:'#3fb6a6'},
+  {k:['골드','gold'],c:'#e0b04a'},
+  {k:['실버','silver'],c:'#9fb0c0'},
+  {k:['브론즈','bronze'],c:'#b07b4a'},
+  {k:['아이언','iron'],c:'#8a8f96'}
+];
+const tierColor=t=>{ const i=tierIdx(t); return i<0?'':TIERS[i].c; };
+// 축약형 첫 글자 → TIERS 인덱스 (GM은 별도 처리). 예: M7·G3·S4·D1·C·E2
+const TIER_ABBR={c:0,m:2,d:3,e:4,p:5,g:6,s:7,b:8,i:9};
+const tierIdx=t=>{
+  const s=String(t||'').trim().toLowerCase();
+  if(!s) return -1;
+  for(let i=0;i<TIERS.length;i++) if(TIERS[i].k.some(k=>s.includes(k))) return i;  // 한글·영문 전체 표기
+  if(/^gm/.test(s)) return 1;                                                       // 그랜드마스터
+  return (s[0] in TIER_ABBR) ? TIER_ABBR[s[0]] : -1;                                // 축약형(M7/G3/S4…)
+};
+// 티어순 정렬용 순위(높을수록 상위). 마스터~챌린저는 LP(축약형 한 자리는 100단위=M7→700),
+// 그 외는 단수(작을수록 상위). 오직 정렬에만 쓰이고 화면 색은 쓰지 않음.
+function tierRank(t){
+  const i=tierIdx(t); if(i<0) return -1;
+  const base=(TIERS.length-i)*1000;
+  const n=parseInt((String(t).match(/\d+/)||[])[0]);
+  if(!Number.isFinite(n)) return base;
+  if(!TIERS[i].apex) return base - Math.min(n,9);
+  return base + Math.min(n<10 ? n*100 : n, 999);   // M7=700, 마스터700=700, M100=100
+}
+// 등급 구간 색 — 롤 티어색(1~1.9 챌린저 … 5~5.9 에메랄드). 없으면 빈값.
+// 색 인덱스는 정수부-1 (등급 1→색0=챌린저 … 5→색4=에메).
+const GRADE_COLORS=['#e6c14a','#e0554f','#b06fe0','#4aa3e0','#2fae5f'];
+const gradeBand=g=>{ const n=Number(g); return (g==null||g===''||!Number.isFinite(n)||n<1)?-1:Math.min(4,Math.floor(n)-1); };
+const gradeColor=g=>{ const b=gradeBand(g); return b<0?'':GRADE_COLORS[b]; };
+// 등급: 1~5 정수 + 소수점 첫째자리(예 1.2, 3.4). 색은 정수부 구간, 숫자는 소수까지 표시.
+function gradeBadge(g){
+  const b=gradeBand(g); if(b<0) return '';
+  return `<span class="gr gr${b}">${Math.round(Number(g)*10)/10}티어</span>`;
+}
+let toastH;
+function toast(msg,bad){
+  const t=$('toast'); t.textContent=msg; t.className='toast on'+(bad?' bad':'');
+  clearTimeout(toastH); toastH=setTimeout(()=>t.className='toast',2400);
+}
+
+/* ═══ 상태 ═══ */
+let S=null, me=null, ws=null, connected=false, skew=0, links=null;
+let players=[];
+let opCode=null, setupMode='admin';   // 방 생성: 관리자 직접('admin') 또는 생성 코드('op')
+let managerMode=false;                 // 매니저 코드로 들어왔는지(다회용, 최대 10개)
+let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·티어순('tier')·등급순('grade')
+let sfxMuted=(()=>{ try{ return localStorage.getItem('sfxMuted')==='1'; }catch{ return false; } })();  // 소리 음소거(클라이언트별)
+const sfxOn=()=>me&&me.role==='host'&&!sfxMuted;   // 연출 사운드는 진행자 화면 위주로 재생
+const fmtInv=c=>c.length===8?c.slice(0,4)+'-'+c.slice(4):c;
+const copyText=txt=>navigator.clipboard.writeText(txt).then(()=>toast('복사했습니다')).catch(()=>{
+  const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+  ta.select(); document.execCommand('copy'); ta.remove(); toast('복사했습니다');
+});
+let leaders=[{name:'',line:'TOP',points:null},{name:'',line:'JGL',points:null},
+             {name:'',line:'MID',points:null},{name:'',line:'ADC',points:null}];
+
+// 링크는 /#/r/CODE?k=... 형태라 쿼리가 해시 뒤에 옵니다.
+const [hPath,hQuery]=location.hash.slice(1).split('?');
+const roomCode=(hPath.match(/^\/r\/([A-Z0-9]{6})$/i)||[])[1];
+const q=new URLSearchParams(hQuery||location.search.slice(1));
+
+// 내부 화면 전환은 go()로 해시를 바꿉니다. 외부에서 해시가 바뀌면(딥링크
+// 붙여넣기·뒤로가기) 새로 라우팅되도록 페이지를 다시 불러옵니다.
+let routedHash=location.hash;
+function go(h){ routedHash=h?(h[0]==='#'?h:'#'+h):''; location.hash=h; }
+window.addEventListener('hashchange',()=>{ if(location.hash!==routedHash) location.reload(); });
+
+/* ═══ 접속 ═══ */
+let wsAuth='';           // 진행자의 k=… 키. 사진 업로드 인증에도 씁니다.
+let closedForGood=false; // 방 삭제/만료로 서버가 정상 종료(code 1000)한 경우
+let reconnectMs=1500;    // 지수 백오프 (최대 20초)
+function connect(code,auth){
+  wsAuth=auth; managerMode=false;   // 방에 입장하면 매니저 컨텍스트를 벗어납니다(방어)
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const url=`${proto}://${location.host}/api/room/${code}/ws?${auth}`;
+  ws=new WebSocket(url);
+
+  ws.onopen=()=>{ connected=true; reconnectMs=1500; paint(); };
+  ws.onclose=e=>{
+    connected=false;
+    // 서버가 정상 종료(1000)로 닫으면 방이 사라진 것이므로 재시도하지 않습니다.
+    if(e&&e.code===1000){ closedForGood=true; renderClosed(e.reason); return; }
+    paint();
+    setTimeout(()=>{ if(!connected&&!closedForGood) connect(code,auth); }, reconnectMs);
+    reconnectMs=Math.min(Math.round(reconnectMs*1.7), 20000);
+  };
+  ws.onerror=()=>{};
+  ws.onmessage=e=>{
+    const m=JSON.parse(e.data);
+    if(m.t==='hello'){ me=m.you; S=m.S; skew=Date.now()-m.S.now; paint(); }
+    else if(m.t==='state'){ S=m.S; skew=Date.now()-m.S.now; paint(); if(m.event) onEvent(m.event); }
+    else if(m.t==='error'){ toast(m.msg,true); }
+    // pong은 하이버네이션 자동응답이 처리하며 별도 동작이 필요 없습니다.
+  };
+}
+function renderClosed(reason){
+  if(ws){ try{ ws.onclose=null; ws.close(); }catch{} }
+  $('app').innerHTML=`<div class="landing"><h1>경매방이 종료되었습니다</h1>
+    <p class="hint">${esc(reason||'방이 삭제되었거나 보관 기간(14일)이 지났습니다.')}</p>
+    <button class="btn ghost" id="bHome" style="margin-top:14px">처음으로</button></div>`;
+  $('bHome').onclick=()=>{ location.hash=''; location.reload(); };
+}
+const send=(t,extra={})=>{
+  if(ws&&ws.readyState===1){ ws.send(JSON.stringify({t,...extra})); return true; }
+  if(t!=='ping') toast('연결이 끊겨 있습니다. 재연결 중…',true);
+  return false;
+};
+
+function onEvent(ev){
+  if(ev.kind==='sold'){ flash(`${esc(ev.team)}<br><span style="font-size:.55em">${esc(ev.player)} · ${esc(ev.price)}P</span>`); if(sfxOn()) soldChime(); }
+  else if(ev.kind==='pass') flash('유찰');
+  else if(ev.kind==='assign') flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} · 배정</span>`);
+  else if(ev.kind==='bid' && me.role!=='host') beep();
+  else if(ev.kind==='clock' && me.role!=='host') toast(`제한시간이 ${ev.clock}초로 바뀌었습니다`);
+  else if(ev.kind==='reset') toast('경매가 처음 상태로 초기화되었습니다');
+}
+function flash(html){
+  const f=$('flash'); if(!f) return;
+  f.querySelector('b').innerHTML=html;
+  f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+}
+let actx;
+function beep(){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();   // 사용자 제스처 전이라 멈춰 있으면 깨웁니다
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.frequency.value=880; g.gain.setValueAtTime(.06,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.16);
+    o.start(); o.stop(actx.currentTime+.17);
+  }catch{}
+}
+// 파일 없이 WebAudio로 합성하는 연출음(무료·무의존).
+function tone(freq,delay,dur,vol=.08,type='sine'){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    if(actx.state!=='running') return;   // 사용자 제스처 전이면 예약하지 않음(리로드 후 밀린 소리가 한꺼번에 터지는 것 방지)
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type=type; o.frequency.value=freq; o.connect(g); g.connect(actx.destination);
+    const t=actx.currentTime+delay;
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.start(t); o.stop(t+dur+.02);
+  }catch{}
+}
+function soldChime(){ try{ [523.25,659.25,783.99].forEach((f,i)=>tone(f,i*0.09,.2,.09,'triangle')); tone(1046.5,.27,.34,.07); }catch{} }
+function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
+
+/* ═══ 파생 ═══ */
+const myTeam=()=>me&&me.teamId?S.teams.find(t=>t.id===me.teamId):null;
+const remaining=()=>S?S.pool.filter(p=>p.status!=='sold'):[];
+const leftMs=()=>{
+  if(!S) return 0;
+  if(S.pausedLeft!=null) return S.pausedLeft;
+  if(!S.deadline) return 0;
+  return Math.max(0,S.deadline-(Date.now()-skew));
+};
+
+/* ═══ 화면 ═══ */
+function paint(){
+  if(!S){ return; }
+  // 드래그 도중 재렌더되면 소스 노드가 사라져 dragend가 안 뜨므로, 드래그 시각효과를 여기서 정리.
+  document.body.classList.remove('dragging');
+  // 브로드캐스트마다 전체를 다시 그리므로, 입력 중이던 값·포커스·커서를 보존합니다.
+  // 특히 팀장이 커스텀 입찰 금액을 치는 도중 남이 입찰해도 값이 날아가지 않게 합니다.
+  const a=document.activeElement;
+  const keep=a&&a.id&&('value' in a)?{id:a.id,val:a.value,s:a.selectionStart,e:a.selectionEnd}:null;
+  $('app').innerHTML=topbar()+stage();
+  wire();
+  if(keep){
+    const el=$(keep.id);
+    if(el&&('value' in el)){
+      el.value=keep.val;
+      try{ el.focus(); if(keep.s!=null) el.setSelectionRange(keep.s,keep.e); }catch{}
+    }
+  }
+}
+
+function topbar(){
+  const role={host:'진행자',team:myTeam()?myTeam().name:'팀장',view:'관전'}[me.role];
+  return `<div class="topbar">
+    <div class="brand">${esc(S.title)} <span>LIVE</span></div>
+    <div class="code">${S.code}</div>
+    <div class="who">${esc(role)}</div>
+    <div class="conn">${me.role==='host'?`<button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+  </div>`;
+}
+
+function stage(){
+  return `<div class="stage">
+    <div>
+      <div class="panel lot" id="lotPanel">${lotBody()}<div class="flash" id="flash"><b></b></div></div>
+      <div class="panel" style="margin-top:12px">
+        <span class="lbl">진행 기록</span>
+        <div class="log-list">${S.log.length?S.log.map(l=>l.kind==='sold'
+          ?`<div><em>${l.price}P</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
+          :l.kind==='assign'
+          ?`<div><em style="color:var(--ok)">배정</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
+          :`<div><em style="color:var(--danger)">유찰</em><b>${esc(l.player)}</b></div>`).join('')
+          :'<span class="hint">아직 기록이 없습니다</span>'}</div>
+      </div>
+    </div>
+    <div>
+      <div class="teams">${S.teams.map(teamCard).join('')}</div>
+      ${poolPanel()}
+    </div>
+  </div>`;
+}
+
+function lotBody(){
+  const p=S.pool.find(x=>x.id===S.current);
+  if(!p){
+    const done=S.phase==='done'||!remaining().length||S.teams.every(t=>t.open<=0);
+    return `<div class="lot-empty">${done
+      ? '경매가 끝났습니다<br>아래 팀 구성을 확인하세요'
+      : `대기 매물 <b class="num" style="color:var(--gold);font-size:20px">${remaining().length}</b>명<br>${
+          me.role==='host'?'다음 매물을 올려주세요':'진행자가 다음 매물을 올리는 중입니다'}`}</div>
+      ${(done||S.log.length)?`<div class="row"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장${done?'':' (현재까지)'}</button></div>`:''}
+      ${me.role==='host'?`<div class="row" style="margin-top:8px">
+        <button class="btn gold" style="flex:1" id="bNext" ${done?'disabled':''}>다음 매물 올리기</button>
+        <button class="btn" id="bUndo">되돌리기</button>
+      </div>${hostClockCtl()}
+      ${S.log.length?`<div class="row" style="margin-top:10px;justify-content:flex-end">
+        <button class="btn ghost" id="bReset" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger)">경매 초기화</button>
+      </div>`:''}`:''}`;
+  }
+
+  const t=myTeam();
+  const mine=S.bid&&t&&S.bid.teamId===t.id;
+  const bidTeam=S.bid?S.teams.find(x=>x.id===S.bid.teamId):null;
+  const ms=leftMs(), pct=Math.min(100,ms/(S.clock*1000)*100);
+
+  return `${p.imgV?`<img class="lot-img" src="/api/room/${S.code}/img/${p.id}?v=${p.imgV}" alt="${esc(p.name)} 사진">`:''}
+    <div class="lot-no">LOT ${String(S.pool.filter(x=>x.status==='sold').length+1).padStart(2,'0')}${p.status==='pass'?' · 재상정':''}</div>
+    <div class="lot-name">${esc(p.name)}${p.tag?`<span style="font-size:.34em;color:var(--muted);font-weight:400"> #${esc(p.tag)}</span>`:''}</div>
+    <div class="lot-meta">
+      <span class="tag t-${p.line}">${esc(p.line)||'라인 미지정'}</span>
+      ${p.sub?`<span class="hint">부 ${esc(subLabel(p.sub))}</span>`:''}
+      ${gradeBadge(p.grade)}
+      ${p.tier?`<span class="tier">${esc(p.tier)}</span>`:''}
+    </div>
+    ${p.champs&&p.champs.length?`<div class="champs">${p.champs.map(c=>`<span>${esc(c)}</span>`).join('')}</div>`:''}
+    <div class="hint" style="margin-bottom:16px">잔여 매물 ${remaining().length-1}명</div>
+
+    <div class="clock ${ms<=5000?'hot':''}">
+      <b class="num" id="clockVal">${Math.ceil(ms/1000)}</b>
+      <div class="bar"><i id="clockBar" style="width:${pct}%"></i></div>
+      ${S.pausedLeft!=null?'<span class="hint">일시정지</span>':''}
+    </div>
+
+    <div class="high ${mine?'mine':''}">
+      ${S.bid
+        ? `<div class="who-bid">${esc(bidTeam.name)}${mine?' · 내 입찰':''}</div>
+           <div class="amt">${S.bid.amount}<span style="font-size:.42em;color:var(--muted)"> P</span></div>`
+        : `<div class="none">아직 입찰이 없습니다 · 시작가 ${S.minNext}P</div>`}
+    </div>
+
+    ${me.role==='team'?bidControls(t,mine):''}
+    ${me.role==='host'?`<div class="row">
+      <button class="btn gold" style="flex:1" id="bSell" ${S.bid?'':'disabled'}>즉시 낙찰</button>
+      <button class="btn" id="bPass">유찰</button>
+      <button class="btn" id="bPause">${S.pausedLeft!=null?'재개':'일시정지'}</button>
+    </div>
+    ${hostClockCtl()}
+    <div class="row" style="margin-top:8px">
+      <button class="btn ghost" id="bImg" style="font-size:12px;padding:6px 12px">${p.imgV?'사진 변경':'선수 사진 올리기'}</button>
+      ${p.imgV?'<button class="btn ghost" id="bImgDel" style="font-size:12px;padding:6px 12px">사진 삭제</button>':''}
+      <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" hidden>
+    </div>`:''}`;
+}
+
+function bidControls(t,mine){
+  if(!t) return '';
+  if(t.open<=0) return '<div class="hint">로스터를 모두 채웠습니다. 관전만 가능합니다.</div>';
+  const base=S.minNext, m=S.minBid, cap=t.cap;
+  const steps=[base, base+m*2, base+m*5, base+m*10];
+  const blocked=mine||S.pausedLeft!=null;
+  const why=mine?'이미 최고 입찰 중입니다'
+    :cap<base?`한도 ${cap}P — 더 부를 수 없습니다`
+    :`내 한도 ${cap}P · ${t.open}자리 남음`;
+  return `<div class="bidpad">${steps.map(v=>`
+      <button data-bid="${v}" ${blocked||v>cap?'disabled':''}>${v}</button>`).join('')}</div>
+    <div class="custom">
+      <input type="number" id="custom" class="num" placeholder="직접 입력" min="${base}" max="${cap}" onwheel="this.blur()">
+      <button class="btn gold" id="bCustom" ${blocked?'disabled':''}>입찰</button>
+    </div>
+    <div class="hint" style="margin-top:9px;${mine?'color:var(--gold)':''}">${why}</div>`;
+}
+
+function teamCard(t){
+  const mineT=me.teamId===t.id, top=S.bid&&S.bid.teamId===t.id;
+  const pct=t.start?Math.round(t.points/t.start*100):0;
+  const slots=Array.from({length:S.size-1},(_,i)=>{
+    const pl=t.players[i];
+    return pl?`<div class="slot on" style="color:var(--${(pl.line||'none').toLowerCase()})">${pl.line||'●'}</div>`
+             :'<div class="slot">빈자리</div>';
+  }).join('');
+  return `<div class="team ${mineT?'me':''} ${top?'top':''} ${t.open<=0?'full':''}" ${(me.role==='host'&&t.open>0&&!S.current)?`data-team-drop="${t.id}"`:''}>
+    <div class="team-hd">
+      <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}</div>
+      <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${t.start!==S.base?` · 시작 ${t.start}P`:''}</div></div>
+      <div class="team-pt"><b>${t.points}</b><i>POINT</i></div>
+    </div>
+    <div class="gauge"><i style="width:${pct}%"></i></div>
+    <div class="slots">${slots}</div>
+    <div class="roster">
+      <div class="lead"><b>${esc(t.leader)}</b><span>팀장</span></div>
+      ${t.players.map(p=>`<div><b>${esc(p.name)}</b><span>${p.price}</span></div>`).join('')}
+      ${t.open>0?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
+    </div>
+  </div>`;
+}
+
+// 순서대로 다음에 나올 매물 목록(현재 제외). 추첨(draw)이면 확정 순서, 아니면 pool 순서.
+// 대기 매물을 앞에, 유찰(재상정 예정) 매물을 뒤에 붙여 남은 매물 수와 목록이 일치하게 합니다.
+function nextUpList(){
+  const byId={}; S.pool.forEach(p=>byId[p.id]=p);
+  const seq=((S.orderMode==='draw'&&S.order)?S.order:S.pool.map(p=>p.id)).map(id=>byId[id]).filter(Boolean);
+  const wait=seq.filter(p=>p.status==='wait'&&p.id!==S.current);
+  const pass=seq.filter(p=>p.status==='pass'&&p.id!==S.current);
+  return wait.concat(pass);
+}
+
+// 남은 매물 패널 — 모든 역할이 봅니다(진행자만 클릭해 상정, 나머지는 미리보기).
+// 칩에 티어(색)·모스트 챔피언·실력 등급을 함께 보여주고, 순서/포지션/티어로 정렬·그룹.
+function poolPanel(){
+  const host=me.role==='host';
+  const live=!!S.current;
+  const draw=S.orderMode==='draw';
+  const rem=remaining().filter(p=>p.id!==S.current);
+  const posline=LINES.map(l=>`${l} ${rem.filter(p=>p.line===l).length}`).join(' · ');
+  const noline=rem.filter(p=>!p.line).length;
+  const chip=p=>{
+    // 2줄 카드: 윗줄 닉네임·등급, 아랫줄 주포/부포·티어.
+    // 테두리 색 = 등급색 우선, 없으면 티어색, 둘 다 없으면 무채색.
+    const gc=gradeColor(p.grade);
+    const hasG=p.grade!=null&&p.grade!=='';
+    const bc=gc||tierColor(p.tier)||'var(--line)';
+    const inner=`<div class="pc-top">
+        <span class="pc-nm">${esc(p.name)}</span>
+        ${hasG?`<span class="pc-gr" style="color:${gc}">${esc(p.grade)}</span>`
+             :p.status==='pass'?'<span class="pc-pass">유찰</span>':''}
+      </div>
+      <div class="pc-bot">
+        <span class="pc-line">${esc(p.line)||'-'}${p.sub?`<span class="pc-sub">/${esc(subLabel(p.sub))}</span>`:''}${hasG&&p.status==='pass'?' <span class="pc-pass">유찰</span>':''}</span>
+        <span class="pc-tier">${esc(p.tier)||'-'}</span>
+      </div>`;
+    const bst=`style="border-color:${bc}"`;
+    // 진행자는 매물이 없을 때 카드를 팀으로 드래그해 배정할 수 있습니다.
+    const drag=(host&&!live)?`draggable="true" data-dpid="${p.id}"`:'';
+    return host
+      ? `<button class="pcard" data-lot="${p.id}" ${drag} ${bst} ${live?'disabled':''}>${inner}</button>`
+      : `<span class="pcard" ${bst}>${inner}</span>`;
+  };
+  const poolDiv=arr=>`<div class="pool">${arr.length?arr.map(chip).join(''):'<span class="hint">남은 매물이 없습니다</span>'}</div>`;
+  // 그룹 렌더 공용: [[라벨, 배열], …] → 헤더+칩. 빈 그룹은 숨김.
+  const renderGroups=groups=>{ const shown=groups.filter(([,a])=>a.length);
+    return shown.length?shown.map(([label,a])=>`<div class="pgroup">${label} · ${a.length}</div>${poolDiv(a)}`).join(''):'<span class="hint">남은 매물이 없습니다</span>'; };
+
+  let body;
+  if(poolView==='pos'){
+    body=renderGroups(LINES.map(l=>[l,rem.filter(p=>p.line===l)]).concat([['미지정',rem.filter(p=>!p.line)]]));
+  }else if(poolView==='tier'){
+    // 티어별 그룹(상위→하위), 그룹 내 LP·단수 정렬. 못 알아본 티어는 '미분류'.
+    const tg=TIERS.map((t,i)=>[t.k[0], rem.filter(p=>tierIdx(p.tier)===i).sort((a,b)=>tierRank(b.tier)-tierRank(a.tier))])
+             .concat([['미분류', rem.filter(p=>tierIdx(p.tier)<0)]]);
+    body=renderGroups(tg);
+  }else if(poolView==='grade'){
+    // 등급 구간별 그룹(1티어 상위), 그룹 내 소수 오름차순. 등급 없으면 '등급 미정'.
+    // gradeBand로 완전분할 → 범위 밖·구데이터 등 어떤 값도 누락 없이 한 그룹에만 속함(카운트=목록 일치).
+    const gg=[0,1,2,3,4].map(b=>[`${b+1}티어`, rem.filter(p=>gradeBand(p.grade)===b).sort((x,y)=>Number(x.grade)-Number(y.grade))])
+             .concat([['등급 미정', rem.filter(p=>gradeBand(p.grade)<0)]]);
+    body=renderGroups(gg);
+  }else{
+    body=poolDiv(draw?nextUpList():rem);
+  }
+  return `<div class="panel" style="margin-top:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="lbl" style="margin:0">${draw&&poolView==='order'?'매물 순서':'남은 매물'} <b class="num" style="color:var(--gold);font-size:15px">${rem.length}</b></span>
+      <div class="psort" role="group" aria-label="매물 정렬">
+        <button id="pv-order" data-pv="order" aria-pressed="${poolView==='order'}" class="${poolView==='order'?'on':''}">${draw?'순서':'등록순'}</button>
+        <button id="pv-pos" data-pv="pos" aria-pressed="${poolView==='pos'}" class="${poolView==='pos'?'on':''}">포지션</button>
+        <button id="pv-tier" data-pv="tier" aria-pressed="${poolView==='tier'}" class="${poolView==='tier'?'on':''}">티어순</button>
+        <button id="pv-grade" data-pv="grade" aria-pressed="${poolView==='grade'}" class="${poolView==='grade'?'on':''}">등급순</button>
+      </div>
+    </div>
+    <div class="hint" style="margin:4px 0 8px">${posline}${noline?` · 미지정 ${noline}`:''}${host&&live?' · <span style="color:var(--gold)">현재 매물 마무리 후 선택 가능</span>':host?' · <span style="color:var(--gold)">카드를 팀으로 끌어다 놓으면 0P로 배정됩니다</span>':''}</div>
+    ${body}
+  </div>`;
+}
+
+// 진행자 전용: 진행 중에도 제한 시간을 5초 단위로 조정.
+function hostClockCtl(){
+  return `<div class="row" style="margin-top:8px;align-items:center;gap:8px">
+    <span class="hint" style="text-transform:none;letter-spacing:0">제한시간 <b style="color:var(--gold)">${S.clock}</b>초</span>
+    <button class="btn ghost" id="bClkDn" style="padding:4px 12px" ${S.clock<=5?'disabled':''}>−5</button>
+    <button class="btn ghost" id="bClkUp" style="padding:4px 12px" ${S.clock>=300?'disabled':''}>+5</button>
+  </div>`;
+}
+
+// A-4: 최종 결과를 한 장 이미지(PNG)로 저장. 팀별 로스터·낙찰가·잔여 포인트.
+function saveResultImage(){
+  const teams=S.teams, sc=2, colW=300, pad=28, headH=96, rowH=30, gap=16;
+  const cols=Math.min(teams.length,4), rowsN=Math.ceil(teams.length/cols);
+  const maxP=Math.max(0,...teams.map(t=>t.players.length));
+  const cardH=64+(1+maxP)*rowH+16;
+  const W=pad*2+cols*colW+(cols-1)*gap, H=headH+rowsN*cardH+(rowsN-1)*gap+pad;
+  const cv=document.createElement('canvas'); cv.width=W*sc; cv.height=H*sc;
+  const x=cv.getContext('2d'); x.scale(sc,sc); x.textBaseline='top';
+  const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();};
+  x.fillStyle='#0A1017'; x.fillRect(0,0,W,H);
+  x.fillStyle='#E6ECF2'; x.font='700 26px sans-serif'; x.fillText(S.title,pad,26,W-pad*2);
+  x.fillStyle='#D4A94E'; x.font='700 13px sans-serif';
+  x.fillText('경매 결과 · '+new Date().toLocaleString('ko-KR',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),pad,62);
+  const POS={TOP:'#E07A5F',JGL:'#7BB661',MID:'#6FA8DC',ADC:'#E0B04A',SUP:'#B58ADB'};
+  teams.forEach((t,i)=>{
+    const cx=pad+(i%cols)*(colW+gap), cy=headH+Math.floor(i/cols)*(cardH+gap);
+    x.fillStyle='#141C26'; rr(cx,cy,colW,cardH,10); x.fill();
+    x.strokeStyle='#26343F'; x.lineWidth=1; x.stroke();
+    x.fillStyle='#E6ECF2'; x.font='700 17px sans-serif'; x.fillText(t.name,cx+16,cy+13,colW-32);
+    x.fillStyle='#7E90A2'; x.font='12px sans-serif'; x.fillText('팀장 '+t.leader,cx+16,cy+38,colW-120);
+    x.fillStyle='#D4A94E'; x.textAlign='right'; x.fillText('잔여 '+t.points+'P',cx+colW-16,cy+38,90); x.textAlign='left';
+    let ry=cy+64;
+    x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.fillText('★ '+t.leader,cx+16,ry,colW-70); ry+=rowH;
+    t.players.forEach(pl=>{
+      x.fillStyle=POS[pl.line]||'#7E90A2'; x.fillRect(cx+16,ry+3,3,13);
+      x.fillStyle='#E6ECF2'; x.font='13px sans-serif'; x.fillText(pl.name,cx+26,ry,colW-130);
+      x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.textAlign='right'; x.fillText(pl.price+'P',cx+colW-16,ry,80); x.textAlign='left';
+      ry+=rowH;
+    });
+  });
+  cv.toBlob(b=>{
+    if(!b) return toast('이미지를 만들지 못했습니다',true);
+    const url=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=url; a.download=`경매결과_${S.code}.png`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('결과 이미지를 저장했습니다');
+  },'image/png');
+}
+
+function wire(){
+  const on=(id,fn)=>{ const el=$(id); if(el) el.onclick=fn; };
+  on('bNext',()=>send('lot'));
+  on('bUndo',()=>send('undo'));
+  on('bSfx',()=>{
+    sfxMuted=!sfxMuted;
+    try{ localStorage.setItem('sfxMuted',sfxMuted?'1':'0'); }catch{}
+    const b=$('bSfx'); if(b){ b.textContent=sfxMuted?'🔇':'🔊'; b.classList.toggle('off',sfxMuted); b.setAttribute('aria-label','소리 '+(sfxMuted?'꺼짐':'켜짐')); }
+    // 켤 때: 사용자 제스처로 오디오 잠금을 풀고, 컨텍스트가 running이 되면 짧은 확인음.
+    if(!sfxMuted){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const blip=()=>tone(880,0,.09,.05); actx.state==='running'?blip():actx.resume().then(blip).catch(()=>{}); }catch{} }
+  });
+  on('bReset',()=>{ if(confirm('경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)')) send('reset'); });
+  on('bSell',()=>send('sell'));
+  on('bPass',()=>{ if(S.bid&&!confirm('최고 입찰이 있는데 유찰 처리할까요?')) return; send('pass'); });
+  on('bPause',()=>send(S.pausedLeft!=null?'resume':'pause'));
+  on('bClkDn',()=>send('setclock',{clock:Math.max(5,S.clock-5)}));
+  on('bClkUp',()=>send('setclock',{clock:Math.min(300,S.clock+5)}));
+  on('bResultImg',saveResultImage);
+  const doCustom=()=>{
+    const v=+$('custom').value;
+    if(!v) return toast('금액을 입력하세요',true);
+    send('bid',{amount:v});
+  };
+  on('bCustom',doCustom);
+  const custom=$('custom');
+  if(custom) custom.onkeydown=e=>{ if(e.key==='Enter') doCustom(); };
+  document.querySelectorAll('[data-bid]').forEach(b=>b.onclick=()=>send('bid',{amount:+b.dataset.bid}));
+  document.querySelectorAll('[data-lot]').forEach(b=>b.onclick=()=>send('lot',{id:b.dataset.lot}));
+  // 유찰/대기 카드 → 팀 카드로 드래그해 0P 배정 (진행자, 매물 없을 때)
+  // 전용 타입(application/x-dpid)을 실어, 외부 텍스트·링크 드래그는 무시합니다.
+  const isCard=e=>e.dataTransfer.types.includes('application/x-dpid');
+  document.querySelectorAll('[data-dpid]').forEach(el=>{
+    el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('application/x-dpid',el.dataset.dpid); e.dataTransfer.setData('text/plain',el.dataset.dpid); e.dataTransfer.effectAllowed='move'; document.body.classList.add('dragging'); });
+    el.addEventListener('dragend',()=>{ document.body.classList.remove('dragging'); document.querySelectorAll('.drop-ok').forEach(x=>x.classList.remove('drop-ok')); });
+  });
+  document.querySelectorAll('[data-team-drop]').forEach(el=>{
+    el.addEventListener('dragover',e=>{ if(!isCard(e)) return; e.preventDefault(); e.dataTransfer.dropEffect='move'; el.classList.add('drop-ok'); });
+    el.addEventListener('dragleave',()=>el.classList.remove('drop-ok'));
+    el.addEventListener('drop',e=>{ el.classList.remove('drop-ok'); if(!isCard(e)) return; e.preventDefault();
+      const pid=e.dataTransfer.getData('application/x-dpid');
+      if(/^p\d+$/.test(pid)) send('assign',{playerId:pid,teamId:el.dataset.teamDrop});
+    });
+  });
+  document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{
+    // 정렬 토글은 전체 재렌더라, 팀장이 입력 중이던 커스텀 금액을 보존합니다.
+    const c=$('custom'), cv=c?c.value:'', cs=c?c.selectionStart:null;
+    poolView=b.dataset.pv; paint();
+    const c2=$('custom');
+    if(c2&&cv){ c2.value=cv; try{ if(cs!=null) c2.setSelectionRange(cs,cs); }catch{} }
+    const bb=$('pv-'+poolView); if(bb) bb.focus();
+  });
+  // 업로드 대상 pid를 "버튼 클릭 시점"에 고정합니다. 파일 탐색기를 여는 사이
+  // 매물이 바뀌어도 엉뚱한 선수에게 사진이 붙지 않게 합니다.
+  on('bImg',()=>{ const f=$('imgFile'); if(f){ f.dataset.pid=S.current||''; f.click(); } });
+  const imgFile=$('imgFile');
+  if(imgFile) imgFile.onchange=e=>{ const f=e.target.files[0]; const pid=e.target.dataset.pid; if(f) uploadImg(f,pid); e.target.value=''; };
+  on('bImgDel',async()=>{
+    const pid=S.current;
+    if(!pid||!confirm('이 선수의 사진을 지울까요?')) return;
+    try{
+      const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,{method:'DELETE'});
+      if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'삭제하지 못했습니다');
+      toast('사진을 지웠습니다');
+    }catch(e){ toast(e.message,true); }
+  });
+}
+
+/* 진행자 전용: 사진을 브라우저에서 줄여서(최대 800px·95KB) 올립니다 */
+async function uploadImg(file,pid){
+  pid=pid||(S&&S.current);
+  if(!pid) return toast('경매 중인 매물이 없습니다',true);
+  try{
+    const blob=await shrinkImage(file);
+    const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,
+      {method:'POST',headers:{'content-type':blob.type},body:blob});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||'업로드에 실패했습니다');
+    toast('사진을 올렸습니다');
+  }catch(e){ toast(e.message,true); }
+}
+function shrinkImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(img.src);
+      const sc=Math.min(1,800/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.max(1,Math.round(img.width*sc));
+      cv.height=Math.max(1,Math.round(img.height*sc));
+      const ctx=cv.getContext('2d');
+      // JPEG는 투명도가 없으므로 PNG/WebP 투명 배경을 흰색으로 채웁니다(검게 나오는 것 방지).
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+      ctx.drawImage(img,0,0,cv.width,cv.height);
+      const tryQ=qs=>{
+        if(!qs.length) return rej(new Error('이미지를 충분히 줄이지 못했습니다'));
+        cv.toBlob(b=>{ b&&b.size<=95*1024 ? res(b) : tryQ(qs.slice(1)); },'image/jpeg',qs[0]);
+      };
+      tryQ([.85,.7,.5,.35]);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(img.src); rej(new Error('이미지 파일을 읽지 못했습니다')); };
+    img.src=URL.createObjectURL(file);
+  });
+}
+
+/* 시계는 다시 그리지 않고 숫자만 갱신 */
+let lastTick=0;
+setInterval(()=>{
+  if(!S||!S.current){ lastTick=0; return; }
+  const v=$('clockVal'), bar=$('clockBar');
+  if(!v) return;
+  const ms=leftMs();
+  const sec=Math.ceil(ms/1000);
+  v.textContent=sec;
+  bar.style.width=Math.min(100,ms/(S.clock*1000)*100)+'%';
+  v.parentElement.classList.toggle('hot',ms<=5000);
+  // 마지막 3·2·1초 긴장 틱(진행자 화면, 음소거 아닐 때). 입찰로 시간이 늘면 다시 울립니다.
+  if(S.pausedLeft==null && sec>=1 && sec<=3 && sec!==lastTick && sfxOn()){ lastTick=sec; tickSound(); }
+  else if(sec>3) lastTick=0;
+},200);
+
+setInterval(()=>send('ping'),25000);
+
+/* ═══ 관리자 ═══ */
+const store={
+  get(){ try{ return sessionStorage.getItem('adm')||''; }catch{ return mem; } },
+  set(v){ mem=v; try{ sessionStorage.setItem('adm',v); }catch{} },
+  clear(){ mem=''; try{ sessionStorage.removeItem('adm'); }catch{} }
+};
+let mem='';
+
+async function api(path,opt={}){
+  const r=await fetch(path,{...opt,headers:{'content-type':'application/json',
+    Authorization:'Bearer '+store.get(),...(opt.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401){ store.clear(); renderLogin('세션이 만료되었습니다. 다시 로그인해주세요.'); throw new Error('unauth'); }
+  if(!r.ok) throw new Error(d.error||'요청에 실패했습니다');
+  return d;
+}
+
+function renderAdmin(){ store.get()?renderRooms():renderLogin(); }
+
+function renderLogin(msg){
+  $('app').innerHTML=`<div class="landing" style="max-width:420px">
+    <h1>관리자</h1>
+    <p class="hint">${msg?esc(msg):'경매방을 만들고 관리하려면 로그인하세요.'}</p>
+    <div class="panel" style="text-align:left;margin-top:20px">
+      <label class="lbl" for="pw">비밀번호</label>
+      <input type="password" id="pw" autocomplete="current-password" style="padding:12px 13px;font-size:15px">
+      <button class="btn gold" id="bLogin" style="width:100%;margin-top:10px;padding:12px 13px;font-size:15px">로그인</button>
+    </div>
+    <button class="btn ghost" id="bBack" style="margin-top:14px;font-size:13px">돌아가기</button>
+  </div>`;
+  const go=async()=>{
+    const pw=$('pw').value;
+    if(!pw) return toast('비밀번호를 입력하세요',true);
+    $('bLogin').disabled=true;
+    try{
+      const r=await fetch('/api/admin/login',{method:'POST',
+        headers:{'content-type':'application/json'},body:JSON.stringify({password:pw})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error);
+      store.set(d.token); renderRooms();
+    }catch(e){ toast(e.message,true); $('bLogin').disabled=false; }
+  };
+  $('bLogin').onclick=go;
+  $('pw').onkeydown=e=>{ if(e.key==='Enter') go(); };
+  $('bBack').onclick=()=>{ go(''); renderLanding(); };
+}
+
+async function renderRooms(){
+  setupMode='admin'; managerMode=false;   // 관리자 화면에서는 링크 뷰가 다른 컨텍스트로 오인되지 않게 고정
+  $('app').innerHTML=`
+  <div class="topbar">
+    <div class="brand">관리자 <span>경매방</span></div>
+    <div class="conn"><button class="btn ghost" id="bOut" style="padding:5px 12px;font-size:12px">로그아웃</button></div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <span class="lbl">방 생성 코드</span>
+    <p class="hint" style="margin-bottom:12px"><b>1회용(운영자)</b>: 코드 하나로 방 하나만 만듭니다(발급 후 30일 만료). <b>매니저</b>: 코드 하나로 방을 여러 개(최대 10개) 자유롭게 만들 수 있는 지속형 권한입니다. 경매방(사진 포함)은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
+    <div class="row">
+      <select id="invKind" style="max-width:200px">
+        <option value="once">1회용 · 운영자 (방 1개)</option>
+        <option value="manager">매니저 (최대 10개)</option>
+      </select>
+      <input type="text" id="invNote" maxlength="20" placeholder="메모 (받을 사람 이름 등, 선택)" style="flex:1;min-width:160px">
+      <button class="btn gold" id="bInv">코드 발급</button>
+    </div>
+    <div id="invList" style="margin-top:14px"><span class="hint">불러오는 중…</span></div>
+  </div>
+  <div class="row" style="margin-bottom:16px;align-items:center">
+    <span class="lbl" style="margin:0">경매방 목록</span>
+    <button class="btn ghost" id="bNew" style="margin-left:auto;padding:6px 12px;font-size:12px">직접 만들기</button>
+    <button class="btn ghost" id="bRe" style="padding:6px 12px;font-size:12px">새로고침</button>
+  </div>
+  <div id="rooms"><div class="empty">불러오는 중…</div></div>`;
+  $('bOut').onclick=()=>{ store.clear(); renderLogin('로그아웃했습니다.'); };
+  $('bNew').onclick=()=>renderSetup('admin');
+  $('bRe').onclick=renderRooms;
+  $('bInv').onclick=async()=>{
+    $('bInv').disabled=true;
+    try{
+      const kind=$('invKind').value==='manager'?'manager':'once';
+      const {invite}=await api('/api/admin/invite',{method:'POST',
+        body:JSON.stringify({note:$('invNote').value.trim(),kind})});
+      toast(`${kind==='manager'?'매니저':'1회용'} 코드 ${fmtInv(invite.code)} 를 발급했습니다`);
+      renderRooms();
+    }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); $('bInv').disabled=false; } }
+  };
+
+  let rooms, total, shown, invites;
+  try{
+    [{rooms,total,shown},invites]=await Promise.all([api('/api/admin/rooms'),api('/api/admin/invites')]);
+  }catch(e){ if(e.message!=='unauth') toast(e.message,true); return; }
+  total=total??rooms.length; shown=shown??rooms.length;   // 서버는 최신 40개만 상세 조회
+
+  $('invList').innerHTML=invites.length?invites.map(v=>{
+    const mgr=v.kind==='manager';
+    const date=new Date(v.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const state=mgr?'<b style="color:var(--gold)">매니저</b> · 다회용(최대 10)'
+      :(v.used?`사용됨${v.roomCode?' → 방 '+v.roomCode:''}`:'미사용 · 1회용');
+    const expiry=(mgr||v.used)?'':' · 만료 '+new Date(v.createdAt+30*86400e3).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'});
+    const copyable=mgr||!v.used;
+    return `<div class="link-row">
+      <b class="num" style="font-size:17px;letter-spacing:.1em;color:${(mgr||!v.used)?'var(--gold)':'var(--muted)'}">${fmtInv(v.code)}</b>
+      <code>${state}${v.note?' · '+esc(v.note):''} · ${date}${expiry}</code>
+      <span class="row" style="gap:6px">
+        ${copyable?`<button class="btn" data-invcopy="${v.code}" data-invkind="${mgr?'manager':'once'}">복사</button>`:''}
+        <button class="btn" data-invdel="${v.code}">삭제</button>
+      </span>
+    </div>`;
+  }).join(''):'<span class="hint">발급한 코드가 없습니다. 위에서 발급해 매니저/운영자에게 보내세요.</span>';
+
+  document.querySelectorAll('[data-invcopy]').forEach(b=>b.onclick=()=>{
+    const c=b.dataset.invcopy, mgr=b.dataset.invkind==='manager';
+    copyText(`${mgr?'매니저 코드':'경매방 생성 코드'}: ${fmtInv(c)}\n아래 링크를 열면 바로 ${mgr?'경매방을 만들 수 있습니다':'만들 수 있습니다'}.\n${location.origin}/#/op/${c}`);
+  });
+  document.querySelectorAll('[data-invdel]').forEach(b=>b.onclick=async()=>{
+    const c=b.dataset.invdel;
+    if(!confirm(`코드 ${fmtInv(c)} 를 삭제할까요? 아직 안 쓴 코드라면 더는 방을 만들 수 없게 됩니다.`)) return;
+    try{ await api('/api/admin/invite/'+c,{method:'DELETE'}); toast('삭제했습니다'); renderRooms(); }
+    catch(e){ if(e.message!=='unauth') toast(e.message,true); }
+  });
+
+  // 경매방을 만든 코드(via)별로 묶어 표시. 코드 종류/메모는 발급 코드 목록에서 가져옵니다.
+  const invMeta={}; invites.forEach(v=>invMeta[v.code]={kind:v.kind,note:v.note,createdAt:v.createdAt});
+  const stOf=r=>r.missing?['p-gone','삭제됨','st-gone']
+    :r.filled||r.phase==='done'?['p-done','종료','st-done']
+    :r.phase==='live'?['p-live','진행 중','st-live']:['p-ready','대기','st-ready'];
+  const daysOf=r=>Math.ceil((r.createdAt+14*86400e3-Date.now())/86400e3);
+
+  if(!rooms.length){
+    $('rooms').innerHTML='<div class="empty">아직 만든 경매방이 없습니다<br>위의 버튼으로 새로 만들어보세요</div>';
+  }else{
+    // 상단 요약 바
+    const c={live:0,ready:0,done:0,gone:0,soon:0};
+    rooms.forEach(r=>{ const s=stOf(r)[2];
+      if(s==='st-gone')c.gone++; else if(s==='st-done')c.done++; else if(s==='st-live')c.live++; else c.ready++;
+      const d=daysOf(r); if(s!=='st-gone'&&d>=0&&d<=3)c.soon++; });
+    const capped=total>shown;   // 방이 40개를 넘으면 최신 40개만 집계·표시됩니다.
+    const sum=`<div class="room-sum">
+      <span class="s">${capped?'표시':'전체'} <b>${rooms.length}</b>${capped?` <i style="font-style:normal;color:var(--muted)">/ 전체 ${total}</i>`:''}</span>
+      <span class="s live">진행중 <b>${c.live}</b></span>
+      <span class="s">대기 <b>${c.ready}</b></span>
+      <span class="s done">종료 <b>${c.done}</b></span>
+      ${c.gone?`<span class="s">삭제됨 <b>${c.gone}</b></span>`:''}
+      ${c.soon?`<span class="s warn">곧 삭제 <b>${c.soon}</b></span>`:''}
+    </div>${capped?`<div class="hint" style="margin:-6px 0 12px;color:var(--muted)">방이 많아 최신 40개만 표시됩니다. 끝난 방을 삭제하면 정리됩니다.</div>`:''}`;
+
+    // 코드별 그룹: 원본 인덱스(idx)를 유지해 아래 버튼 핸들러가 그대로 동작하게 함.
+    const gmap=new Map();
+    rooms.forEach((r,idx)=>{ const k=r.via||''; if(!gmap.has(k))gmap.set(k,[]); gmap.get(k).push({r,idx}); });
+    // 그룹 순서: 코드 발급순(오래된 먼저) → 삭제된 코드 → 직접 생성(맨 뒤)
+    const rank=k=> k===''?Number.MAX_SAFE_INTEGER : (invMeta[k]?invMeta[k].createdAt:Number.MAX_SAFE_INTEGER-1);
+    const newest=k=>Math.max(...gmap.get(k).map(it=>it.r.createdAt));   // 발급순 동률(만료·삭제 코드) 보조정렬
+    const keys=[...gmap.keys()].sort((a,b)=> rank(a)-rank(b) || newest(b)-newest(a));
+
+    const card=({r,idx})=>{ const st=stOf(r), d=daysOf(r);
+      const prog=(!r.missing&&r.players)?`<div class="rbar"><i style="width:${Math.round(r.sold/r.players*100)}%"></i></div>`:'';
+      return `<div class="room ${st[2]}">
+        <div class="rc">${r.code}</div>
+        <div>
+          <div class="rt">${esc(r.title)} <span class="pill ${st[0]}">${st[1]}</span></div>
+          <div class="rs">
+            ${r.missing?'<span>방 데이터가 없습니다</span>':`
+            <span>${r.teams}팀 · 참가자 ${r.players}명</span>
+            <span>낙찰 ${r.sold}/${r.players}</span>
+            <span>접속 ${r.online}명</span>`}
+            <span>${new Date(r.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+            <span class="${!r.missing&&d>=0&&d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
+          </div>
+          ${prog}
+        </div>
+        <div class="row" style="gap:6px">
+          ${r.missing?'':`<button class="btn" data-links="${idx}">링크</button>
+          <button class="btn" data-enter="${idx}">진행자로 입장</button>`}
+          <button class="btn" data-del="${r.code}">삭제</button>
+        </div>
+      </div>`;
+    };
+    const header=k=>{ const n=gmap.get(k).length;
+      if(k==='') return `<div class="room-group"><span class="gc">직접 생성</span><span class="gk direct">관리자</span><span class="gn">방 ${n}개</span></div>`;
+      const m=invMeta[k];
+      const kind=m?(m.kind==='manager'?['mgr','매니저']:['once','1회용']):['gone','만료·삭제된 코드'];
+      const memo=(m&&m.note)?`<span class="gm">${esc(m.note)}</span>`:'';
+      return `<div class="room-group"><span class="gc">${fmtInv(k)}</span><span class="gk ${kind[0]}">${kind[1]}</span>${memo}<span class="gn">방 ${n}개</span></div>`;
+    };
+    const body=keys.map(k=>{
+      const items=gmap.get(k).sort((x,y)=>y.r.createdAt-x.r.createdAt);  // 그룹 내 최신순
+      return header(k)+'<div class="rooms">'+items.map(card).join('')+'</div>';
+    }).join('');
+
+    $('rooms').innerHTML=sum+body;
+  }
+
+  document.querySelectorAll('[data-links]').forEach(b=>b.onclick=()=>{
+    const r=rooms[+b.dataset.links];
+    renderLinks({code:r.code,hostKey:r.hostKey,viewKey:r.viewKey,links:r.links},true);
+  });
+  document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>{
+    const r=rooms[+b.dataset.enter];
+    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
+    $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
+    connect(r.code,'k='+r.hostKey);
+  });
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    const code=b.dataset.del;
+    if(!confirm(`${code} 방을 삭제할까요? 진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.`)) return;
+    try{ await api('/api/admin/room/'+code,{method:'DELETE'}); toast('삭제했습니다'); renderRooms(); }
+    catch(e){ if(e.message!=='unauth') toast(e.message,true); }
+  });
+}
+
+/* ═══ 랜딩 · 설정 ═══ */
+function renderLanding(){
+  managerMode=false;
+  $('app').innerHTML=`<div class="landing">
+    <h1>실시간 경매</h1>
+    <p class="hint">진행자가 방을 만들고 팀장들에게 링크를 보내면, 각자 화면에서 직접 입찰할 수 있습니다.</p>
+    <div class="panel" style="text-align:left">
+      <span class="lbl">방 코드로 참가</span>
+      <div class="join">
+        <input type="text" id="joinCode" maxlength="6" placeholder="ABC123" aria-label="방 코드">
+        <button class="btn" id="bJoin">확인</button>
+      </div>
+      <p class="hint" style="margin-top:10px">팀장이라면 진행자가 보낸 링크를 그대로 열어야 합니다. 코드만으로는 관전만 가능합니다.</p>
+    </div>
+    <div class="panel" style="text-align:left;margin-top:14px">
+      <span class="lbl">경매방 만들기 · 운영자/매니저</span>
+      <div class="join">
+        <input type="text" id="opIn" maxlength="9" placeholder="ABCD-EFGH" aria-label="생성 코드" style="font-size:19px">
+        <button class="btn" id="bOp">확인</button>
+      </div>
+      <p class="hint" style="margin-top:10px">관리자에게 받은 코드를 입력하면 경매방을 만들 수 있습니다. <b>1회용 코드</b>는 방 1개, <b>매니저 코드</b>는 방을 여러 개(최대 10개) 만들 수 있습니다.</p>
+    </div>
+  </div>`;
+  const goOp=()=>startOperator($('opIn').value);
+  $('bOp').onclick=goOp;
+  $('opIn').onkeydown=e=>{ if(e.key==='Enter') goOp(); };
+  $('bJoin').onclick=async()=>{
+    const c=$('joinCode').value.trim().toUpperCase();
+    if(c.length!==6) return toast('6자리 코드를 입력하세요',true);
+    try{
+      const r=await fetch('/api/room/'+c);
+      if(!r.ok) return toast('없는 방 코드입니다',true);
+      toast('진행자가 보낸 링크로 접속해야 입찰할 수 있습니다');
+    }catch{ toast('연결에 실패했습니다. 잠시 후 다시 시도해주세요.',true); }
+  };
+  $('joinCode').onkeydown=e=>{ if(e.key==='Enter') $('bJoin').click(); };
+}
+
+/* 운영자: 생성 코드를 확인하고 설정 화면으로 */
+async function startOperator(raw){
+  const c=String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(c.length!==8) return toast('8자리 생성 코드를 입력하세요',true);
+  try{
+    const r=await fetch('/api/invite/'+c);
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){
+      toast(d.error||'코드를 확인하지 못했습니다',true);
+      if(!$('opIn')) renderLanding();
+      return;
+    }
+    opCode=c; setupMode='op'; go('#/op/'+c);
+    if(d.manager){
+      // 매니저 코드 → 방을 여러 개 관리하는 대시보드.
+      managerMode=true; renderManager();
+    }else if(d.used&&d.room){
+      // 1회용인데 이미 방을 만든 상태 → 그 방의 링크 화면으로 재진입.
+      managerMode=false; links=d.room; renderLinks(d.room,true);
+    }else{
+      managerMode=false; renderSetup('op');
+    }
+  }catch{ toast('네트워크 오류입니다. 잠시 후 다시 시도해주세요.',true); }
+}
+
+/* 매니저: 자기가 만든 경매방들을 한 화면에서 관리(최대 10개) */
+async function renderManager(){
+  $('app').innerHTML=`
+  <div class="topbar"><div class="brand">매니저 <span>경매방</span></div>
+    <div class="who">코드 ${fmtInv(opCode)}</div>
+    <div class="conn"><button class="btn ghost" id="bHome" style="padding:5px 12px;font-size:12px">처음으로</button></div>
+  </div>
+  <div class="row" style="margin-bottom:14px;align-items:center">
+    <span class="lbl" style="margin:0">내 경매방 <b id="mCount" class="num" style="color:var(--gold);font-size:16px">–</b><span class="hint" style="text-transform:none;letter-spacing:0"> / <span id="mMax">10</span></span></span>
+    <button class="btn gold" id="mNew" style="margin-left:auto;padding:9px 18px">＋ 새 경매방 만들기</button>
+    <button class="btn ghost" id="mRe" style="padding:6px 12px;font-size:12px">새로고침</button>
+  </div>
+  <div id="mRooms"><div class="empty">불러오는 중…</div></div>`;
+  $('bHome').onclick=()=>{ managerMode=false; go(''); renderLanding(); };
+  $('mRe').onclick=renderManager;
+  $('mNew').onclick=()=>renderSetup('op');   // 매니저도 op 흐름으로 생성(코드=opCode, 서버가 소모 안 함)
+
+  let data;
+  try{
+    const r=await fetch('/api/manager/'+opCode+'/rooms');
+    data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error||'불러오지 못했습니다');
+    if(!Array.isArray(data.rooms)) throw new Error('불러오지 못했습니다');
+  }catch(e){
+    toast(/fetch|network|failed/i.test(e.message)?'네트워크 오류입니다. 새로고침해주세요.':e.message,true);
+    $('mNew').disabled=true;
+    $('mRooms').innerHTML='<div class="empty">불러오지 못했습니다<br>새로고침하거나 처음으로 돌아가세요</div>';
+    return;
+  }
+
+  const {rooms,count,max}=data;
+  $('mCount').textContent=count;
+  $('mMax').textContent=max;
+  const full=count>=max;
+  $('mNew').disabled=full;
+
+  $('mRooms').innerHTML=(full?`<div class="hint" style="color:var(--danger);margin-bottom:10px">경매방이 ${max}개예요. 끝난 방을 삭제하면 새로 만들 수 있어요.</div>`:'')
+    +(rooms.length?`<div class="rooms">`+rooms.map((r,i)=>{
+      const st=r.missing?['p-gone','삭제됨']:(r.filled||r.phase==='done')?['p-done','종료']:r.phase==='live'?['p-live','진행 중']:['p-ready','대기'];
+      return `<div class="room">
+        <div class="rc">${r.code}</div>
+        <div>
+          <div class="rt">${esc(r.title)} <span class="pill ${st[0]}">${st[1]}</span></div>
+          <div class="rs">
+            ${r.missing?'<span>방 데이터가 없습니다</span>':`<span>${r.teams}팀 · 참가자 ${r.players}명</span><span>낙찰 ${r.sold}/${r.players}</span><span>접속 ${r.online}명</span>`}
+            <span>삭제까지 ${Math.max(0,Math.ceil((r.createdAt+14*86400e3-Date.now())/86400e3))}일</span>
+          </div>
+        </div>
+        <div class="row" style="gap:6px">
+          ${r.missing?'':`<button class="btn" data-mlinks="${i}">링크</button>
+          <button class="btn" data-menter="${i}">진행자 입장</button>`}
+          <button class="btn" data-mdel="${r.code}">삭제</button>
+        </div>
+      </div>`;
+    }).join('')+`</div>`
+    :'<div class="empty">아직 만든 경매방이 없습니다<br>위의 <b>＋ 새 경매방 만들기</b>로 시작하세요</div>');
+
+  document.querySelectorAll('[data-mlinks]').forEach(b=>b.onclick=()=>{
+    const r=rooms[+b.dataset.mlinks];
+    renderLinks({code:r.code,hostKey:r.hostKey,viewKey:r.viewKey,links:r.links},true);
+  });
+  document.querySelectorAll('[data-menter]').forEach(b=>b.onclick=()=>{
+    const r=rooms[+b.dataset.menter];
+    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
+    $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
+    connect(r.code,'k='+r.hostKey);
+  });
+  document.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=async()=>{
+    const rc=b.dataset.mdel;
+    if(!confirm(`${rc} 방을 삭제할까요? 진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.`)) return;
+    try{
+      const r=await fetch('/api/manager/'+opCode+'/room/'+rc,{method:'DELETE'});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||'삭제하지 못했습니다');
+      toast('삭제했습니다'); renderManager();
+    }catch(e){ toast(/fetch|network|failed/i.test(e.message)?'네트워크 오류입니다. 다시 시도해주세요.':e.message,true); }
+  });
+}
+
+function renderSetup(mode){
+  setupMode = mode==='op' ? 'op' : 'admin';
+  $('app').innerHTML=`
+  <div class="topbar"><div class="brand">새 경매방 <span>설정</span></div>
+    ${setupMode==='op'?`<div class="who">${managerMode?'매니저':'생성'} 코드 ${fmtInv(opCode)}</div>`:''}
+    <div class="conn"><button class="btn ghost" id="bBackList" style="padding:5px 12px;font-size:12px">${managerMode?'매니저 홈':(setupMode==='op'?'처음으로':'목록으로')}</button></div>
+  </div>
+  <div class="setup">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <span class="lbl">규칙</span>
+        <div class="grid2">
+          <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="클랜 내전 경매"></div>
+          <div><label class="lbl" for="cBase">기본 시작 포인트</label><input type="number" id="cBase" value="1000" min="10"></div>
+          <div><label class="lbl" for="cSize">팀 인원 (팀장 포함)</label><input type="number" id="cSize" value="5" min="2" max="6"></div>
+          <div><label class="lbl" for="cMin">최소 입찰 단위</label><input type="number" id="cMin" value="10" min="1"></div>
+          <div><label class="lbl" for="cClock">입찰 제한 시간 (초)</label><input type="number" id="cClock" value="15" min="5" max="300"></div>
+          <div><label class="lbl" for="cOrder">매물 순서</label>
+            <select id="cOrder">
+              <option value="random">무작위 (진행자가 매번 뽑기)</option>
+              <option value="draw">미리 추첨 (순서 확정·공개)</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:12px">입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.</p>
+      </div>
+      <div class="panel">
+        <span class="lbl">팀장</span>
+        <div id="leaderList"></div>
+        <div class="row" style="margin-top:4px">
+          <button class="btn ghost" id="bAdd">+ 팀장 추가</button>
+          <button class="btn ghost" id="bClear">포인트 초기화</button>
+        </div>
+        <p class="hint" style="margin-top:10px">세 번째 칸은 그 팀장의 시작 포인트입니다. 비워두면 기본값을 씁니다.</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="lbl" style="margin:0">참가자 명단</span>
+          <a class="btn gold" href="/participant-template.xlsx" download="참가자_명단_양식.xlsx"
+             style="margin-left:auto;font-size:12.5px;padding:6px 14px;text-decoration:none">⬇ 양식 다운로드 (.xlsx)</a>
+        </div>
+        <div class="drop" id="drop">
+          <b>엑셀 파일을 여기에 놓거나 클릭해서 선택</b>
+          <span class="hint">위 <b>양식 다운로드</b>로 받아 채운 뒤 그대로 올리면 됩니다</span>
+          <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+        </div>
+        <div class="plist" id="plist"></div>
+        <div class="psum" id="psum"></div>
+        <details style="margin-top:14px">
+          <summary class="hint" style="cursor:pointer">엑셀 없이 직접 입력하기</summary>
+          <p class="hint" style="margin:8px 0 6px">엑셀 양식과 같은 순서로, 쉼표로 구분해 한 줄에 한 명씩 적습니다.<br>
+            <b>아이디, 티어, 등급, 주포지션, 부포지션, 주챔프1, 주챔프2, 주챔프3</b><br>
+            아이디는 <b>닉네임#태그</b>(예: 페이커#KR1), 아이디만 필수. 등급은 1~5 소수 가능(예 1.2·3.4, 1이 최상위, 없으면 생략).<br>
+            티어는 축약형 권장 — <b>M7</b>=마스터700 · <b>G3</b>=골드3 · <b>S4</b>=실버4 · <b>D1</b>=다이아1 (한글·영문도 인식).</p>
+          <textarea id="cPool" rows="6" spellcheck="false"
+            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스&#10;홍길동#0415, G3, 3.4, TOP, , 가렌&#10;이영희#KR1"></textarea>
+          <button class="btn ghost" id="bText" style="margin-top:8px">목록에 추가</button>
+        </details>
+      </div>
+      <div class="panel">
+        <button class="btn gold" id="bCreate" style="width:100%;padding:13px">경매방 만들기</button>
+        <p class="hint" style="margin-top:10px">만들고 나면 팀장별 접속 링크가 나옵니다. 설정은 이후 바꿀 수 없으니 확인하고 눌러주세요.</p>
+      </div>
+    </div>
+  </div>`;
+  $('bBackList').onclick=setupMode==='op'
+    ? (managerMode ? renderManager : ()=>{ go(''); renderLanding(); })
+    : renderRooms;
+  drawLeaders(); drawPlayers();
+  const drop=$('drop'), file=$('file');
+  drop.onclick=()=>file.click();
+  file.onchange=e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); e.target.value=''; };
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{
+    e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{
+    e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+  $('bText').onclick=addText;
+  $('bAdd').onclick=()=>{leaders.push({name:'',line:'',points:null});drawLeaders();};
+  $('bClear').onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
+  $('bCreate').onclick=createRoom;
+}
+
+function drawLeaders(){
+  $('leaderList').innerHTML=leaders.map((l,i)=>`
+    <div class="leader-row">
+      <input type="text" placeholder="팀장 ${i+1} 닉네임" value="${esc(l.name)}" data-i="${i}" data-f="name">
+      <select data-i="${i}" data-f="line" aria-label="팀장 ${i+1} 라인">
+        ${['',...LINES].map(v=>`<option value="${v}" ${v===l.line?'selected':''}>${v||'라인'}</option>`).join('')}
+      </select>
+      <input type="number" min="0" placeholder="기본" value="${l.points??''}" data-i="${i}" data-f="points"
+             aria-label="팀장 ${i+1} 시작 포인트" onwheel="this.blur()">
+      <button data-del="${i}" title="삭제" aria-label="팀장 ${i+1} 삭제">&times;</button>
+    </div>`).join('');
+  $('leaderList').querySelectorAll('[data-f]').forEach(el=>{
+    el.oninput=el.onchange=()=>{
+      const i=+el.dataset.i, f=el.dataset.f;
+      leaders[i][f]= f==='points' ? (el.value===''?null:Math.max(0,+el.value)) : el.value;
+    };
+  });
+  $('leaderList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    if(leaders.length<=2) return toast('팀장은 2명 이상이어야 합니다',true);
+    leaders.splice(+b.dataset.del,1); drawLeaders();
+  });
+}
+
+// Object.create(null): 'constructor'·'toString' 같은 상속 속성이 오탐되지 않게 합니다.
+const POSMAP=Object.assign(Object.create(null),{
+  TOP:'TOP','탑':'TOP','탑라인':'TOP','토프':'TOP',
+  JGL:'JGL',JG:'JGL',JUG:'JGL',JUNGLE:'JGL','정글':'JGL','정글러':'JGL','정글링':'JGL',
+  MID:'MID','미드':'MID','미드라이너':'MID','미들':'MID',
+  ADC:'ADC',AD:'ADC',BOT:'ADC',BOTTOM:'ADC',ADCARRY:'ADC','원딜':'ADC','봇':'ADC','바텀':'ADC','딜러':'ADC',
+  SUP:'SUP',SUPP:'SUP',SPT:'SUP',SUPPORT:'SUP','서폿':'SUP','서포터':'SUP','서포트':'SUP','폿':'SUP','서폿터':'SUP'});
+const norm=v=>{
+  const t=String(v??'').trim();
+  return POSMAP[t.toUpperCase()]||POSMAP[t]||'';
+};
+// 부포지션: 5라인 + '전체/all'(→'ALL')까지 허용. 메인 포지션은 norm(5라인만) 사용.
+const normSub=v=>{ const t=String(v??'').trim(); return /^(전체|올|올포|올라인|all)$/i.test(t)?'ALL':norm(t); };
+const subLabel=s=>s==='ALL'?'전체':s;
+const clean=v=>String(v??'').trim().replace(/\s+/g,' ').slice(0,24);
+// 실력 등급: 1~5 정수 + 소수점 첫째자리(예 1.2·3.4). 범위 밖·두 자리 소수는 인정 안 함.
+const gnum=v=>{ const m=String(v??'').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i); return m?m[1]:''; };
+// 아이디(닉네임#태그) 분리 → {name, tag}. 첫 # 기준, 태그는 12자·내부 # 제거(서버와 동일).
+function splitId(id){
+  const s=String(id??'').trim();
+  const h=s.indexOf('#');
+  if(h<0) return {name:clean(s), tag:''};
+  return {name:clean(s.slice(0,h)), tag:clean(s.slice(h+1)).replace(/#/g,'').slice(0,12)};
+}
+
+/* 엑셀/CSV 읽기 — 열 순서가 바뀌어도 제목으로 찾습니다. 아이디=닉네임#태그. */
+function readSheet(rows){
+  const want={아이디:'id',ID:'id',id:'id',
+              '솔랭 티어':'tier',솔랭티어:'tier',티어:'tier',
+              등급:'grade',티어등급:'grade','실력 등급':'grade',실력등급:'grade',
+              주포지션:'line',부포지션:'sub',
+              주챔프1:'c1',주챔프2:'c2',주챔프3:'c3'};
+  let h=-1, map={};
+  for(let i=0;i<Math.min(rows.length,15);i++){
+    const cells=(rows[i]||[]).map(c=>String(c??'').trim());
+    if(cells.some(c=>c==='아이디')){
+      h=i; cells.forEach((c,j)=>{ if(want[c] && map[want[c]]==null) map[want[c]]=j; }); break;   // 중복 헤더는 먼저 나온 열 우선
+    }
+  }
+  if(h<0) throw new Error('"아이디" 열을 찾지 못했습니다. 최신 양식(양식 다운로드)이 맞는지 확인해주세요.');
+
+  const out=[];
+  for(let i=h+1;i<rows.length;i++){
+    const r=rows[i]||[];
+    const at=k=>map[k]==null?'':clean(r[map[k]]);
+    const idRaw=map['id']==null?'':String(r[map['id']]??'').trim();
+    if(!idRaw||idRaw.startsWith('(예시)')) continue;
+    const {name,tag}=splitId(idRaw);
+    if(!name) continue;
+    out.push({
+      name, tag,
+      tier:at('tier'), grade:gnum(at('grade')),
+      line:norm(at('line')), sub:normSub(at('sub')),
+      champs:[at('c1'),at('c2'),at('c3')].filter(Boolean)
+    });
+  }
+  return out;
+}
+
+// SheetJS는 용량이 커서, 엑셀을 실제로 읽을 때만 지연 로드합니다(관전자·팀장에겐 안 받음).
+let xlsxLoading=null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(xlsxLoading) return xlsxLoading;
+  xlsxLoading=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='/xlsx.full.min.js';
+    s.onload=()=>res(window.XLSX);
+    s.onerror=()=>{ xlsxLoading=null; rej(new Error('엑셀 처리 모듈을 불러오지 못했습니다')); };
+    document.head.appendChild(s);
+  });
+  return xlsxLoading;
+}
+
+async function loadFile(f){
+  try{
+    const XLSX=await loadXLSX();
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames.find(n=>n.includes('명단'))||wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,blankrows:false,defval:''});
+    const list=readSheet(rows);
+    if(!list.length) throw new Error('읽을 수 있는 참가자가 없습니다. 예시 행 아래에 입력했는지 확인해주세요.');
+    players=list; drawPlayers();
+    toast(`${list.length}명을 불러왔습니다`);
+  }catch(e){ toast(e.message,true); }
+}
+
+/* 직접 입력: 아이디(닉네임#태그), 티어, 등급, 주포, 부포, 주챔프1~3 */
+function addText(){
+  let suspect=0;   // 옛 형식(닉네임,태그,주포…)으로 보이는 줄
+  const add=$('cPool').value.split('\n').map(x=>x.trim()).filter(Boolean).map(raw=>{
+    const p=raw.split(',').map(x=>x.trim());
+    const {name,tag}=splitId(p[0]);
+    // 2번째 칸(티어 자리)이 티어가 아닌데 3번째 칸이 포지션이면 옛 순서 붙여넣기로 의심.
+    if(p[1] && tierIdx(p[1])<0 && !gnum(p[1]) && norm(p[2])) suspect++;
+    return {
+      name, tag,
+      tier:clean(p[1]),
+      grade:gnum(p[2]),
+      line:norm(p[3]),
+      sub:normSub(p[4]),
+      champs:[p[5],p[6],p[7]].map(clean).filter(Boolean)
+    };
+  }).filter(p=>p.name);
+  if(!add.length) return toast('추가할 내용이 없습니다',true);
+  players=players.concat(add); $('cPool').value=''; drawPlayers();
+  if(suspect) toast(`${add.length}명 추가 — 다만 ${suspect}줄이 옛 순서처럼 보입니다. 새 순서(아이디, 티어, 등급, 주포…)인지 확인하세요.`,true);
+  else toast(`${add.length}명을 추가했습니다`);
+}
+
+function drawPlayers(){
+  const seen={}, dup=new Set();
+  players.forEach(p=>{ const k=p.name+'#'+p.tag; if(seen[k]) dup.add(k); seen[k]=1; });
+
+  $('plist').innerHTML=players.map((p,i)=>`
+    <div class="prow ${dup.has(p.name+'#'+p.tag)?'dup':''}">
+      <span class="nm">${esc(p.name)}${p.tag?` <i>#${esc(p.tag)}</i>`:''}</span>
+      <span><span class="tag t-${p.line}">${esc(p.line)||'-'}</span></span>
+      <span class="tr">${gradeBadge(p.grade)} ${p.sub?esc(subLabel(p.sub))+' · ':''}${esc(p.tier)||'티어 미상'}</span>
+      <span class="ch">${p.champs.map(esc).join(' · ')}</span>
+      <button data-rm="${i}" title="삭제" aria-label="${esc(p.name)} 삭제">&times;</button>
+    </div>`).join('');
+
+  const byLine=LINES.map(l=>`${l} ${players.filter(p=>p.line===l).length}`).join(' · ');
+  const noLine=players.filter(p=>!p.line).length;
+  $('psum').innerHTML=players.length
+    ? `<b>${players.length}</b><span class="hint">명 · ${byLine}${noLine?` · 미지정 ${noLine}`:''}</span>
+       ${dup.size?`<span class="hint" style="color:var(--danger)">중복 ${dup.size}건</span>`:''}
+       <button class="btn ghost" id="bWipe" style="margin-left:auto;padding:5px 11px;font-size:12px">전체 비우기</button>`
+    : '<span class="hint">아직 참가자가 없습니다</span>';
+
+  $('plist').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+    players.splice(+b.dataset.rm,1); drawPlayers();
+  });
+  const wipe=$('bWipe');
+  if(wipe) wipe.onclick=()=>{ if(confirm('참가자 목록을 모두 지울까요?')){ players=[]; drawPlayers(); } };
+}
+
+async function createRoom(){
+  const names=leaders.filter(l=>l.name.trim());
+  if(names.length<2) return toast('팀장을 2명 이상 입력하세요',true);
+  if(!players.length) return toast('참가자 명단을 먼저 불러오세요',true);
+  const base=+$('cBase').value, size=+$('cSize').value, minBid=+$('cMin').value, clock=+$('cClock').value;
+  if(!(base>=1)) return toast('기본 시작 포인트를 1 이상으로 입력하세요',true);
+  if(!(size>=2&&size<=6)) return toast('팀 인원은 2~6명이어야 합니다',true);
+  if(!(minBid>=1&&minBid<=100000)) return toast('최소 입찰 단위는 1~100000이어야 합니다',true);
+  if(!(clock>=5&&clock<=300)) return toast('제한 시간은 5~300초여야 합니다',true);
+  const cfg={
+    title:$('cTitle').value.trim()||'경매',
+    base, size, minBid, clock,
+    order:($('cOrder')&&$('cOrder').value==='draw')?'draw':'random',
+    leaders:names, pool:players
+  };
+  const need=(cfg.size-1)*cfg.minBid;
+  const poor=names.filter(l=>(l.points??cfg.base)<need);
+  if(poor.length&&!confirm(`${poor.map(l=>l.name).join(', ')}의 시작 포인트로는 ${cfg.size-1}자리를 채울 수 없습니다. 계속할까요?`)) return;
+
+  $('bCreate').disabled=true;
+  try{
+    let d;
+    if(setupMode==='op'){
+      // 운영자는 로그인 없이 생성 코드로 만듭니다. 성공하면 코드는 소모됩니다.
+      const r=await fetch('/api/room',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({...cfg,inviteCode:opCode})});
+      d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||'방을 만들지 못했습니다');
+    }else{
+      d=await api('/api/room',{method:'POST',body:JSON.stringify(cfg)});
+    }
+    links=d; renderLinks(d);
+  }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); $('bCreate').disabled=false; } }
+}
+
+function renderLinks(d,again){
+  const origin=location.origin;
+  const host=`${origin}/#/r/${d.code}?k=${d.hostKey}`;
+  const rows=[
+    {label:'진행자 (나)', url:host, gold:true},
+    ...d.links.map(l=>({label:l.name, url:`${origin}/#/r/${d.code}?t=${l.token}`})),
+    {label:'관전용', url:`${origin}/#/r/${d.code}?v=${d.viewKey}`}
+  ];
+  const opCtx=setupMode==='op';
+  const backLabel=managerMode?'매니저 홈':(opCtx?'처음으로':'목록으로');
+  $('app').innerHTML=`
+  <div class="topbar"><div class="brand">경매방 <span>${again?'링크':'생성됨'}</span></div><div class="code">${d.code}</div>
+    <div class="conn"><button class="btn ghost" id="bBackList2" style="padding:5px 12px;font-size:12px">${backLabel}</button></div>
+  </div>
+  <div class="panel">
+    <span class="lbl">접속 링크</span>
+    <p class="hint" style="margin-bottom:14px">각 팀장에게 <b>자기 링크만</b> 개인 메시지로 보내세요. 링크가 곧 신분이라, 남의 링크를 받으면 그 팀으로 입찰할 수 있습니다.</p>
+    ${rows.map((r,i)=>`<div class="link-row">
+      <b style="${r.gold?'color:var(--gold)':''}">${esc(r.label)}</b>
+      <code>${esc(r.url)}</code>
+      <button class="btn" data-copy="${i}">복사</button>
+    </div>`).join('')}
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button class="btn gold" id="bGo" style="flex:1;padding:13px">진행자로 입장</button>
+    <button class="btn" id="bCopyAll">전체 목록 복사</button>
+  </div>
+  <p class="hint" style="margin-top:12px">${managerMode
+    ?`<b>매니저 홈</b>에서 이 방의 링크를 언제든 다시 볼 수 있습니다. 각 팀장에게는 <b>자기 링크만</b> 보내세요.`
+    :opCtx
+    ?`받은 <b>생성 코드(${fmtInv(opCode)})를 다시 입력하면</b> 언제든 이 화면으로 돌아올 수 있습니다. 각 팀장에게는 <b>자기 링크만</b> 보내세요.`
+    :'링크는 관리자 화면의 <b>링크</b> 버튼으로 언제든 다시 볼 수 있습니다.'} 방과 사진은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`;
+  $('bBackList2').onclick=managerMode
+    ? renderManager
+    : opCtx
+    ? ()=>{ go(''); renderLanding(); }
+    : renderRooms;
+
+  document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(rows[+b.dataset.copy].url));
+  $('bCopyAll').onclick=()=>copyText(rows.map(r=>`${r.label}\n${r.url}`).join('\n\n'));
+  $('bGo').onclick=()=>{
+    history.replaceState(null,'',`/#/r/${d.code}?k=${d.hostKey}`);
+    $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
+    connect(d.code,'k='+d.hostKey);
+  };
+}
+
+/* ═══ 시작 ═══ */
+if(roomCode){
+  const auth=q.get('k')?`k=${q.get('k')}`
+           :q.get('t')?`t=${q.get('t')}`
+           :q.get('v')?`v=${q.get('v')}`:null;
+  if(!auth){
+    $('app').innerHTML=`<div class="landing"><h1>링크가 올바르지 않습니다</h1>
+      <p class="hint">진행자가 보낸 링크 전체를 주소창에 붙여넣어야 합니다.</p></div>`;
+  }else{
+    $('app').innerHTML=`<div class="landing"><h1 class="num" style="color:var(--gold)">${roomCode}</h1>
+      <p class="hint">경매방에 접속하는 중입니다…</p></div>`;
+    connect(roomCode,auth);
+  }
+}else if(location.hash.startsWith('#/admin')){
+  renderAdmin();
+}else if(location.hash.startsWith('#/op')){
+  const om=location.hash.match(/^#\/op\/([A-Z0-9]{8})/i);
+  if(om){
+    $('app').innerHTML='<div class="landing"><p class="hint">생성 코드를 확인하는 중입니다…</p></div>';
+    startOperator(om[1]);
+  }else renderLanding();
+}else{
+  renderLanding();
+}
+</script>
+</body>
+</html>
