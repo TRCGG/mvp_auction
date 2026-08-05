@@ -79,6 +79,7 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .room .rs{font-size:12px;color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
 .pill{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
 .p-ready{color:var(--muted)} .p-live{color:var(--gold)} .p-done{color:var(--ok)} .p-gone{color:var(--danger)}
+.mode-auction{color:var(--gold)} .mode-draft{color:#6fa8dc}
 /* 관리자: 경매방 요약 바 · 코드별 그룹 · 카드 상태 강조 */
 .room-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .room-sum .s{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted)}
@@ -1179,7 +1180,7 @@ async function renderRooms(){
       return `<div class="room ${st[2]}">
         <div class="rc">${r.code}</div>
         <div>
-          <div class="rt">${esc(r.title)} <span class="pill ${st[0]}">${st[1]}</span></div>
+          <div class="rt">${esc(r.title)} <span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트'+(r.draftBalance==='tier'?' · 티어':r.draftBalance==='free'?' · 자유':'')):'경매'}</span> <span class="pill ${st[0]}">${st[1]}</span></div>
           <div class="rs">
             ${r.missing?'<span>방 데이터가 없습니다</span>':`
             <span>${r.teams}팀 · 참가자 ${r.players}명</span>

@@ -449,6 +449,8 @@ export class AuctionRoom {
       const sold = this.S.pool.filter(p => p.status === 'sold').length;
       return json({
         code: this.S.code, title: this.S.title,
+        mode: this.S.mode || 'auction',
+        draftBalance: this.S.draft ? this.S.draft.balance : null,
         phase: this.S.phase, current: this.S.current,
         teams: this.S.teams.length, players: this.S.pool.length, sold,
         filled: this.S.teams.every(t => this.openSlots(t) <= 0),
