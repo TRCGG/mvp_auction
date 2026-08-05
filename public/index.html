@@ -166,6 +166,23 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .team.me{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
 .my-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:1px 7px;border-radius:999px;vertical-align:middle;box-shadow:0 0 6px -1px var(--gold)}
 .team.top{background:linear-gradient(var(--gold-soft),var(--panel))}
+.team.turn{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
+.turn-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;vertical-align:middle}
+.tierrow{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0}
+.tchip{font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.tchip.on{color:#0A1017;background:var(--gold);border-color:var(--gold)}
+.tchip i{font-style:normal;font-size:9px;opacity:.75}
+.ttag{display:inline-block;min-width:15px;text-align:center;font-size:9.5px;font-weight:800;color:#000;border-radius:3px;padding:1px 4px;margin-right:5px;vertical-align:middle}
+.lbadge{font-style:normal;font-size:9px;font-weight:700;color:var(--muted);margin-left:5px;border:1px solid var(--line);border-radius:3px;padding:0 4px;vertical-align:middle}
+.posic{width:17px;height:17px;vertical-align:middle;margin-left:3px}
+.treqrow{display:flex;gap:6px;flex-wrap:wrap}
+.treq{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 9px}
+.treq b{font-family:var(--num);color:var(--text)}
+.treq.bad{color:var(--danger);border-color:var(--danger)}
+.treq.bad b{color:var(--danger)}
+.pcard.pick{cursor:pointer}
+.pcard.pick:hover{border-color:var(--gold);background:var(--gold-soft)}
+.pcard.noelig{opacity:.4}
 .team.full{opacity:.55}
 /* 드래그 배정: 드래그 중 드롭 가능한 팀 강조 */
 button.pcard[draggable]{cursor:grab}
@@ -233,6 +250,10 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 @keyframes st{0%{opacity:0;transform:scale(1.4)}16%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0}}
 .sfx-btn{background:none;border:1px solid var(--line);border-radius:7px;padding:2px 8px;font-size:14px;line-height:1.4;cursor:pointer}
 .sfx-btn.off{opacity:.45}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;z-index:200;padding:20px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.modal-hd b{font-size:15px}
 
 @media(max-width:900px){.setup,.stage{grid-template-columns:1fr}body{padding:12px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -292,6 +313,10 @@ function gradeBadge(g){
   const b=gradeBand(g); if(b<0) return '';
   return `<span class="gr gr${b}">${Math.round(Number(g)*10)/10}티어</span>`;
 }
+// 드래프트 팀 명단용 작은 티어 태그(정수부 티어, 색은 GRADE_COLORS).
+function tierTag(g){ const b=gradeBand(g); if(b<0) return ''; return `<span class="ttag" style="background:${GRADE_COLORS[b]};color:#000">${b+1}</span>`; }
+// 포지션 아이콘: 라이엇 라인 아이콘을 public/pos/에 내려받아 자체 서빙(외부 로드 없음).
+function posIcon(line){ return LINES.includes(line)?`<img class="posic" src="/pos/${line.toLowerCase()}.png" alt="${esc(line)}" title="${esc(line)}">`:(line?esc(line):''); }
 let toastH;
 function toast(msg,bad){
   const t=$('toast'); t.textContent=msg; t.className='toast on'+(bad?' bad':'');
@@ -313,6 +338,17 @@ const copyText=txt=>navigator.clipboard.writeText(txt).then(()=>toast('복사했
 });
 let leaders=[{name:'',line:'TOP',points:null},{name:'',line:'JGL',points:null},
              {name:'',line:'MID',points:null},{name:'',line:'ADC',points:null}];
+// 진행 방식 설정: 경매(auction) / 드래프트(draft). 드래프트 균형: 티어(tier)/자유(free).
+let gameMode='auction', draftBalance='tier';
+// 규칙 입력값은 모드 전환 시 재렌더돼도 유지되도록 모듈 상태로 보관합니다.
+let rules={title:'클랜 내전',size:5,clock:15,base:1000,minBid:10,order:'random'};
+function syncRules(){
+  const g=(id,d)=>{ const el=$(id); return el?el.value:d; };
+  const n=(id,d)=>{ const el=$(id); return el&&el.value!==''?+el.value:d; };
+  rules.title=g('cTitle',rules.title); rules.clock=n('cClock',rules.clock);
+  const sz=$('cSize'); if(sz&&!sz.readOnly&&sz.value!=='') rules.size=+sz.value;   // 티어(readonly 5)일 땐 사용자의 경매 인원값 보존
+  rules.base=n('cBase',rules.base); rules.minBid=n('cMin',rules.minBid); rules.order=g('cOrder',rules.order);
+}
 
 // 링크는 /#/r/CODE?k=... 형태라 쿼리가 해시 뒤에 옵니다.
 const [hPath,hQuery]=location.hash.slice(1).split('?');
@@ -372,7 +408,9 @@ function onEvent(ev){
   else if(ev.kind==='assign') flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} · 배정</span>`);
   else if(ev.kind==='bid' && me.role!=='host') beep();
   else if(ev.kind==='clock' && me.role!=='host') toast(`제한시간이 ${ev.clock}초로 바뀌었습니다`);
-  else if(ev.kind==='reset') toast('경매가 처음 상태로 초기화되었습니다');
+  else if(ev.kind==='reset') toast('처음 상태로 초기화되었습니다');
+  else if(ev.kind==='pick'){ flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} 지명</span>`); if(sfxOn()) soldChime(); }
+  else if(ev.kind==='draftstart') toast('드래프트가 시작되었습니다');
 }
 function flash(html){
   const f=$('flash'); if(!f) return;
@@ -411,6 +449,12 @@ function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
 /* ═══ 파생 ═══ */
 const myTeam=()=>me&&me.teamId?S.teams.find(t=>t.id===me.teamId):null;
 const remaining=()=>S?S.pool.filter(p=>p.status!=='sold'):[];
+// 드래프트: 팀이 이미 채운 티어 밴드 집합(팀장 등급 + 지명한 선수). 서버 teamBands와 동일 규칙.
+function teamBandsClient(t){
+  const s=new Set(); const lb=gradeBand(t.grade); if(lb>=0)s.add(lb);
+  S.pool.forEach(p=>{ if(p.teamId===t.id){ const b=gradeBand(p.grade); if(b>=0)s.add(b); } });
+  return s;
+}
 const leftMs=()=>{
   if(!S) return 0;
   if(S.pausedLeft!=null) return S.pausedLeft;
@@ -444,20 +488,57 @@ function topbar(){
     <div class="brand">${esc(S.title)} <span>LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
-    <div class="conn">${me.role==='host'?`<button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+    <div class="conn">${me.role==='host'?`<button class="btn ghost" id="bLinks" style="padding:4px 9px;font-size:12px">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
   </div>`;
+}
+
+// 진행자 전용: 방 안에서 접속 링크를 모달로 다시 보기. 이번 세션 링크가 없으면(새로고침·북마크) hostKey로 서버 조회.
+async function openLinksModal(){
+  if(!S||me.role!=='host') return;
+  // 캐시된 링크는 '이 방'의 것일 때만 재사용(관리자·매니저 목록에서 다른 방으로 입장한 경우 방지).
+  let d=(links&&links.code===S.code&&links.links)?links:null;
+  if(!d){
+    try{
+      const k=new URLSearchParams(wsAuth).get('k')||'';   // 연결에 쓴 진행자 키 — 모든 입장 경로에서 정확
+      const r=await fetch(`/api/room/${S.code}/links?k=${encodeURIComponent(k)}`);
+      d=await r.json(); if(!r.ok) throw new Error(d.error||'링크를 불러오지 못했습니다');
+      links=d;
+    }catch(e){ return toast(e.message||'링크를 불러오지 못했습니다',true); }
+  }
+  const origin=location.origin;
+  const rows=[
+    {label:'진행자 (나)', url:`${origin}/#/r/${d.code}?k=${d.hostKey}`, gold:true},
+    ...d.links.map(l=>({label:l.name, url:`${origin}/#/r/${d.code}?t=${l.token}`})),
+    {label:'관전용', url:`${origin}/#/r/${d.code}?v=${d.viewKey}`}
+  ];
+  let m=$('linkmodal');
+  if(!m){ m=document.createElement('div'); m.id='linkmodal'; document.body.appendChild(m); }
+  m.className='modal-bg';
+  m.innerHTML=`<div class="modal">
+    <div class="modal-hd"><b>접속 링크</b><button class="btn ghost" id="lmClose" style="padding:5px 12px;font-size:12px">닫기</button></div>
+    <p class="hint" style="margin-bottom:12px">각 팀장에게 <b>자기 링크만</b> 개인적으로 보내세요. 링크가 곧 신분입니다.</p>
+    ${rows.map((r,i)=>`<div class="link-row"><b style="${r.gold?'color:var(--gold)':''}">${esc(r.label)}</b><code>${esc(r.url)}</code><button class="btn" data-lcopy="${i}">복사</button></div>`).join('')}
+    <div class="row" style="margin-top:12px"><button class="btn" id="lmAll" style="flex:1">전체 목록 복사</button></div>
+  </div>`;
+  const close=()=>m.remove();
+  $('lmClose').onclick=close;
+  m.onclick=e=>{ if(e.target===m) close(); };   // 바깥 어두운 영역 클릭 시 닫기
+  m.querySelectorAll('[data-lcopy]').forEach(b=>b.onclick=()=>copyText(rows[+b.dataset.lcopy].url));
+  $('lmAll').onclick=()=>copyText(rows.map(r=>`${r.label}\n${r.url}`).join('\n\n'));
 }
 
 function stage(){
   return `<div class="stage">
     <div>
-      <div class="panel lot" id="lotPanel">${lotBody()}<div class="flash" id="flash"><b></b></div></div>
+      <div class="panel lot" id="lotPanel">${S.mode==='draft'?draftBody():lotBody()}<div class="flash" id="flash"><b></b></div></div>
       <div class="panel" style="margin-top:12px">
         <span class="lbl">진행 기록</span>
         <div class="log-list">${S.log.length?S.log.map(l=>l.kind==='sold'
           ?`<div><em>${l.price}P</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
           :l.kind==='assign'
           ?`<div><em style="color:var(--ok)">배정</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
+          :l.kind==='pick'
+          ?`<div><em style="color:var(--gold)">지명</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
           :`<div><em style="color:var(--danger)">유찰</em><b>${esc(l.player)}</b></div>`).join('')
           :'<span class="hint">아직 기록이 없습니다</span>'}</div>
       </div>
@@ -550,27 +631,91 @@ function bidControls(t,mine){
 }
 
 function teamCard(t){
-  const mineT=me.teamId===t.id, top=S.bid&&S.bid.teamId===t.id;
+  const draft=S.mode==='draft';
+  const mineT=me.teamId===t.id, top=!draft&&S.bid&&S.bid.teamId===t.id;
+  const curId=(draft&&S.phase==='live'&&S.draft)?S.draft.seq[S.draft.ptr]:null;
+  const turn=curId===t.id;
+  const lgBand=draft?gradeBand(t.grade):-1;
+  // 드래프트 명단은 풀에서 직접 읽어 등급·라인이 항상 실리게 함(예전 지명분도 티어 표시).
+  const roster=draft?S.pool.filter(p=>p.teamId===t.id):t.players;
   const pct=t.start?Math.round(t.points/t.start*100):0;
   const slots=Array.from({length:S.size-1},(_,i)=>{
     const pl=t.players[i];
     return pl?`<div class="slot on" style="color:var(--${(pl.line||'none').toLowerCase()})">${pl.line||'●'}</div>`
              :'<div class="slot">빈자리</div>';
   }).join('');
-  return `<div class="team ${mineT?'me':''} ${top?'top':''} ${t.open<=0?'full':''}" ${(me.role==='host'&&t.open>0&&!S.current)?`data-team-drop="${t.id}"`:''}>
+  const ptBlock=draft
+    ? `<div class="team-pt"><b>${t.players.length}${S.draft?'/'+S.draft.picksPerTeam:''}</b><i>지명</i></div>`
+    : `<div class="team-pt"><b>${t.points}</b><i>POINT</i></div>`;
+  const tierRow=(draft&&S.draft&&S.draft.balance==='tier')
+    ? `<div class="tierrow">${[0,1,2,3,4].map(b=>{
+        const filled=teamBandsClient(t).has(b);
+        const st=filled?` style="background:${GRADE_COLORS[b]};border-color:${GRADE_COLORS[b]};color:#0A1017"`:'';
+        return `<span class="tchip ${filled?'on':''}"${st}>${b+1}티어</span>`;
+      }).join('')}</div>` : '';
+  const dropAttr=(me.role==='host'&&!draft&&t.open>0&&!S.current)?`data-team-drop="${t.id}"`:'';
+  return `<div class="team ${mineT?'me':''} ${top?'top':''} ${turn?'turn':''} ${t.open<=0?'full':''}" ${dropAttr}>
     <div class="team-hd">
-      <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}</div>
-      <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${t.start!==S.base?` · 시작 ${t.start}P`:''}</div></div>
-      <div class="team-pt"><b>${t.points}</b><i>POINT</i></div>
+      <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}${turn?'<span class="turn-badge">지명중</span>':''}</div>
+      <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${draft&&lgBand>=0?` · ${lgBand+1}티어`:(!draft&&t.start!==S.base?` · 시작 ${t.start}P`:'')}</div></div>
+      ${ptBlock}
     </div>
-    <div class="gauge"><i style="width:${pct}%"></i></div>
+    ${draft?'':`<div class="gauge"><i style="width:${pct}%"></i></div>`}
+    ${tierRow}
     <div class="slots">${slots}</div>
     <div class="roster">
-      <div class="lead"><b>${esc(t.leader)}</b><span>팀장</span></div>
-      ${t.players.map(p=>`<div><b>${esc(p.name)}</b><span>${p.price}</span></div>`).join('')}
-      ${t.open>0?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
+      <div class="lead"><b>${esc(t.leader)}${draft?'<i class="lbadge">팀장</i>':''}</b><span>${draft?tierTag(t.grade)+posIcon(t.leaderLine):'팀장'}</span></div>
+      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${draft?tierTag(p.grade)+posIcon(p.line):p.price}</span></div>`).join('')}
+      ${(!draft&&t.open>0)?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
     </div>
   </div>`;
+}
+
+// 드래프트 진행판(경매의 lotBody 자리). 준비/진행/완료 단계별로 그립니다.
+function draftBody(){
+  const d=S.draft||{seq:[],ptr:0,balance:'free',picksPerTeam:0};
+  if(S.phase==='ready'){
+    return `<div class="lot-empty">${d.balance==='tier'?'티어 균형':'자유'} 드래프트 준비 완료<br>
+        ${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명 지명</div>
+      ${me.role==='host'
+        ? `<div class="row" style="margin-top:8px"><button class="btn gold" style="flex:1" id="bStartDraft">드래프트 시작</button></div>`
+        : '<div class="hint" style="text-align:center;margin-top:8px">진행자가 곧 시작합니다</div>'}`;
+  }
+  if(S.phase==='done'){
+    return `<div class="lot-empty">드래프트 완료<br>아래 팀 구성을 확인하세요</div>
+      <div class="row"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장</button></div>
+      ${me.role==='host'?`<div class="row" style="margin-top:8px;justify-content:flex-end">
+        <button class="btn ghost" id="bReset" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger)">드래프트 초기화</button>
+      </div>`:''}`;
+  }
+  // 진행 중
+  const curId=d.seq[d.ptr];
+  const t=S.teams.find(x=>x.id===curId);
+  const myTurn=!!me.teamId&&me.teamId===curId;
+  const ms=leftMs(), over=ms<=0, pct=Math.max(0,Math.min(100,ms/(S.clock*1000)*100));
+  const round=Math.floor(d.ptr/S.teams.length)+1;
+  let need='';
+  if(d.balance==='tier'&&t){
+    const rem=[0,1,2,3,4].filter(b=>!teamBandsClient(t).has(b)).map(b=>b+1);
+    need=` · 지명할 티어 <b style="color:var(--gold)">${rem.join('·')}</b>`;
+  }
+  return `<div class="lot-no">ROUND ${round}/${d.picksPerTeam} · PICK ${Math.min(d.ptr+1,d.seq.length)}/${d.seq.length}</div>
+    <div class="lot-name" style="font-size:clamp(26px,4vw,42px)">${esc(t?t.leader:'')} <span style="font-size:.5em;color:var(--muted)">팀 차례</span></div>
+    <div class="hint" style="margin-bottom:12px">${d.balance==='tier'?'티어 균형':'자유'} 드래프트${need}</div>
+    <div class="clock ${ms<=5000?'hot':''}">
+      <b class="num" id="clockVal">${Math.max(0,Math.ceil(ms/1000))}</b>
+      <div class="bar"><i id="clockBar" style="width:${pct}%"></i></div>
+      ${S.pausedLeft!=null?'<span class="hint" style="color:var(--gold)">일시정지</span>':over?'<span class="hint" style="color:var(--danger)">시간 초과 · 지명 대기</span>':''}
+    </div>
+    <div class="hint" style="margin-top:14px">${
+      myTurn?'<b style="color:var(--gold)">내 차례입니다.</b> 오른쪽 남은 매물에서 선수를 눌러 지명하세요.'
+      :me.role==='host'?'현재 팀장이 고르는 중입니다. 오른쪽 매물을 클릭하면 진행자가 대신 지명합니다.'
+      :'다른 팀 차례입니다. 남은 매물을 살펴보세요.'}</div>
+    ${me.role==='host'?`<div class="row" style="margin-top:12px;justify-content:flex-end">
+      <button class="btn" id="bPause" style="font-size:12px;padding:6px 12px">${S.pausedLeft!=null?'재개':'일시정지'}</button>
+      <button class="btn" id="bUndo" style="font-size:12px;padding:6px 12px">되돌리기</button>
+      <button class="btn ghost" id="bReset" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger)">초기화</button>
+    </div>${hostClockCtl()}`:''}`;
 }
 
 // 순서대로 다음에 나올 매물 목록(현재 제외). 추첨(draw)이면 확정 순서, 아니면 pool 순서.
@@ -588,6 +733,11 @@ function nextUpList(){
 function poolPanel(){
   const host=me.role==='host';
   const live=!!S.current;
+  const draft=S.mode==='draft';
+  const dLive=draft&&S.phase==='live'&&!!S.draft;
+  const curId=dLive?S.draft.seq[S.draft.ptr]:null;
+  const iCanPick=dLive&&(host||me.teamId===curId);   // 지금 지명할 수 있는 사람인가
+  const curTeam=curId?S.teams.find(x=>x.id===curId):null;
   const draw=S.orderMode==='draw';
   const rem=remaining().filter(p=>p.id!==S.current);
   const posline=LINES.map(l=>`${l} ${rem.filter(p=>p.line===l).length}`).join(' · ');
@@ -609,7 +759,15 @@ function poolPanel(){
       </div>`;
     const bst=`style="border-color:${bc}"`;
     // 진행자는 매물이 없을 때 카드를 팀으로 드래그해 배정할 수 있습니다.
-    const drag=(host&&!live)?`draggable="true" data-dpid="${p.id}"`:'';
+    const drag=(host&&!live&&!draft)?`draggable="true" data-dpid="${p.id}"`:'';
+    if(draft){
+      // 드래프트: 내 차례(또는 진행자)면 적격 매물에 지명 버튼, 아니면 표시만.
+      let eligible=iCanPick&&p.status!=='sold';
+      if(eligible&&S.draft.balance==='tier'&&curTeam){ const b=gradeBand(p.grade); eligible=b>=0&&!teamBandsClient(curTeam).has(b); }
+      return eligible
+        ? `<button class="pcard pick" data-pick="${p.id}" ${bst}>${inner}</button>`
+        : `<span class="pcard ${(iCanPick&&p.status!=='sold')?'noelig':''}" ${bst}>${inner}</span>`;
+    }
     return host
       ? `<button class="pcard" data-lot="${p.id}" ${drag} ${bst} ${live?'disabled':''}>${inner}</button>`
       : `<span class="pcard" ${bst}>${inner}</span>`;
@@ -646,7 +804,7 @@ function poolPanel(){
         <button id="pv-grade" data-pv="grade" aria-pressed="${poolView==='grade'}" class="${poolView==='grade'?'on':''}">등급순</button>
       </div>
     </div>
-    <div class="hint" style="margin:4px 0 8px">${posline}${noline?` · 미지정 ${noline}`:''}${host&&live?' · <span style="color:var(--gold)">현재 매물 마무리 후 선택 가능</span>':host?' · <span style="color:var(--gold)">카드를 팀으로 끌어다 놓으면 0P로 배정됩니다</span>':''}</div>
+    <div class="hint" style="margin:4px 0 8px">${posline}${noline?` · 미지정 ${noline}`:''}${host&&live?' · <span style="color:var(--gold)">현재 매물 마무리 후 선택 가능</span>':(host&&!draft)?' · <span style="color:var(--gold)">카드를 팀으로 끌어다 놓으면 0P로 배정됩니다</span>':''}</div>
     ${body}
   </div>`;
 }
@@ -711,7 +869,13 @@ function wire(){
     // 켤 때: 사용자 제스처로 오디오 잠금을 풀고, 컨텍스트가 running이 되면 짧은 확인음.
     if(!sfxMuted){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const blip=()=>tone(880,0,.09,.05); actx.state==='running'?blip():actx.resume().then(blip).catch(()=>{}); }catch{} }
   });
-  on('bReset',()=>{ if(confirm('경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)')) send('reset'); });
+  on('bReset',()=>{ const draft=S&&S.mode==='draft';
+    const msg=draft
+      ? '드래프트를 처음 상태로 초기화할까요?\n\n모든 지명 기록이 지워지고 지명 순서가 새로 추첨됩니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)'
+      : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
+    if(confirm(msg)) send('reset'); });
+  on('bStartDraft',()=>send('startdraft'));
+  on('bLinks',openLinksModal);
   on('bSell',()=>send('sell'));
   on('bPass',()=>{ if(S.bid&&!confirm('최고 입찰이 있는데 유찰 처리할까요?')) return; send('pass'); });
   on('bPause',()=>send(S.pausedLeft!=null?'resume':'pause'));
@@ -728,6 +892,7 @@ function wire(){
   if(custom) custom.onkeydown=e=>{ if(e.key==='Enter') doCustom(); };
   document.querySelectorAll('[data-bid]').forEach(b=>b.onclick=()=>send('bid',{amount:+b.dataset.bid}));
   document.querySelectorAll('[data-lot]').forEach(b=>b.onclick=()=>send('lot',{id:b.dataset.lot}));
+  document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>send('pick',{playerId:b.dataset.pick,ptr:S.draft?S.draft.ptr:-1}));
   // 유찰/대기 카드 → 팀 카드로 드래그해 0P 배정 (진행자, 매물 없을 때)
   // 전용 타입(application/x-dpid)을 실어, 외부 텍스트·링크 드래그는 무시합니다.
   const isCard=e=>e.dataTransfer.types.includes('application/x-dpid');
@@ -807,13 +972,15 @@ function shrinkImage(file){
 /* 시계는 다시 그리지 않고 숫자만 갱신 */
 let lastTick=0;
 setInterval(()=>{
-  if(!S||!S.current){ lastTick=0; return; }
+  // 경매(현재 매물) 또는 진행 중 드래프트에서 초읽기 갱신.
+  const running = S && (S.current || (S.mode==='draft' && S.phase==='live'));
+  if(!running){ lastTick=0; return; }
   const v=$('clockVal'), bar=$('clockBar');
   if(!v) return;
   const ms=leftMs();
-  const sec=Math.ceil(ms/1000);
+  const sec=Math.max(0,Math.ceil(ms/1000));
   v.textContent=sec;
-  bar.style.width=Math.min(100,ms/(S.clock*1000)*100)+'%';
+  if(bar) bar.style.width=Math.max(0,Math.min(100,ms/(S.clock*1000)*100))+'%';
   v.parentElement.classList.toggle('hot',ms<=5000);
   // 마지막 3·2·1초 긴장 틱(진행자 화면, 음소거 아닐 때). 입찰로 시간이 늘면 다시 울립니다.
   if(S.pausedLeft==null && sec>=1 && sec<=3 && sec!==lastTick && sfxOn()){ lastTick=sec; tickSound(); }
@@ -1184,30 +1351,46 @@ function renderSetup(mode){
   <div class="setup">
     <div style="display:flex;flex-direction:column;gap:16px">
       <div class="panel">
-        <span class="lbl">규칙</span>
+        <span class="lbl">진행 방식</span>
+        <div class="modesel" style="display:flex;gap:8px;margin-bottom:14px">
+          <button type="button" class="btn ${gameMode==='auction'?'gold':'ghost'}" data-gm="auction" style="flex:1">경매</button>
+          <button type="button" class="btn ${gameMode==='draft'?'gold':'ghost'}" data-gm="draft" style="flex:1">드래프트 (순서 지명)</button>
+        </div>
+        ${gameMode==='draft'?`
+        <div style="margin-bottom:14px"><label class="lbl" for="cBalance">균형 규칙</label>
+          <select id="cBalance">
+            <option value="tier" ${draftBalance==='tier'?'selected':''}>티어 균형 — 팀마다 1·2·3·4·5티어 1명씩(팀장 포함)</option>
+            <option value="free" ${draftBalance==='free'?'selected':''}>자유 — 제약 없이 지명</option>
+          </select>
+        </div>`:''}
         <div class="grid2">
-          <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="클랜 내전 경매"></div>
-          <div><label class="lbl" for="cBase">기본 시작 포인트</label><input type="number" id="cBase" value="1000" min="10"></div>
-          <div><label class="lbl" for="cSize">팀 인원 (팀장 포함)</label><input type="number" id="cSize" value="5" min="2" max="6"></div>
-          <div><label class="lbl" for="cMin">최소 입찰 단위</label><input type="number" id="cMin" value="10" min="1"></div>
-          <div><label class="lbl" for="cClock">입찰 제한 시간 (초)</label><input type="number" id="cClock" value="15" min="5" max="300"></div>
+          <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="${esc(rules.title)}"></div>
+          <div><label class="lbl" for="cSize">팀 인원 (팀장 포함)</label><input type="number" id="cSize" value="${(gameMode==='draft'&&draftBalance==='tier')?5:rules.size}" min="2" max="6" ${(gameMode==='draft'&&draftBalance==='tier')?'readonly title="티어 균형은 5명 고정"':''}></div>
+          <div><label class="lbl" for="cClock">${gameMode==='draft'?'지명 제한 시간 (초)':'입찰 제한 시간 (초)'}</label><input type="number" id="cClock" value="${rules.clock}" min="5" max="300"></div>
+          ${gameMode==='auction'?`
+          <div><label class="lbl" for="cBase">기본 시작 포인트</label><input type="number" id="cBase" value="${rules.base}" min="10"></div>
+          <div><label class="lbl" for="cMin">최소 입찰 단위</label><input type="number" id="cMin" value="${rules.minBid}" min="1"></div>
           <div><label class="lbl" for="cOrder">매물 순서</label>
             <select id="cOrder">
-              <option value="random">무작위 (진행자가 매번 뽑기)</option>
-              <option value="draw">미리 추첨 (순서 확정·공개)</option>
+              <option value="random" ${rules.order!=='draw'?'selected':''}>무작위 (진행자가 매번 뽑기)</option>
+              <option value="draw" ${rules.order==='draw'?'selected':''}>미리 추첨 (순서 확정·공개)</option>
             </select>
-          </div>
+          </div>`:''}
         </div>
-        <p class="hint" style="margin-top:12px">입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.</p>
+        <p class="hint" style="margin-top:12px">${gameMode==='draft'
+          ? '팀장이 <b>스네이크 순서</b>로 선수를 직접 지명합니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다.'+(draftBalance==='tier'?' <b>티어 균형</b>은 팀 인원 5명 고정이며, 아래에서 <b>팀장 등급(1~5)</b>을 입력해야 합니다.':'')
+          : '입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.'}</p>
       </div>
       <div class="panel">
         <span class="lbl">팀장</span>
         <div id="leaderList"></div>
         <div class="row" style="margin-top:4px">
           <button class="btn ghost" id="bAdd">+ 팀장 추가</button>
-          <button class="btn ghost" id="bClear">포인트 초기화</button>
+          ${gameMode==='auction'?'<button class="btn ghost" id="bClear">포인트 초기화</button>':''}
         </div>
-        <p class="hint" style="margin-top:10px">세 번째 칸은 그 팀장의 시작 포인트입니다. 비워두면 기본값을 씁니다.</p>
+        <p class="hint" style="margin-top:10px">${gameMode==='draft'
+          ? '세 번째 칸은 <b>팀장 등급(1~5, 소수 가능)</b>입니다.'+(draftBalance==='tier'?' 그 팀장이 채우는 티어가 되어, 팀은 나머지 4개 티어를 지명합니다.':' 자유 드래프트에선 참고용입니다.')
+          : '세 번째 칸은 그 팀장의 시작 포인트입니다. 비워두면 기본값을 씁니다.'}</p>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:16px">
@@ -1224,6 +1407,7 @@ function renderSetup(mode){
         </div>
         <div class="plist" id="plist"></div>
         <div class="psum" id="psum"></div>
+        <div id="tierReq"></div>
         <details style="margin-top:14px">
           <summary class="hint" style="cursor:pointer">엑셀 없이 직접 입력하기</summary>
           <p class="hint" style="margin:8px 0 6px">엑셀 양식과 같은 순서로, 쉼표로 구분해 한 줄에 한 명씩 적습니다.<br>
@@ -1236,7 +1420,7 @@ function renderSetup(mode){
         </details>
       </div>
       <div class="panel">
-        <button class="btn gold" id="bCreate" style="width:100%;padding:13px">경매방 만들기</button>
+        <button class="btn gold" id="bCreate" style="width:100%;padding:13px">${gameMode==='draft'?'드래프트 방 만들기':'경매방 만들기'}</button>
         <p class="hint" style="margin-top:10px">만들고 나면 팀장별 접속 링크가 나옵니다. 설정은 이후 바꿀 수 없으니 확인하고 눌러주세요.</p>
       </div>
     </div>
@@ -1255,7 +1439,9 @@ function renderSetup(mode){
   drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
   $('bText').onclick=addText;
   $('bAdd').onclick=()=>{leaders.push({name:'',line:'',points:null});drawLeaders();};
-  $('bClear').onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
+  const bClear=$('bClear'); if(bClear) bClear.onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
+  document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{ syncRules(); gameMode=b.dataset.gm; renderSetup(setupMode); });
+  const bal=$('cBalance'); if(bal) bal.onchange=()=>{ syncRules(); draftBalance=bal.value; renderSetup(setupMode); };
   $('bCreate').onclick=createRoom;
 }
 
@@ -1266,20 +1452,23 @@ function drawLeaders(){
       <select data-i="${i}" data-f="line" aria-label="팀장 ${i+1} 라인">
         ${['',...LINES].map(v=>`<option value="${v}" ${v===l.line?'selected':''}>${v||'라인'}</option>`).join('')}
       </select>
-      <input type="number" min="0" placeholder="기본" value="${l.points??''}" data-i="${i}" data-f="points"
-             aria-label="팀장 ${i+1} 시작 포인트" onwheel="this.blur()">
+      ${gameMode==='draft'
+        ? `<input type="text" placeholder="등급" value="${esc(l.grade??'')}" data-i="${i}" data-f="grade" aria-label="팀장 ${i+1} 등급(1~5)" style="text-align:center">`
+        : `<input type="number" min="0" placeholder="기본" value="${l.points??''}" data-i="${i}" data-f="points" aria-label="팀장 ${i+1} 시작 포인트" onwheel="this.blur()">`}
       <button data-del="${i}" title="삭제" aria-label="팀장 ${i+1} 삭제">&times;</button>
     </div>`).join('');
   $('leaderList').querySelectorAll('[data-f]').forEach(el=>{
     el.oninput=el.onchange=()=>{
       const i=+el.dataset.i, f=el.dataset.f;
       leaders[i][f]= f==='points' ? (el.value===''?null:Math.max(0,+el.value)) : el.value;
+      drawTierReq();   // 이름·등급 어느 쪽을 고쳐도 티어표 갱신(비-티어/미표시면 즉시 반환)
     };
   });
   $('leaderList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
     if(leaders.length<=2) return toast('팀장은 2명 이상이어야 합니다',true);
     leaders.splice(+b.dataset.del,1); drawLeaders();
   });
+  drawTierReq();
 }
 
 // Object.create(null): 'constructor'·'toString' 같은 상속 속성이 오탐되지 않게 합니다.
@@ -1419,27 +1608,70 @@ function drawPlayers(){
   });
   const wipe=$('bWipe');
   if(wipe) wipe.onclick=()=>{ if(confirm('참가자 목록을 모두 지울까요?')){ players=[]; drawPlayers(); } };
+  drawTierReq();
+}
+
+// 티어 균형 드래프트: '티어별 현재/필요' 표를 설정 화면에 보여줘 만들기 전에 균형을 확인하게 합니다.
+function drawTierReq(){
+  const box=$('tierReq'); if(!box) return;
+  if(!(gameMode==='draft'&&draftBalance==='tier')){ box.innerHTML=''; return; }
+  const names=leaders.filter(l=>l.name.trim());
+  const noGL=names.filter(l=>!gnum(l.grade)).length;
+  const noGP=players.filter(p=>!gnum(p.grade)).length;
+  const rows=[0,1,2,3,4].map(b=>{
+    const need=names.filter(l=>gradeBand(gnum(l.grade))!==b).length;
+    const have=players.filter(p=>gradeBand(p.grade)===b).length;
+    return `<span class="treq ${have>=need?'':'bad'}">${b+1}티어 <b>${have}</b>/${need}</span>`;
+  }).join('');
+  box.innerHTML=`<div class="lbl" style="margin:14px 0 6px">티어별 매물 (현재/필요)</div>
+    <div class="treqrow">${rows}</div>
+    ${noGL?`<p class="hint" style="color:var(--danger);margin-top:7px">팀장 ${noGL}명의 등급이 비어 있습니다. 등급을 입력해야 시작할 수 있습니다.</p>`:''}
+    ${noGP?`<p class="hint" style="margin-top:7px">등급 없는 매물 ${noGP}명은 티어 드래프트에서 지명되지 않습니다(남는 매물로 유지).</p>`:''}`;
 }
 
 async function createRoom(){
+  syncRules();
   const names=leaders.filter(l=>l.name.trim());
   if(names.length<2) return toast('팀장을 2명 이상 입력하세요',true);
   if(!players.length) return toast('참가자 명단을 먼저 불러오세요',true);
-  const base=+$('cBase').value, size=+$('cSize').value, minBid=+$('cMin').value, clock=+$('cClock').value;
+  const clock=rules.clock;
+  if(!(clock>=5&&clock<=300)) return toast('제한 시간은 5~300초여야 합니다',true);
+
+  if(gameMode==='draft'){
+    const tier=draftBalance==='tier';
+    const size=tier?5:rules.size;
+    if(!tier&&!(size>=2&&size<=6)) return toast('팀 인원은 2~6명이어야 합니다',true);
+    const picks=tier?4:size-1;   // 팀당 지명 수
+    if(players.length<names.length*picks) return toast(`드래프트 매물이 부족합니다 (필요 ${names.length*picks}명, 현재 ${players.length}명)`,true);
+    if(tier){
+      const noG=names.filter(l=>!gnum(l.grade));
+      if(noG.length) return toast('팀장 등급(1~5)을 입력하세요: '+noG.map(l=>l.name).join(', '),true);
+      // 각 티어별 매물이 그 티어를 지명해야 하는 팀 수만큼 있는지 확인(서버 검증과 동일).
+      for(let b=0;b<5;b++){
+        const need=names.filter(l=>gradeBand(gnum(l.grade))!==b).length;
+        const have=players.filter(p=>gradeBand(p.grade)===b).length;
+        if(have<need) return toast(`${b+1}티어 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)`,true);
+      }
+    }
+    // 드래프트는 포인트를 안 쓰므로 base/minBid는 서버 검증만 통과할 안전값으로 보냅니다.
+    return submitRoom({ mode:'draft', draftBalance, title:rules.title.trim()||'드래프트',
+      base:1000, size, minBid:10, clock, leaders:names, pool:players });
+  }
+
+  // 경매
+  const base=rules.base, size=rules.size, minBid=rules.minBid;
   if(!(base>=1)) return toast('기본 시작 포인트를 1 이상으로 입력하세요',true);
   if(!(size>=2&&size<=6)) return toast('팀 인원은 2~6명이어야 합니다',true);
   if(!(minBid>=1&&minBid<=100000)) return toast('최소 입찰 단위는 1~100000이어야 합니다',true);
-  if(!(clock>=5&&clock<=300)) return toast('제한 시간은 5~300초여야 합니다',true);
-  const cfg={
-    title:$('cTitle').value.trim()||'경매',
-    base, size, minBid, clock,
-    order:($('cOrder')&&$('cOrder').value==='draw')?'draw':'random',
-    leaders:names, pool:players
-  };
+  const cfg={ mode:'auction', title:rules.title.trim()||'경매', base, size, minBid, clock,
+    order:rules.order==='draw'?'draw':'random', leaders:names, pool:players };
   const need=(cfg.size-1)*cfg.minBid;
   const poor=names.filter(l=>(l.points??cfg.base)<need);
   if(poor.length&&!confirm(`${poor.map(l=>l.name).join(', ')}의 시작 포인트로는 ${cfg.size-1}자리를 채울 수 없습니다. 계속할까요?`)) return;
+  return submitRoom(cfg);
+}
 
+async function submitRoom(cfg){
   $('bCreate').disabled=true;
   try{
     let d;
@@ -1453,7 +1685,7 @@ async function createRoom(){
       d=await api('/api/room',{method:'POST',body:JSON.stringify(cfg)});
     }
     links=d; renderLinks(d);
-  }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); $('bCreate').disabled=false; } }
+  }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); const b=$('bCreate'); if(b) b.disabled=false; } }
 }
 
 function renderLinks(d,again){

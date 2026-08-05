@@ -14,6 +14,14 @@ const INVITE_TTL = 30 * 86400e3;  // 방 생성 코드 유효 기간
 const MANAGER_MAX = 10;           // 매니저 코드 하나로 만들 수 있는 동시 경매방 수
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
 
+// 실력 등급 파싱: '1'~'5.9' → 숫자, 아니면 null. (드래프트 티어 판정·매물 등급 공용)
+const parseGrade = v => {
+  const m = String(v ?? '').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i);
+  return m ? Math.round(parseFloat(m[1]) * 10) / 10 : null;
+};
+// 티어 밴드 0~4 (1티어→0 … 5티어→4), 등급 없으면 -1. 소수는 같은 티어(정수부)로 본다.
+const gradeBand = g => { const n = Number(g); return (g == null || !Number.isFinite(n) || n < 1) ? -1 : Math.min(4, Math.floor(n) - 1); };
+
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)))
   .map(b => CODE_CHARS[b % CODE_CHARS.length]).join('');
 const token = () => crypto.randomUUID().replace(/-/g, '');
@@ -280,6 +288,13 @@ export default {
       return stub.fetch('https://do/peek');
     }
 
+    // 진행자 전용: 방 안에서 접속 링크 다시 보기 (hostKey 검증은 DO에서)
+    const linksM = path.match(/^\/api\/room\/([A-Z0-9]{6})\/links$/);
+    if (linksM && req.method === 'GET') {
+      const stub = env.ROOM.get(env.ROOM.idFromName(linksM[1]));
+      return stub.fetch(`https://do/links?k=${encodeURIComponent(url.searchParams.get('k') || '')}`);
+    }
+
     // 매물 사진 — 진행자가 올리고 방에 접속한 모두가 봅니다
     const img = path.match(/^\/api\/room\/([A-Z0-9]{6})\/img\/(p\d{1,3})$/);
     if (img) {
@@ -445,6 +460,16 @@ export class AuctionRoom {
       });
     }
 
+    // 진행자 전용: 방 안에서 링크를 다시 볼 수 있게 hostKey로만 링크를 내려줍니다.
+    if (url.pathname === '/links') {
+      if (!this.S) return json({ error: '없는 방입니다' }, 404);
+      if (!safeEqual(url.searchParams.get('k') || '', this.auth.hostKey)) return json({ error: '진행자만 볼 수 있습니다' }, 403);
+      return json({
+        code: this.S.code, hostKey: this.auth.hostKey, viewKey: this.auth.viewKey,
+        links: Object.entries(this.auth.teams).map(([tk, id]) => ({ id, name: (this.team(id) || {}).name || id, token: tk }))
+      });
+    }
+
     /* 매물 사진. SQLite 백엔드 DO는 값 한도가 2MB지만 100KB로 넉넉히 제한합니다. */
     if (url.pathname === '/img-get') {
       if (!this.S) return json({ error: '없는 방입니다' }, 404);
@@ -535,6 +560,7 @@ export class AuctionRoom {
         name: String(l.name).trim().slice(0, 20) + ' 팀',
         leader: String(l.name).trim().slice(0, 20),
         leaderLine: LINES.includes(l.line) ? l.line : '',
+        grade: parseGrade(l.grade),   // 티어 균형 드래프트에서 팀장이 채우는 티어
         start, points: start, players: []
       };
     });
@@ -571,8 +597,40 @@ export class AuctionRoom {
       }
     }
 
+    // ── 진행 방식: 경매(auction) 또는 드래프트(draft) ──
+    const mode = cfg.mode === 'draft' ? 'draft' : 'auction';
+    let draft = null;
+    if (mode === 'draft') {
+      const balance = cfg.draftBalance === 'tier' ? 'tier' : 'free';
+      const size = cfg.size | 0;
+      const picksPerTeam = balance === 'tier' ? 4 : size - 1;
+      if (picksPerTeam < 1) return json({ error: '팀 인원이 너무 적어 드래프트를 만들 수 없습니다' }, 400);
+      // 자유·티어 공통: 지명해야 할 총 인원만큼 매물이 있어야 멈추지 않고 끝납니다.
+      if (pool.length < teams.length * picksPerTeam) return json({ error: `드래프트 매물이 부족합니다 (필요 ${teams.length * picksPerTeam}명, 현재 ${pool.length}명)` }, 400);
+      if (balance === 'tier') {
+        // 티어 균형: 팀 인원 5(팀장+4), 모든 팀장 등급, 각 티어 매물이 필요 수만큼 있어야 함.
+        if (size !== 5) return json({ error: '티어 균형 드래프트는 팀 인원 5명(팀장 포함)이어야 합니다' }, 400);
+        const noGrade = teams.filter(t => gradeBand(t.grade) < 0);
+        if (noGrade.length) return json({ error: `팀장 등급(1~5)을 입력해야 합니다: ${noGrade.map(t => t.leader).join(', ')}` }, 400);
+        for (let b = 0; b < 5; b++) {
+          const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 티어를 지명해야 하는 팀 수
+          const have = pool.filter(p => gradeBand(p.grade) === b).length;
+          if (have < need) return json({ error: `${b + 1}티어 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
+        }
+      }
+      // 지명 순서: 팀 순서를 추첨한 뒤 스네이크(1→N, N→1 반복)로 picksPerTeam 라운드 펼침.
+      const baseOrder = teams.map(t => t.id);
+      for (let i = baseOrder.length - 1; i > 0; i--) {
+        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+        [baseOrder[i], baseOrder[j]] = [baseOrder[j], baseOrder[i]];
+      }
+      const seq = [];
+      for (let r = 0; r < picksPerTeam; r++) seq.push(...(r % 2 === 0 ? baseOrder : baseOrder.slice().reverse()));
+      draft = { balance, baseOrder, seq, ptr: 0, picksPerTeam };
+    }
+
     this.S = {
-      code,
+      code, mode, draft,
       title: String(cfg.title || '경매').slice(0, 40),
       base, size: cfg.size | 0, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
       teams, pool, orderMode, order,
@@ -588,6 +646,13 @@ export class AuctionRoom {
 
   /* ── 파생 계산 ── */
   team(id) { return this.S.teams.find(t => t.id === id); }
+  // 팀이 이미 채운 티어 밴드 집합(팀장 등급 + 지명한 선수들). 티어 균형 드래프트 판정용.
+  teamBands(t) {
+    const s = new Set();
+    const lb = gradeBand(t.grade); if (lb >= 0) s.add(lb);
+    for (const p of this.S.pool) if (p.teamId === t.id) { const b = gradeBand(p.grade); if (b >= 0) s.add(b); }
+    return s;
+  }
   openSlots(t) { return this.S.size - 1 - t.players.length; }
   maxBid(t) {
     const n = this.openSlots(t);
@@ -660,6 +725,7 @@ export class AuctionRoom {
         return ws.send(JSON.stringify({ t: 'pong', now: Date.now() }));
 
       case 'bid': {
+        if (this.S.mode === 'draft') return deny('드래프트 방에서는 입찰할 수 없습니다');
         if (role !== 'team') return deny('팀장만 입찰할 수 있습니다');
         if (!this.S.current) return deny('경매 중인 매물이 없습니다');
         if (this.S.pausedLeft != null) return deny('경매가 일시정지 상태입니다');
@@ -682,6 +748,7 @@ export class AuctionRoom {
 
       case 'lot': {
         if (hostOnly()) return;
+        if (this.S.mode === 'draft') return deny('드래프트 방에서는 경매를 진행할 수 없습니다');
         // 진행 중인 매물이 있으면 먼저 처리하도록 막습니다. 그러지 않으면
         // 두 진행자(또는 풀 오클릭)가 최고 입찰을 흔적 없이 날려버립니다.
         if (this.S.current) return deny('먼저 낙찰 또는 유찰로 현재 매물을 마무리하세요');
@@ -694,6 +761,7 @@ export class AuctionRoom {
       case 'assign': {
         // 유찰/대기 선수를 팀에 0P로 수동 배정(드래그&드롭). 되돌리기 지원.
         if (hostOnly()) return;
+        if (this.S.mode === 'draft') return deny('드래프트 방에서는 지명으로 선수를 넣습니다');
         if (this.S.current) return deny('진행 중인 매물을 먼저 마무리하세요');
         const p = this.S.pool.find(x => x.id === m.playerId);
         if (!p) return deny('없는 선수입니다');
@@ -769,6 +837,8 @@ export class AuctionRoom {
         this.S.clock = curClock;
         this.S.current = null; this.S.bid = null;
         this.S.deadline = null; this.S.pausedLeft = null;
+        // 드래프트 진행 중 되돌리기면 픽 타이머를 다시 채웁니다(0/"시간 초과"로 보이지 않게).
+        if (this.S.mode === 'draft' && this.S.phase === 'live') this.S.deadline = Date.now() + this.S.clock * 1000;
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'undo' } });
@@ -795,9 +865,65 @@ export class AuctionRoom {
         this.S.deadline = null; this.S.pausedLeft = null;
         this.S.log = [];
         this.S.phase = 'ready';
+        // 드래프트면 팀 순서 재추첨 + 스네이크 재생성, 포인터 처음으로.
+        if (this.S.mode === 'draft' && this.S.draft) {
+          const d = this.S.draft;
+          for (let i = d.baseOrder.length - 1; i > 0; i--) {
+            const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+            [d.baseOrder[i], d.baseOrder[j]] = [d.baseOrder[j], d.baseOrder[i]];
+          }
+          const seq = [];
+          for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
+          d.seq = seq; d.ptr = 0;
+        }
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'reset' } });
+      }
+      case 'startdraft': {
+        if (hostOnly()) return;
+        if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
+        if (this.S.phase !== 'ready') return deny('이미 시작했습니다');
+        await this.snapshot();   // 시작 직후 '되돌리기'로 준비 상태로 돌아갈 수 있게.
+        this.S.phase = 'live';
+        // 픽 제한시간은 화면 표시용입니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명합니다.
+        this.S.deadline = Date.now() + this.S.clock * 1000;
+        await this.armExpiry();
+        await this.save();
+        return this.broadcast({ event: { kind: 'draftstart' } });
+      }
+      case 'pick': {
+        // 드래프트 지명. 현재 차례 팀장 또는 진행자가 선수를 지명. 되돌리기 지원.
+        if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
+        if (this.S.phase !== 'live') return deny('드래프트가 진행 중이 아닙니다');
+        if (this.S.pausedLeft != null) return deny('일시정지 상태입니다');
+        const d = this.S.draft;
+        const curId = d.seq[d.ptr];
+        // 화면이 아직 갱신되지 않은 채로 연타하면 다음 차례 팀에 잘못 지명될 수 있어, 클라가 보낸 순번과 대조합니다.
+        if (typeof m.ptr === 'number' && m.ptr !== d.ptr) return deny('화면이 막 갱신되었습니다. 다시 지명해주세요');
+        if (role !== 'host' && teamId !== curId) return deny('지금은 당신 차례가 아닙니다');
+        const p = this.S.pool.find(x => x.id === m.playerId);
+        if (!p) return deny('없는 선수입니다');
+        if (p.status === 'sold') return deny('이미 지명된 선수입니다');
+        const t = this.team(curId);
+        if (!t) return deny('팀을 찾을 수 없습니다');
+        if (this.openSlots(t) <= 0) return deny('로스터가 이미 찼습니다');
+        if (d.balance === 'tier') {
+          const b = gradeBand(p.grade);
+          if (b < 0) return deny('등급이 없는 선수는 티어 드래프트에서 지명할 수 없습니다');
+          if (this.teamBands(t).has(b)) return deny(`${t.name}은 이미 ${b + 1}티어를 채웠습니다`);
+        }
+        await this.snapshot();
+        p.status = 'sold'; p.teamId = t.id; p.price = 0;
+        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade });   // grade: 팀 명단에 티어 표기용
+        this.S.log.unshift({ kind: 'pick', player: p.name, team: t.name });
+        this.S.log = this.S.log.slice(0, 60);
+        d.ptr++;
+        if (d.ptr >= d.seq.length || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
+        else { this.S.deadline = Date.now() + this.S.clock * 1000; }
+        await this.armExpiry();
+        await this.save();
+        return this.broadcast({ event: { kind: 'pick', player: p.name, team: t.name } });
       }
     }
   }
