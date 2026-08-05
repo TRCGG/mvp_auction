@@ -672,8 +672,8 @@ function teamCard(t){
     ${tierRow}
     <div class="slots">${slots}</div>
     <div class="roster">
-      <div class="lead"><b>${esc(t.leader)}${draft?'<i class="lbadge">팀장</i>':''}</b><span>${draft?tierTag(t.grade)+posIcon(t.leaderLine):'팀장'}</span></div>
-      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${draft?tierTag(p.grade)+posIcon(p.line):p.price}</span></div>`).join('')}
+      <div class="lead"><b>${esc(t.leader)}${draft?'<i class="lbadge">팀장</i>':''}</b><span>${draft?tierTag(t.grade)+posIcon(t.leaderLine):posIcon(t.leaderLine)+' 팀장'}</span></div>
+      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${draft?tierTag(p.grade)+posIcon(p.line):posIcon(p.line)+' '+p.price}</span></div>`).join('')}
       ${(!draft&&t.open>0)?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
     </div>
   </div>`;
