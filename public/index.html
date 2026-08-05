@@ -11,7 +11,7 @@
 :root{
   --bg:#0A1017; --panel:#141C26; --panel2:#1B2733; --line:#26343F;
   --gold:#D4A94E; --gold-soft:rgba(212,169,78,.14);
-  --text:#E6ECF2; --muted:#7E90A2; --danger:#D9534F; --ok:#5FA86B;
+  --text:#E6ECF2; --muted:#93A6B8; --body2:#A9B8C6; --danger:#E06A64; --danger-bg:#3A1F1E; --danger-bd:#7A3531; --danger-solid:#B23B36; --ok:#5FA86B;
   --top:#E07A5F; --jgl:#7BB661; --mid:#6FA8DC; --adc:#E0B04A; --sup:#B58ADB; --none:#7E90A2;
   --sans:'IBM Plex Sans KR',system-ui,sans-serif; --num:'Bebas Neue','IBM Plex Sans KR',sans-serif;
 }
@@ -23,7 +23,7 @@ button{cursor:pointer;background:none;border:none}
 ::selection{background:var(--gold);color:#0A1017}
 .wrap{max-width:1440px;margin:0 auto}
 .num{font-family:var(--num);letter-spacing:.02em;font-variant-numeric:tabular-nums}
-.hint{font-size:12.5px;color:var(--muted);line-height:1.65}
+.hint{font-size:12.5px;color:var(--body2);line-height:1.65}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
 .lbl{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
 input[type=text],input[type=number],input[type=password],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);
@@ -36,10 +36,16 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#0A1017;font-weight:700}
 .btn.gold:hover:not(:disabled){filter:brightness(1.12);color:#0A1017}
 .btn.ghost{background:none}
+.btn.danger{background:var(--danger-solid);border-color:var(--danger-solid);color:#fff;font-weight:700}
+.btn.danger:hover:not(:disabled){filter:brightness(1.12);color:#fff;border-color:var(--danger-solid)}
+.btn.danger-soft{background:var(--danger-bg);border-color:var(--danger-bd);color:#E88A85;font-weight:600}
+.btn.danger-soft:hover:not(:disabled){border-color:var(--danger);color:#E88A85}
+.skl{display:block;border-radius:5px;background:linear-gradient(90deg,#1B2733 25%,#243240 50%,#1B2733 75%);background-size:200% 100%;animation:skl 1.4s infinite}
+@keyframes skl{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .btn:disabled{opacity:.32;cursor:not-allowed}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.1em;padding:3px 7px;border-radius:4px;border:1px solid currentColor}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 7px;border-radius:4px;border:1px solid currentColor}
 .t-TOP{color:var(--top)}.t-JGL{color:var(--jgl)}.t-MID{color:var(--mid)}
 .t-ADC{color:var(--adc)}.t-SUP{color:var(--sup)}.t-{color:var(--none)}
 
@@ -48,7 +54,8 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
   padding-bottom:14px;margin-bottom:18px}
 .brand{font-weight:700;font-size:17px;letter-spacing:-.02em}
 .brand span{color:var(--gold)}
-.code{font-family:var(--num);font-size:22px;color:var(--gold);letter-spacing:.14em}
+.brand .live{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:1px 6px;vertical-align:2px;margin-left:4px}
+.code{font-family:var(--num);font-size:22px;color:var(--text);letter-spacing:.14em}
 .who{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:4px 11px}
 .conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--danger)}
@@ -74,10 +81,10 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .rooms{display:flex;flex-direction:column;gap:9px}
 .room{display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
-.room .rc{font-family:var(--num);font-size:26px;color:var(--gold);letter-spacing:.12em}
+.room .rc{font-family:var(--num);font-size:26px;color:var(--text);letter-spacing:.12em}
 .room .rt{font-weight:600;font-size:14.5px;margin-bottom:3px}
 .room .rs{font-size:12px;color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
-.pill{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.pill{font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
 .p-ready{color:var(--muted)} .p-live{color:var(--gold)} .p-done{color:var(--ok)} .p-gone{color:var(--danger)}
 .mode-auction{color:var(--gold)} .mode-draft{color:#6fa8dc}
 /* 관리자: 경매방 요약 바 · 코드별 그룹 · 카드 상태 강조 */
@@ -86,7 +93,7 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .room-sum .s b{font-family:var(--num);font-size:17px;margin-left:4px;color:var(--text)}
 .room-sum .s.live b{color:var(--gold)} .room-sum .s.done b{color:var(--ok)} .room-sum .s.warn{color:var(--danger)} .room-sum .s.warn b{color:var(--danger)}
 .room-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0 9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
-.room-group .gc{font-family:var(--num);font-size:18px;color:var(--gold);letter-spacing:.1em}
+.room-group .gc{font-family:var(--num);font-size:18px;color:var(--text);letter-spacing:.1em}
 .room-group .gk{font-size:10px;font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:99px;border:1px solid currentColor}
 .room-group .gk.mgr{color:var(--gold)} .room-group .gk.direct,.room-group .gk.gone{color:var(--muted)}
 .room-group .gm{font-size:12px;color:var(--muted)}
@@ -104,17 +111,17 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .drop:hover,.drop.over{border-color:var(--gold);background:var(--gold-soft)}
 .drop b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
 .plist{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;margin-top:12px}
-.prow{display:grid;grid-template-columns:1fr 62px 84px 1fr 26px;gap:9px;align-items:center;
+.prow{display:grid;grid-template-columns:1fr 62px 84px 1fr 40px;gap:9px;align-items:center;
   background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px}
 .prow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .nm i{font-style:normal;color:var(--muted);font-weight:400;font-size:11px}
 .prow .tr{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .ch{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.prow button{color:var(--muted);font-size:15px;line-height:1}
+.prow button{color:var(--muted);font-size:16px;line-height:1;min-width:40px;min-height:36px}
 .prow button:hover{color:var(--danger)}
 .prow.dup{border-color:var(--danger)}
 .psum{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
-.psum b{font-family:var(--num);font-size:20px;color:var(--gold)}
+.psum b{font-family:var(--num);font-size:20px;color:var(--text)}
 
 /* 링크 배포 */
 .link-row{display:grid;grid-template-columns:130px 1fr auto;gap:9px;align-items:center;margin-bottom:8px}
@@ -126,7 +133,7 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .stage{display:grid;grid-template-columns:minmax(320px,410px) 1fr;gap:16px;align-items:start}
 .lot{position:relative;overflow:hidden}
 .lot-empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:14px;line-height:1.85}
-.lot-no{font-family:var(--num);font-size:13px;color:var(--gold);letter-spacing:.2em}
+.lot-no{font-family:var(--num);font-size:13px;color:var(--muted);letter-spacing:.2em}
 .lot-img{display:block;width:100%;height:240px;object-fit:cover;object-position:center 22%;
   border-radius:10px;border:1px solid var(--line);margin-bottom:14px;background:var(--panel2)}
 @media(max-width:520px){.lot-img{height:180px}}
@@ -142,11 +149,11 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .high{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:15px;margin-bottom:12px}
 .high.mine{border-color:var(--gold);background:var(--gold-soft)}
 .high .who-bid{font-size:13px;font-weight:600;margin-bottom:3px}
-.high .amt{font-family:var(--num);font-size:52px;line-height:1;color:var(--gold)}
+.high .amt{font-family:var(--num);font-size:40px;line-height:1;color:var(--gold)}
 .high .none{font-size:14px;color:var(--muted);padding:6px 0}
 
 .clock{display:flex;align-items:center;gap:11px;margin-bottom:14px}
-.clock b{font-family:var(--num);font-size:38px;line-height:1;min-width:60px}
+.clock b{font-family:var(--num);font-size:58px;line-height:1;min-width:80px}
 .clock.hot b{color:var(--danger)}
 .bar{flex:1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--gold);transition:width .25s linear}
@@ -166,15 +173,14 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
   display:flex;flex-direction:column;gap:11px;transition:.15s}
 .team.me{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
 .my-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:1px 7px;border-radius:999px;vertical-align:middle;box-shadow:0 0 6px -1px var(--gold)}
-.team.top{background:linear-gradient(var(--gold-soft),var(--panel))}
+.team.top{border-color:var(--ok);background:linear-gradient(rgba(95,168,107,.10),var(--panel))}
 .team.turn{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
 .turn-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;vertical-align:middle}
 .tierrow{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0}
-.tchip{font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.tchip{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
 .tchip.on{color:#0A1017;background:var(--gold);border-color:var(--gold)}
 .tchip i{font-style:normal;font-size:9px;opacity:.75}
-.ttag{display:inline-block;min-width:15px;text-align:center;font-size:9.5px;font-weight:800;color:#000;border-radius:3px;padding:1px 4px;margin-right:5px;vertical-align:middle}
-.lbadge{font-style:normal;font-size:9px;font-weight:700;color:var(--muted);margin-left:5px;border:1px solid var(--line);border-radius:3px;padding:0 4px;vertical-align:middle}
+.ttag{display:inline-block;min-width:17px;text-align:center;font-size:11px;font-weight:800;color:#000;border-radius:3px;padding:1px 4px;margin-right:5px;vertical-align:middle}
 .posic{width:17px;height:17px;vertical-align:middle;margin-left:3px}
 .treqrow{display:flex;gap:6px;flex-wrap:wrap}
 .treq{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 9px}
@@ -183,13 +189,12 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .treq.bad b{color:var(--danger)}
 .ord-list{display:flex;flex-direction:column;gap:6px}
 .ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
-.ord-n{font-family:var(--num);font-size:16px;color:var(--gold);min-width:20px;text-align:center}
+.ord-n{font-family:var(--num);font-size:16px;color:var(--text);min-width:20px;text-align:center}
 .ord-nm{flex:1;font-weight:600}
 .ord-btns{display:flex;gap:4px}
-.ord-btns button{padding:2px 10px;font-size:13px}
+.ord-btns button{padding:10px 14px;font-size:14px;min-width:44px}
 .pcard.pick{cursor:pointer}
 .pcard.pick:hover{border-color:var(--gold);background:var(--gold-soft)}
-.pcard.noelig{opacity:.4}
 .team.full{opacity:.55}
 /* 드래그 배정: 드래그 중 드롭 가능한 팀 강조 */
 button.pcard[draggable]{cursor:grab}
@@ -202,22 +207,24 @@ body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offse
 .team-pt{text-align:right;flex-shrink:0}
 .team-pt b{font-family:var(--num);font-size:29px;color:var(--gold);line-height:1}
 .team-pt i{display:block;font-style:normal;font-size:10px;color:var(--muted);letter-spacing:.1em;margin-top:1px}
-.gauge{height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.gauge{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
 .gauge i{display:block;height:100%;background:var(--gold);transition:width .35s ease}
 .slots{display:flex;gap:4px}
 .slot{flex:1;height:26px;border-radius:5px;border:1px dashed var(--line);display:grid;place-items:center;
-  font-size:9px;color:var(--muted);letter-spacing:.06em}
+  font-size:10.5px;color:var(--muted);letter-spacing:.06em}
 .slot.on{border:1px solid transparent;background:var(--panel2);color:var(--text)}
 .roster{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
 .roster div{display:flex;justify-content:space-between;gap:8px;color:var(--muted)}
 .roster div b{font-weight:500;color:var(--text)}
-.roster div span{font-family:var(--num);font-size:14px;color:var(--gold)}
+.roster div span{font-family:var(--num);font-size:14px;color:var(--body2)}
 .roster .lead b{color:var(--gold)}
+/* 팀장 표시 ★ — 결과 이미지(canvas)와 같은 표기를 씁니다. */
+.lead-star{font-style:normal;margin-right:4px}
 
 .log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:12.5px}
 .log-list div{color:var(--muted);display:flex;gap:9px}
 .log-list div b{font-weight:500;color:var(--text)}
-.log-list em{font-family:var(--num);font-size:14px;color:var(--gold);font-style:normal}
+.log-list em{font-family:var(--num);font-size:14px;color:var(--body2);font-style:normal}
 
 .pool{display:flex;gap:7px;flex-wrap:wrap}
 /* 남은 매물 칩 — 2줄 카드. 테두리 색 = 등급 구간(롤 티어색). 라인 색은 없음. */
@@ -229,24 +236,26 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .pc-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .pc-nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-gr{font-family:var(--num);font-weight:700;font-size:15px;flex:none}
-.pc-pass{color:var(--danger);font-size:9.5px;font-weight:700;flex:none}
-.pc-bot{display:flex;justify-content:space-between;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:4px;font-size:11px;color:var(--muted)}
+.pc-pass{font-size:11px;font-weight:700;color:#E88A85;background:#2C1817;border-radius:4px;padding:1px 6px;flex:none}
+.pc-bot{display:flex;justify-content:space-between;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:5px;font-size:12px;color:var(--muted)}
 .pc-line{font-weight:700;letter-spacing:.03em}
-.pc-sub{font-weight:400;color:var(--muted);font-size:10px}
+.pc-sub{font-weight:400;color:var(--muted);font-size:11px}
 .pc-tier{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
 /* 정렬/그룹 토글 */
 .psort{display:inline-flex;gap:2px;margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:2px}
-.psort button{font-size:11px;padding:3px 9px;border-radius:5px;color:var(--muted);letter-spacing:0}
-.psort button.on{background:var(--panel2);color:var(--gold)}
-.pgroup{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:10px 0 5px}
+.psort button{font-size:12.5px;padding:9px 13px;border-radius:5px;color:var(--muted);letter-spacing:0}
+.psort button.on{background:var(--panel2);color:var(--text);font-weight:600;box-shadow:inset 0 0 0 1px var(--line)}
+.pgroup{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:10px 0 5px}
 /* 실력 등급 뱃지 (등급 1~5 → 색인덱스 gr0~gr4) — 롤 티어색(챌·그마·마스터·다이아·에메) */
-.gr{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.02em;padding:2px 5px;border-radius:4px;color:#0A1017;white-space:nowrap}
+.gr{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.02em;padding:2px 6px;border-radius:4px;color:#0A1017;white-space:nowrap}
 .gr0{background:#e6c14a}.gr1{background:#e0554f}.gr2{background:#b06fe0}.gr3{background:#4aa3e0}.gr4{background:#2fae5f}
 
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:99;background:var(--gold);
   color:#0A1017;font-weight:600;font-size:13.5px;padding:11px 20px;border-radius:8px;opacity:0;
   pointer-events:none;transition:.25s;max-width:90vw;text-align:center}
 .toast.on{opacity:1;bottom:34px}
+/* 토스트 자체는 클릭을 통과시키고(입찰 탭을 가로채지 않도록) 떠 있는 동안의 되돌리기 버튼만 받습니다. */
+.toast.on #tUndo{pointer-events:auto}
 .toast.bad{background:var(--danger);color:#fff}
 
 .flash{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
@@ -328,6 +337,30 @@ let toastH;
 function toast(msg,bad){
   const t=$('toast'); t.textContent=msg; t.className='toast on'+(bad?' bad':'');
   clearTimeout(toastH); toastH=setTimeout(()=>t.className='toast',2400);
+}
+// 삭제 직후 복구용 토스트 — confirm 없이 실행하고 5초 안에 되돌릴 수 있게 합니다.
+function toastUndo(msg,fn){
+  const t=$('toast');
+  t.innerHTML=esc(msg)+' <b style="cursor:pointer;text-decoration:underline;margin-left:8px" id="tUndo">되돌리기</b>';
+  t.className='toast on';
+  $('tUndo').onclick=()=>{ fn(); t.className='toast'; };
+  clearTimeout(toastH); toastH=setTimeout(()=>t.className='toast',5000);
+}
+// 브라우저 confirm() 대체 모달. danger:'solid'|'soft', code를 주면 코드 입력 일치 시에만 확인 활성화.
+function askConfirm({title,msg,confirmLabel='확인',danger='soft',code=null}){
+  return new Promise(res=>{
+    const m=document.createElement('div'); m.className='modal-bg';
+    m.innerHTML=`<div class="modal" tabindex="-1" style="max-width:420px"><div class="modal-hd"><b style="color:#E88A85">${esc(title)}</b></div><p class="hint" style="margin-bottom:12px;white-space:pre-line">${esc(msg)}</p>${code?`<input type="text" id="cfCode" placeholder="${esc(code)}" class="num" style="text-align:center;letter-spacing:.2em;margin-bottom:10px;text-transform:uppercase" aria-label="확인용 코드 입력">`:''}<div class="row"><button class="btn" id="cfNo" style="flex:1">취소</button><button class="btn ${danger==='solid'?'danger':'danger-soft'}" id="cfYes" style="flex:1" ${code?'disabled':''}>${esc(confirmLabel)}</button></div></div>`;
+    document.body.appendChild(m);
+    const done=v=>{ m.remove(); res(v); };
+    m.querySelector('#cfNo').onclick=()=>done(false);
+    m.querySelector('#cfYes').onclick=()=>done(true);
+    m.onclick=e=>{ if(e.target===m) done(false); };
+    m.onkeydown=e=>{ if(e.key==='Escape') done(false); };
+    if(code){ const i=m.querySelector('#cfCode'); i.oninput=()=>{ m.querySelector('#cfYes').disabled=i.value.trim().toUpperCase()!==code; }; i.focus(); }
+    // 포커스를 모달로 옮깁니다. 그대로 두면 Enter가 뒤의 트리거 버튼을 다시 눌러 모달이 겹칩니다.
+    else m.querySelector('#cfNo').focus();
+  });
 }
 
 /* ═══ 상태 ═══ */
@@ -458,6 +491,8 @@ function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
 /* ═══ 파생 ═══ */
 const myTeam=()=>me&&me.teamId?S.teams.find(t=>t.id===me.teamId):null;
 const remaining=()=>S?S.pool.filter(p=>p.status!=='sold'):[];
+// 종료 판정: 명시적 done, 남은 매물 없음, 또는 모든 팀 정원 마감.
+const allDone=()=>!!S&&(S.phase==='done'||!remaining().length||S.teams.every(t=>t.open<=0));
 // 드래프트: 팀이 이미 채운 티어 밴드 집합(팀장 등급 + 지명한 선수). 서버 teamBands와 동일 규칙.
 function teamBandsClient(t){
   const s=new Set(); const lb=gradeBand(t.grade); if(lb>=0)s.add(lb);
@@ -494,7 +529,7 @@ function paint(){
 function topbar(){
   const role={host:'진행자',team:myTeam()?myTeam().name:'팀장',view:'관전'}[me.role];
   return `<div class="topbar">
-    <div class="brand">${esc(S.title)} <span>LIVE</span></div>
+    <div class="brand">${esc(S.title)} <span class="live">LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
     <div class="conn">${me.role==='host'?`<button class="btn ghost" id="bLinks" style="padding:4px 9px;font-size:12px">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
@@ -562,7 +597,7 @@ function stage(){
 function lotBody(){
   const p=S.pool.find(x=>x.id===S.current);
   if(!p){
-    const done=S.phase==='done'||!remaining().length||S.teams.every(t=>t.open<=0);
+    const done=allDone();
     return `<div class="lot-empty">${done
       ? '경매가 끝났습니다<br>아래 팀 구성을 확인하세요'
       : `대기 매물 <b class="num" style="color:var(--gold);font-size:20px">${remaining().length}</b>명<br>${
@@ -573,7 +608,7 @@ function lotBody(){
         <button class="btn" id="bUndo">되돌리기</button>
       </div>${hostClockCtl()}
       ${S.log.length?`<div class="row" style="margin-top:10px;justify-content:flex-end">
-        <button class="btn ghost" id="bReset" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger)">경매 초기화</button>
+        <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">경매 초기화</button>
       </div>`:''}`:''}`;
   }
 
@@ -583,10 +618,10 @@ function lotBody(){
   const ms=leftMs(), pct=Math.min(100,ms/(S.clock*1000)*100);
 
   return `${p.imgV?`<img class="lot-img" src="/api/room/${S.code}/img/${p.id}?v=${p.imgV}" alt="${esc(p.name)} 사진">`:''}
-    <div class="lot-no">LOT ${String(S.pool.filter(x=>x.status==='sold').length+1).padStart(2,'0')}${p.status==='pass'?' · 재상정':''}</div>
+    <div class="lot-no">LOT ${String(S.pool.filter(x=>x.status==='sold').length+1).padStart(2,'0')}${p.status==='pass'?' <span style="font-size:11px;font-weight:800;color:#E88A85;background:#2C1817;border-radius:4px;padding:2px 7px;letter-spacing:0;vertical-align:2px">재상정 · 유찰</span>':''}</div>
     <div class="lot-name">${esc(p.name)}${p.tag?`<span style="font-size:.34em;color:var(--muted);font-weight:400"> #${esc(p.tag)}</span>`:''}</div>
     <div class="lot-meta">
-      <span class="tag t-${p.line}">${esc(p.line)||'라인 미지정'}</span>
+      <span class="tag t-${p.line}">${LINES.includes(p.line)?`<img src="/pos/${p.line.toLowerCase()}.png" alt="" style="width:12px;height:12px;vertical-align:-2px;margin-right:3px">`:''}${esc(p.line)||'라인 미지정'}</span>
       ${p.sub?`<span class="hint">부 ${esc(subLabel(p.sub))}</span>`:''}
       ${gradeBadge(p.grade)}
       ${p.tier?`<span class="tier">${esc(p.tier)}</span>`:''}
@@ -625,18 +660,19 @@ function bidControls(t,mine){
   if(!t) return '';
   if(t.open<=0) return '<div class="hint">로스터를 모두 채웠습니다. 관전만 가능합니다.</div>';
   const base=S.minNext, m=S.minBid, cap=t.cap;
+  const cur=S.bid?S.bid.amount:null;
   const steps=[base, base+m*2, base+m*5, base+m*10];
   const blocked=mine||S.pausedLeft!=null;
   const why=mine?'이미 최고 입찰 중입니다'
     :cap<base?`한도 ${cap}P — 더 부를 수 없습니다`
     :`내 한도 ${cap}P · ${t.open}자리 남음`;
   return `<div class="bidpad">${steps.map(v=>`
-      <button data-bid="${v}" ${blocked||v>cap?'disabled':''}>${v}</button>`).join('')}</div>
+      <button data-bid="${v}" ${blocked||v>cap?'disabled':''}>${cur!=null&&v>cur?`+${v-cur}<span style="display:block;font-size:11px;color:var(--muted);font-weight:400">${v}</span>`:v}</button>`).join('')}</div>
     <div class="custom">
       <input type="number" id="custom" class="num" placeholder="직접 입력" min="${base}" max="${cap}" onwheel="this.blur()">
       <button class="btn gold" id="bCustom" ${blocked?'disabled':''}>입찰</button>
     </div>
-    <div class="hint" style="margin-top:9px;${mine?'color:var(--gold)':''}">${why}</div>`;
+    ${mine?`<div style="margin-top:10px;background:var(--gold-soft);border:1px solid var(--gold);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--gold);text-align:center">✓ ${why}</div>`:`<div class="hint" style="margin-top:9px">${why}</div>`}`;
 }
 
 function teamCard(t){
@@ -663,9 +699,9 @@ function teamCard(t){
         return `<span class="tchip ${filled?'on':''}"${st}>${b+1}티어</span>`;
       }).join('')}</div>` : '';
   const dropAttr=(me.role==='host'&&!draft&&t.open>0&&!S.current)?`data-team-drop="${t.id}"`:'';
-  return `<div class="team ${mineT?'me':''} ${top?'top':''} ${turn?'turn':''} ${t.open<=0?'full':''}" ${dropAttr}>
+  return `<div class="team ${mineT?'me':''} ${top?'top':''} ${turn?'turn':''} ${t.open<=0&&!allDone()?'full':''}" ${dropAttr}>
     <div class="team-hd">
-      <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}${turn?'<span class="turn-badge">지명중</span>':''}</div>
+      <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}${turn?'<span class="turn-badge">지명중</span>':''}${top?`<span class="turn-badge" style="background:var(--ok)">최고 ${S.bid.amount}P</span>`:''}</div>
       <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${draft&&lgBand>=0?` · ${lgBand+1}티어`:(!draft&&t.start!==S.base?` · 시작 ${t.start}P`:'')}</div></div>
       ${ptBlock}
     </div>
@@ -673,8 +709,8 @@ function teamCard(t){
     ${tierRow}
     <div class="slots">${slots}</div>
     <div class="roster">
-      <div class="lead"><b>${esc(t.leader)}${draft?'<i class="lbadge">팀장</i>':''}</b><span>${draft?tierTag(t.grade)+posIcon(t.leaderLine):posIcon(t.leaderLine)+' 팀장'}</span></div>
-      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${draft?tierTag(p.grade)+posIcon(p.line):posIcon(p.line)+' '+p.price}</span></div>`).join('')}
+      <div class="lead"><b><i class="lead-star">★</i>${esc(t.leader)}</b><span>${draft?tierTag(t.grade)+posIcon(t.leaderLine):posIcon(t.leaderLine)}</span></div>
+      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${draft?tierTag(p.grade)+posIcon(p.line):p.price+posIcon(p.line)}</span></div>`).join('')}
       ${(!draft&&t.open>0)?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
     </div>
   </div>`;
@@ -714,7 +750,7 @@ function draftBody(){
     return `<div class="lot-empty">드래프트 완료<br>아래 팀 구성을 확인하세요</div>
       <div class="row"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장</button></div>
       ${me.role==='host'?`<div class="row" style="margin-top:8px;justify-content:flex-end">
-        <button class="btn ghost" id="bReset" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger)">드래프트 초기화</button>
+        <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">드래프트 초기화</button>
       </div>`:''}`;
   }
   // 진행 중
@@ -743,7 +779,7 @@ function draftBody(){
     ${me.role==='host'?`<div class="row" style="margin-top:12px;justify-content:flex-end">
       <button class="btn" id="bPause" style="font-size:12px;padding:6px 12px">${S.pausedLeft!=null?'재개':'일시정지'}</button>
       <button class="btn" id="bUndo" style="font-size:12px;padding:6px 12px">되돌리기</button>
-      <button class="btn ghost" id="bReset" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger)">초기화</button>
+      <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">초기화</button>
     </div>${hostClockCtl()}`:''}`;
 }
 
@@ -786,7 +822,7 @@ function poolPanel(){
         <span class="pc-line">${esc(p.line)||'-'}${p.sub?`<span class="pc-sub">/${esc(subLabel(p.sub))}</span>`:''}${hasG&&p.status==='pass'?' <span class="pc-pass">유찰</span>':''}</span>
         <span class="pc-tier">${esc(p.tier)||'-'}</span>
       </div>`;
-    const bst=`style="border-color:${bc}"`;
+    const bst=`style="border-color:${bc};border-left-width:4px"`;
     // 진행자는 매물이 없을 때 카드를 팀으로 드래그해 배정할 수 있습니다.
     const drag=(host&&!live&&!draft)?`draggable="true" data-dpid="${p.id}"`:'';
     if(draft){
@@ -795,7 +831,7 @@ function poolPanel(){
       if(eligible&&S.draft.balance==='tier'&&curTeam){ const b=gradeBand(p.grade); eligible=b>=0&&!teamBandsClient(curTeam).has(b); }
       return eligible
         ? `<button class="pcard pick" data-pick="${p.id}" ${bst}>${inner}</button>`
-        : `<span class="pcard ${(iCanPick&&p.status!=='sold')?'noelig':''}" ${bst}>${inner}</span>`;
+        : `<span class="pcard" ${bst}>${inner}</span>`;
     }
     return host
       ? `<button class="pcard" data-lot="${p.id}" ${drag} ${bst} ${live?'disabled':''}>${inner}</button>`
@@ -833,6 +869,7 @@ function poolPanel(){
         <button id="pv-grade" data-pv="grade" aria-pressed="${poolView==='grade'}" class="${poolView==='grade'?'on':''}">등급순</button>
       </div>
     </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin:8px 0 2px"><b style="letter-spacing:.06em">등급색</b>${GRADE_COLORS.map((c,i)=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${c};vertical-align:-1px"></i> ${i+1}</span>`).join('')}<span style="color:#5A6B7C">·</span><span>낮을수록 상위</span></div>
     <div class="hint" style="margin:4px 0 8px">${posline}${noline?` · 미지정 ${noline}`:''}${host&&live?' · <span style="color:var(--gold)">현재 매물 마무리 후 선택 가능</span>':(host&&!draft)?' · <span style="color:var(--gold)">카드를 팀으로 끌어다 놓으면 0P로 배정됩니다</span>':''}</div>
     ${body}
   </div>`;
@@ -902,14 +939,14 @@ function wire(){
     const msg=draft
       ? '드래프트를 처음 상태로 초기화할까요?\n\n모든 지명 기록이 지워지고 지명 순서가 새로 추첨됩니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)'
       : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
-    if(confirm(msg)) send('reset'); });
+    askConfirm({title:(S&&S.mode==='draft')?'드래프트를 초기화할까요?':'경매를 초기화할까요?',msg,confirmLabel:'초기화'}).then(ok=>{ if(ok) send('reset'); }); });
   on('bStartDraft',()=>send('startdraft',{order:draftOrder}));
   on('bDraw',()=>send('draworder'));
   on('bLinks',openLinksModal);
   document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
   document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
   on('bSell',()=>send('sell'));
-  on('bPass',()=>{ if(S.bid&&!confirm('최고 입찰이 있는데 유찰 처리할까요?')) return; send('pass'); });
+  on('bPass',()=>{ if(S.bid){ askConfirm({title:'유찰 처리할까요?',msg:`최고 입찰 ${S.bid.amount}P가 있습니다. 유찰하면 이 매물은 뒤로 밀립니다.`,confirmLabel:'유찰'}).then(ok=>{ if(ok) send('pass'); }); return; } send('pass'); });
   on('bPause',()=>send(S.pausedLeft!=null?'resume':'pause'));
   on('bClkDn',()=>send('setclock',{clock:Math.max(5,S.clock-5)}));
   on('bClkUp',()=>send('setclock',{clock:Math.min(300,S.clock+5)}));
@@ -955,7 +992,8 @@ function wire(){
   if(imgFile) imgFile.onchange=e=>{ const f=e.target.files[0]; const pid=e.target.dataset.pid; if(f) uploadImg(f,pid); e.target.value=''; };
   on('bImgDel',async()=>{
     const pid=S.current;
-    if(!pid||!confirm('이 선수의 사진을 지울까요?')) return;
+    if(!pid) return;
+    if(!await askConfirm({title:'이 선수의 사진을 지울까요?',msg:'업로드한 사진이 삭제됩니다.',confirmLabel:'삭제'})) return;
     try{
       const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,{method:'DELETE'});
       if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'삭제하지 못했습니다');
@@ -1093,7 +1131,7 @@ async function renderRooms(){
     <button class="btn ghost" id="bNew" style="margin-left:auto;padding:6px 12px;font-size:12px">직접 만들기</button>
     <button class="btn ghost" id="bRe" style="padding:6px 12px;font-size:12px">새로고침</button>
   </div>
-  <div id="rooms"><div class="empty">불러오는 중…</div></div>`;
+  <div id="rooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div></div>`;
   $('bOut').onclick=()=>{ store.clear(); renderLogin('로그아웃했습니다.'); };
   $('bNew').onclick=()=>renderSetup('admin');
   $('bRe').onclick=renderRooms;
@@ -1126,7 +1164,7 @@ async function renderRooms(){
       <code>${state}${v.note?' · '+esc(v.note):''} · ${date}${expiry}</code>
       <span class="row" style="gap:6px">
         ${copyable?`<button class="btn" data-invcopy="${v.code}" data-invkind="${mgr?'manager':'once'}">복사</button>`:''}
-        <button class="btn" data-invdel="${v.code}">삭제</button>
+        <button class="btn danger-soft" data-invdel="${v.code}">삭제</button>
       </span>
     </div>`;
   }).join(''):'<span class="hint">발급한 코드가 없습니다. 위에서 발급해 매니저/운영자에게 보내세요.</span>';
@@ -1137,7 +1175,7 @@ async function renderRooms(){
   });
   document.querySelectorAll('[data-invdel]').forEach(b=>b.onclick=async()=>{
     const c=b.dataset.invdel;
-    if(!confirm(`코드 ${fmtInv(c)} 를 삭제할까요? 아직 안 쓴 코드라면 더는 방을 만들 수 없게 됩니다.`)) return;
+    if(!await askConfirm({title:`코드 ${fmtInv(c)} 를 삭제할까요?`,msg:'아직 안 쓴 코드라면 더는 방을 만들 수 없게 됩니다.',confirmLabel:'삭제'})) return;
     try{ await api('/api/admin/invite/'+c,{method:'DELETE'}); toast('삭제했습니다'); renderRooms(); }
     catch(e){ if(e.message!=='unauth') toast(e.message,true); }
   });
@@ -1193,8 +1231,8 @@ async function renderRooms(){
         </div>
         <div class="row" style="gap:6px">
           ${r.missing?'':`<button class="btn" data-links="${idx}">링크</button>
-          <button class="btn" data-enter="${idx}">진행자로 입장</button>`}
-          <button class="btn" data-del="${r.code}">삭제</button>
+          <button class="btn gold" data-enter="${idx}">진행자로 입장</button>`}
+          <button class="btn danger-soft" data-del="${r.code}">삭제</button>
         </div>
       </div>`;
     };
@@ -1225,7 +1263,7 @@ async function renderRooms(){
   });
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
     const code=b.dataset.del;
-    if(!confirm(`${code} 방을 삭제할까요? 진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.`)) return;
+    if(!await askConfirm({title:`${code} 방을 삭제할까요?`,msg:'진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.\n확인을 위해 방 코드를 입력하세요.',confirmLabel:'삭제',danger:'solid',code})) return;
     try{ await api('/api/admin/room/'+code,{method:'DELETE'}); toast('삭제했습니다'); renderRooms(); }
     catch(e){ if(e.message!=='unauth') toast(e.message,true); }
   });
@@ -1306,7 +1344,7 @@ async function renderManager(){
     <button class="btn gold" id="mNew" style="margin-left:auto;padding:9px 18px">＋ 새 경매방 만들기</button>
     <button class="btn ghost" id="mRe" style="padding:6px 12px;font-size:12px">새로고침</button>
   </div>
-  <div id="mRooms"><div class="empty">불러오는 중…</div></div>`;
+  <div id="mRooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div></div>`;
   $('bHome').onclick=()=>{ managerMode=false; go(''); renderLanding(); };
   $('mRe').onclick=renderManager;
   $('mNew').onclick=()=>renderSetup('op');   // 매니저도 op 흐름으로 생성(코드=opCode, 서버가 소모 안 함)
@@ -1344,8 +1382,8 @@ async function renderManager(){
         </div>
         <div class="row" style="gap:6px">
           ${r.missing?'':`<button class="btn" data-mlinks="${i}">링크</button>
-          <button class="btn" data-menter="${i}">진행자 입장</button>`}
-          <button class="btn" data-mdel="${r.code}">삭제</button>
+          <button class="btn gold" data-menter="${i}">진행자 입장</button>`}
+          <button class="btn danger-soft" data-mdel="${r.code}">삭제</button>
         </div>
       </div>`;
     }).join('')+`</div>`
@@ -1363,7 +1401,7 @@ async function renderManager(){
   });
   document.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=async()=>{
     const rc=b.dataset.mdel;
-    if(!confirm(`${rc} 방을 삭제할까요? 진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.`)) return;
+    if(!await askConfirm({title:`${rc} 방을 삭제할까요?`,msg:'진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.\n확인을 위해 방 코드를 입력하세요.',confirmLabel:'삭제',danger:'solid',code:rc})) return;
     try{
       const r=await fetch('/api/manager/'+opCode+'/room/'+rc,{method:'DELETE'});
       const d=await r.json().catch(()=>({}));
@@ -1478,7 +1516,7 @@ function renderSetup(mode){
 }
 
 function drawLeaders(){
-  $('leaderList').innerHTML=leaders.map((l,i)=>`
+  $('leaderList').innerHTML='<div class="leader-row" style="margin-bottom:4px"><span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em">닉네임</span><span style="font-size:11px;color:var(--muted);font-weight:600">라인</span><span style="font-size:11px;color:var(--muted);font-weight:600">'+(gameMode==='draft'?'등급':'시작 P')+'</span><span></span></div>'+leaders.map((l,i)=>`
     <div class="leader-row">
       <input type="text" placeholder="팀장 ${i+1} 닉네임" value="${esc(l.name)}" data-i="${i}" data-f="name">
       <select data-i="${i}" data-f="line" aria-label="팀장 ${i+1} 라인">
@@ -1636,10 +1674,13 @@ function drawPlayers(){
     : '<span class="hint">아직 참가자가 없습니다</span>';
 
   $('plist').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
-    players.splice(+b.dataset.rm,1); drawPlayers();
+    const i=+b.dataset.rm, p=players[i];
+    players.splice(i,1); drawPlayers();
+    toastUndo(`${p.name} 삭제됨`,()=>{ players.splice(Math.min(i,players.length),0,p); drawPlayers(); });
   });
   const wipe=$('bWipe');
-  if(wipe) wipe.onclick=()=>{ if(confirm('참가자 목록을 모두 지울까요?')){ players=[]; drawPlayers(); } };
+  // 비우기 전에 대기 중인 되돌리기 토스트를 닫습니다. 그대로 두면 비운 뒤 한 명이 되살아납니다.
+  if(wipe) wipe.onclick=()=>askConfirm({title:'참가자 목록을 모두 지울까요?',msg:'불러온 명단이 전부 사라집니다.',confirmLabel:'비우기'}).then(ok=>{ if(ok){ clearTimeout(toastH); $('toast').className='toast'; players=[]; drawPlayers(); } });
   drawTierReq();
 }
 
@@ -1699,7 +1740,7 @@ async function createRoom(){
     order:rules.order==='draw'?'draw':'random', leaders:names, pool:players };
   const need=(cfg.size-1)*cfg.minBid;
   const poor=names.filter(l=>(l.points??cfg.base)<need);
-  if(poor.length&&!confirm(`${poor.map(l=>l.name).join(', ')}의 시작 포인트로는 ${cfg.size-1}자리를 채울 수 없습니다. 계속할까요?`)) return;
+  if(poor.length&&!await askConfirm({title:'시작 포인트가 부족합니다',msg:`${poor.map(l=>l.name).join(', ')}의 시작 포인트로는 ${cfg.size-1}자리를 채울 수 없습니다. 계속할까요?`,confirmLabel:'계속 만들기'})) return;
   return submitRoom(cfg);
 }
 
