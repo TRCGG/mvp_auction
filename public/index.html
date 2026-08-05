@@ -211,7 +211,7 @@ body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offse
 .gauge i{display:block;height:100%;background:var(--gold);transition:width .35s ease}
 .slots{display:flex;gap:4px}
 .slot{flex:1;height:26px;border-radius:5px;border:1px dashed var(--line);display:grid;place-items:center;
-  font-size:10.5px;color:var(--muted);letter-spacing:.06em}
+  font-size:11px;color:var(--muted);letter-spacing:.06em}
 .slot.on{border:1px solid transparent;background:var(--panel2);color:var(--text)}
 .roster{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
 .roster div{display:flex;justify-content:space-between;gap:8px;color:var(--muted)}
@@ -884,11 +884,17 @@ function hostClockCtl(){
   </div>`;
 }
 
-// A-4: 최종 결과를 한 장 이미지(PNG)로 저장. 팀별 로스터·낙찰가·잔여 포인트.
+// A-4: 최종 결과를 한 장 이미지(PNG)로 저장.
+// 경매는 낙찰가·잔여 포인트, 드래프트는 지명 수·티어를 싣습니다.
 function saveResultImage(){
+  // 드래프트는 포인트 개념이 없습니다(price 0, base 더미). 웹 팀 명단과 같은 표기를 씁니다.
+  const draft=S.mode==='draft';
+  const perTeam=(draft&&S.draft)?S.draft.picksPerTeam:0;
+  // 드래프트 명단은 teamCard와 같이 풀에서 읽습니다(t.players에 등급이 없는 예전 지명분 대비).
+  const rosterOf=t=>draft?S.pool.filter(p=>p.teamId===t.id):t.players;
   const teams=S.teams, sc=2, colW=300, pad=28, headH=96, rowH=30, gap=16;
   const cols=Math.min(teams.length,4), rowsN=Math.ceil(teams.length/cols);
-  const maxP=Math.max(0,...teams.map(t=>t.players.length));
+  const maxP=Math.max(0,...teams.map(t=>rosterOf(t).length));
   const cardH=64+(1+maxP)*rowH+16;
   const W=pad*2+cols*colW+(cols-1)*gap, H=headH+rowsN*cardH+(rowsN-1)*gap+pad;
   const cv=document.createElement('canvas'); cv.width=W*sc; cv.height=H*sc;
@@ -897,7 +903,7 @@ function saveResultImage(){
   x.fillStyle='#0A1017'; x.fillRect(0,0,W,H);
   x.fillStyle='#E6ECF2'; x.font='700 26px sans-serif'; x.fillText(S.title,pad,26,W-pad*2);
   x.fillStyle='#D4A94E'; x.font='700 13px sans-serif';
-  x.fillText('경매 결과 · '+new Date().toLocaleString('ko-KR',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),pad,62);
+  x.fillText((draft?'드래프트 결과 · ':'경매 결과 · ')+new Date().toLocaleString('ko-KR',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),pad,62);
   const POS={TOP:'#E07A5F',JGL:'#7BB661',MID:'#6FA8DC',ADC:'#E0B04A',SUP:'#B58ADB'};
   teams.forEach((t,i)=>{
     const cx=pad+(i%cols)*(colW+gap), cy=headH+Math.floor(i/cols)*(cardH+gap);
@@ -905,20 +911,30 @@ function saveResultImage(){
     x.strokeStyle='#26343F'; x.lineWidth=1; x.stroke();
     x.fillStyle='#E6ECF2'; x.font='700 17px sans-serif'; x.fillText(t.name,cx+16,cy+13,colW-32);
     x.fillStyle='#7E90A2'; x.font='12px sans-serif'; x.fillText('팀장 '+t.leader,cx+16,cy+38,colW-120);
-    x.fillStyle='#D4A94E'; x.textAlign='right'; x.fillText('잔여 '+t.points+'P',cx+colW-16,cy+38,90); x.textAlign='left';
+    x.fillStyle='#D4A94E'; x.textAlign='right';
+    x.fillText(draft?(rosterOf(t).length+(perTeam?'/'+perTeam:'')+' 지명'):('잔여 '+t.points+'P'),cx+colW-16,cy+38,90); x.textAlign='left';
     let ry=cy+64;
-    x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.fillText('★ '+t.leader,cx+16,ry,colW-70); ry+=rowH;
-    t.players.forEach(pl=>{
+    // 오른쪽 끝 값: 경매는 낙찰가, 드래프트는 등급색 티어(웹 명단의 tierTag와 같은 정보).
+    const rightVal=(g,price,ry2)=>{
+      x.font='600 13px sans-serif'; x.textAlign='right';
+      if(draft){ const b=gradeBand(g); if(b>=0){ x.fillStyle=GRADE_COLORS[b]; x.fillText((b+1)+'티어',cx+colW-16,ry2,80); } }
+      else { x.fillStyle='#D4A94E'; x.fillText(price+'P',cx+colW-16,ry2,80); }
+      x.textAlign='left';
+    };
+    x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.fillText('★ '+t.leader,cx+16,ry,colW-70);
+    if(draft) rightVal(t.grade,null,ry);
+    ry+=rowH;
+    rosterOf(t).forEach(pl=>{
       x.fillStyle=POS[pl.line]||'#7E90A2'; x.fillRect(cx+16,ry+3,3,13);
       x.fillStyle='#E6ECF2'; x.font='13px sans-serif'; x.fillText(pl.name,cx+26,ry,colW-130);
-      x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.textAlign='right'; x.fillText(pl.price+'P',cx+colW-16,ry,80); x.textAlign='left';
+      rightVal(pl.grade,pl.price,ry);
       ry+=rowH;
     });
   });
   cv.toBlob(b=>{
     if(!b) return toast('이미지를 만들지 못했습니다',true);
     const url=URL.createObjectURL(b), a=document.createElement('a');
-    a.href=url; a.download=`경매결과_${S.code}.png`; document.body.appendChild(a); a.click(); a.remove();
+    a.href=url; a.download=`${draft?'드래프트결과':'경매결과'}_${S.code}.png`; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
     toast('결과 이미지를 저장했습니다');
   },'image/png');
