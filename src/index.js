@@ -618,12 +618,8 @@ export class AuctionRoom {
           if (have < need) return json({ error: `${b + 1}티어 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
         }
       }
-      // 지명 순서: 팀 순서를 추첨한 뒤 스네이크(1→N, N→1 반복)로 picksPerTeam 라운드 펼침.
+      // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서). 이후는 스네이크(역순 반복).
       const baseOrder = teams.map(t => t.id);
-      for (let i = baseOrder.length - 1; i > 0; i--) {
-        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-        [baseOrder[i], baseOrder[j]] = [baseOrder[j], baseOrder[i]];
-      }
       const seq = [];
       for (let r = 0; r < picksPerTeam; r++) seq.push(...(r % 2 === 0 ? baseOrder : baseOrder.slice().reverse()));
       draft = { balance, baseOrder, seq, ptr: 0, picksPerTeam };
@@ -867,11 +863,8 @@ export class AuctionRoom {
         this.S.phase = 'ready';
         // 드래프트면 팀 순서 재추첨 + 스네이크 재생성, 포인터 처음으로.
         if (this.S.mode === 'draft' && this.S.draft) {
+          // 순서는 유지하고 포인터만 처음으로. 준비 화면에서 진행자가 순서를 다시 정할 수 있습니다.
           const d = this.S.draft;
-          for (let i = d.baseOrder.length - 1; i > 0; i--) {
-            const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-            [d.baseOrder[i], d.baseOrder[j]] = [d.baseOrder[j], d.baseOrder[i]];
-          }
           const seq = [];
           for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
           d.seq = seq; d.ptr = 0;
@@ -884,6 +877,17 @@ export class AuctionRoom {
         if (hostOnly()) return;
         if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
         if (this.S.phase !== 'ready') return deny('이미 시작했습니다');
+        {
+          // 진행자가 정한 첫 라운드 순서(팀 id 순열)를 적용. 없거나 잘못되면 등록 순서를 씁니다.
+          const d = this.S.draft;
+          const ids = this.S.teams.map(t => t.id);
+          let order = Array.isArray(m.order) ? m.order.filter(x => ids.includes(x)) : [];
+          if (order.length !== ids.length || new Set(order).size !== ids.length) order = ids;
+          d.baseOrder = order;
+          const seq = [];
+          for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? order : order.slice().reverse()));
+          d.seq = seq; d.ptr = 0;
+        }
         await this.snapshot();   // 시작 직후 '되돌리기'로 준비 상태로 돌아갈 수 있게.
         this.S.phase = 'live';
         // 픽 제한시간은 화면 표시용입니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명합니다.
@@ -891,6 +895,24 @@ export class AuctionRoom {
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'draftstart' } });
+      }
+      case 'draworder': {
+        // 공개 추첨: 진행자가 누르면 순서를 섞어 전원 화면에 반영합니다(시작 전에만).
+        if (hostOnly()) return;
+        if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
+        if (this.S.phase !== 'ready') return deny('시작 전에만 추첨할 수 있습니다');
+        const d = this.S.draft;
+        const order = d.baseOrder.slice();
+        for (let i = order.length - 1; i > 0; i--) {
+          const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+          [order[i], order[j]] = [order[j], order[i]];
+        }
+        d.baseOrder = order;
+        const seq = [];
+        for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? order : order.slice().reverse()));
+        d.seq = seq; d.ptr = 0;
+        await this.save();
+        return this.broadcast({ event: { kind: 'draworder' } });
       }
       case 'pick': {
         // 드래프트 지명. 현재 차례 팀장 또는 진행자가 선수를 지명. 되돌리기 지원.

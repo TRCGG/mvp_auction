@@ -180,6 +180,12 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .treq b{font-family:var(--num);color:var(--text)}
 .treq.bad{color:var(--danger);border-color:var(--danger)}
 .treq.bad b{color:var(--danger)}
+.ord-list{display:flex;flex-direction:column;gap:6px}
+.ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.ord-n{font-family:var(--num);font-size:16px;color:var(--gold);min-width:20px;text-align:center}
+.ord-nm{flex:1;font-weight:600}
+.ord-btns{display:flex;gap:4px}
+.ord-btns button{padding:2px 10px;font-size:13px}
 .pcard.pick{cursor:pointer}
 .pcard.pick:hover{border-color:var(--gold);background:var(--gold-soft)}
 .pcard.noelig{opacity:.4}
@@ -329,6 +335,7 @@ let players=[];
 let opCode=null, setupMode='admin';   // 방 생성: 관리자 직접('admin') 또는 생성 코드('op')
 let managerMode=false;                 // 매니저 코드로 들어왔는지(다회용, 최대 10개)
 let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·티어순('tier')·등급순('grade')
+let draftOrder=null;                   // 드래프트 첫 라운드 지명 순서(팀 id 배열). 진행자가 준비 화면에서 정함.
 let sfxMuted=(()=>{ try{ return localStorage.getItem('sfxMuted')==='1'; }catch{ return false; } })();  // 소리 음소거(클라이언트별)
 const sfxOn=()=>me&&me.role==='host'&&!sfxMuted;   // 연출 사운드는 진행자 화면 위주로 재생
 const fmtInv=c=>c.length===8?c.slice(0,4)+'-'+c.slice(4):c;
@@ -411,6 +418,7 @@ function onEvent(ev){
   else if(ev.kind==='reset') toast('처음 상태로 초기화되었습니다');
   else if(ev.kind==='pick'){ flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} 지명</span>`); if(sfxOn()) soldChime(); }
   else if(ev.kind==='draftstart') toast('드래프트가 시작되었습니다');
+  else if(ev.kind==='draworder'){ if(S.draft&&S.draft.baseOrder) draftOrder=S.draft.baseOrder.slice(); paint(); if(me.role==='host') toast('지명 순서를 추첨했습니다'); }
 }
 function flash(html){
   const f=$('flash'); if(!f) return;
@@ -671,15 +679,35 @@ function teamCard(t){
   </div>`;
 }
 
+// 드래프트 첫 순서 상태를 팀 구성과 맞춰 초기화(서버 baseOrder 우선, 없으면 등록 순서).
+function ensureDraftOrder(){
+  const ids=S.teams.map(t=>t.id);
+  const valid=draftOrder&&draftOrder.length===ids.length&&new Set(draftOrder).size===ids.length&&draftOrder.every(id=>ids.includes(id));
+  if(!valid){
+    const b=S.draft&&S.draft.baseOrder;
+    draftOrder=(b&&b.length===ids.length&&new Set(b).size===ids.length&&b.every(id=>ids.includes(id)))?b.slice():ids;
+  }
+}
+
 // 드래프트 진행판(경매의 lotBody 자리). 준비/진행/완료 단계별로 그립니다.
 function draftBody(){
   const d=S.draft||{seq:[],ptr:0,balance:'free',picksPerTeam:0};
   if(S.phase==='ready'){
-    return `<div class="lot-empty">${d.balance==='tier'?'티어 균형':'자유'} 드래프트 준비 완료<br>
-        ${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명 지명</div>
-      ${me.role==='host'
-        ? `<div class="row" style="margin-top:8px"><button class="btn gold" style="flex:1" id="bStartDraft">드래프트 시작</button></div>`
-        : '<div class="hint" style="text-align:center;margin-top:8px">진행자가 곧 시작합니다</div>'}`;
+    ensureDraftOrder();
+    const host=me.role==='host';
+    const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.leader:id; };
+    const list=draftOrder.map((id,i)=>`<div class="ord-row">
+        <span class="ord-n">${i+1}</span>
+        <span class="ord-nm">${esc(nm(id))} 팀</span>
+        ${host?`<span class="ord-btns"><button class="btn ghost" data-ordup="${i}" ${i===0?'disabled':''}>▲</button><button class="btn ghost" data-orddn="${i}" ${i===draftOrder.length-1?'disabled':''}>▼</button></span>`:''}
+      </div>`).join('');
+    return `<div class="lot-empty" style="padding:16px 20px">${d.balance==='tier'?'티어 균형':'자유'} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명</div>
+      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">첫 지명 순서</span>${host?`<button class="btn ghost" id="bDraw" style="margin-left:auto;padding:4px 12px;font-size:12px">🎲 추첨</button>`:''}</div>
+      <div class="ord-list">${list}</div>
+      ${host
+        ? `<p class="hint" style="margin:9px 0 12px">추첨을 누르면 모두가 보는 앞에서 순서가 정해집니다. ▲▼로 직접 조정도 가능하고, 이후는 스네이크(다음 라운드부터 역순)로 진행됩니다.</p>
+           <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">이 순서로 드래프트 시작</button></div>`
+        : `<p class="hint" style="margin:9px 0">진행자가 순서를 정하고 곧 시작합니다.</p>`}`;
   }
   if(S.phase==='done'){
     return `<div class="lot-empty">드래프트 완료<br>아래 팀 구성을 확인하세요</div>
@@ -874,8 +902,11 @@ function wire(){
       ? '드래프트를 처음 상태로 초기화할까요?\n\n모든 지명 기록이 지워지고 지명 순서가 새로 추첨됩니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)'
       : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
     if(confirm(msg)) send('reset'); });
-  on('bStartDraft',()=>send('startdraft'));
+  on('bStartDraft',()=>send('startdraft',{order:draftOrder}));
+  on('bDraw',()=>send('draworder'));
   on('bLinks',openLinksModal);
+  document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
+  document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
   on('bSell',()=>send('sell'));
   on('bPass',()=>{ if(S.bid&&!confirm('최고 입찰이 있는데 유찰 처리할까요?')) return; send('pass'); });
   on('bPause',()=>send(S.pausedLeft!=null?'resume':'pause'));
