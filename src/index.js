@@ -14,22 +14,31 @@ const INVITE_TTL = 30 * 86400e3;  // 방 생성 코드 유효 기간
 const MANAGER_MAX = 10;           // 매니저 코드 하나로 만들 수 있는 동시 경매방 수
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
 
-// 실력 등급 파싱: '1'~'5.9' → 숫자, 아니면 null. (드래프트 티어 판정·매물 등급 공용)
+// 클랜티어 파싱: '1'~'5.9' → 숫자, 아니면 null. (밴드 판정·매물 표기 공용)
 const parseGrade = v => {
   const m = String(v ?? '').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i);
   return m ? Math.round(parseFloat(m[1]) * 10) / 10 : null;
 };
-// 티어 밴드 0~4 (1티어→0 … 5티어→4), 등급 없으면 -1. 소수는 같은 티어(정수부)로 본다.
+// 클랜티어 밴드 0~4 (1→0 … 5→4), 값 없으면 -1. 소수는 같은 밴드(정수부)로 본다.
 const gradeBand = g => { const n = Number(g); return (g == null || !Number.isFinite(n) || n < 1) ? -1 : Math.min(4, Math.floor(n) - 1); };
 
-// 점수 드래프트용 점수: 0~999 정수. 등급과 달리 높을수록 강하다.
+// 팀 인원: 롤이 5:5라 팀장 1명 + 지명 4명으로 고정. 예전 방은 저장된 S.size를 그대로 쓴다.
+const TEAM_SIZE = 5;
+
+// 드래프트 규칙은 클랜티어 균형('tier')·클랜점수('score')를 각각 켜고 끌 수 있다(둘 다 끄면 자유).
+// 예전 방은 balance에 문자열 하나만 있으므로 그 값도 흡수한다.
+const draftHas = (d, rule) => !d ? false
+  : Array.isArray(d.rules) ? d.rules.includes(rule)
+  : d.balance === rule;
+
+// 클랜점수: 0~999 정수. 클랜티어와 달리 높을수록 강하다.
 // 소수를 받지 않는 이유 — 총점 합산에 부동소수 오차가 끼면 동점 타이브레이크가 조용히 깨진다.
 // (소수를 넣으려면 총점 계산 전체를 십분위 정수로 바꾼 뒤에만 가능. SCORE_DRAFT_PLAN.md 참조)
 const parseScore = v => {
   const m = String(v ?? '').trim().match(/^(\d{1,3})\s*(?:점|p)?$/i);
   return m ? +m[1] : null;
 };
-// 팀 총점 = 팀장 점수 + 그 팀이 지명한 매물 점수 합. pool을 기준으로 읽는다(teamBands와 동일).
+// 팀 총점 = 팀장 클랜점수 + 그 팀이 지명한 매물 클랜점수 합. pool을 기준으로 읽는다(teamBands와 동일).
 // 정렬 비교자 안에서 팀마다 pool을 훑지 않도록 한 번에 id→총점 맵을 만든다.
 const scoreTotals = (teams, pool) => {
   const tot = new Map(teams.map(t => [t.id, t.score || 0]));
@@ -408,11 +417,17 @@ function validate(cfg) {
   if (!Array.isArray(cfg.pool) || !cfg.pool.length) return '선수 명단이 비어 있습니다';
   if (cfg.pool.length > 200) return '선수는 최대 200명까지입니다';
   if (!cfg.pool.every(p => p && typeof p === 'object' && String(p.name || '').trim())) return '닉네임이 빈 참가자가 있습니다';
-  if (!(cfg.size >= 2 && cfg.size <= 6)) return '팀 인원은 2~6명이어야 합니다';
+  // 팀 인원은 롤이 5:5라 5명(팀장 + 4명)으로 고정입니다. cfg.size는 받지 않고 서버가 정합니다.
   if (!(cfg.minBid >= 1 && cfg.minBid <= 100000)) return '최소 입찰 단위는 1~100000이어야 합니다';
   if (!(cfg.base >= 1 && cfg.base <= 100000000)) return '기본 시작 포인트는 1 이상이어야 합니다';
   if (!(cfg.clock >= 5 && cfg.clock <= 300)) return '제한 시간은 5~300초여야 합니다';
   if (cfg.order != null && cfg.order !== 'random' && cfg.order !== 'draw') return '매물 순서 옵션이 올바르지 않습니다';
+  // 드래프트 규칙: ['tier','score'] 부분집합만 허용(빈 배열 = 자유).
+  if (cfg.rules != null) {
+    if (!Array.isArray(cfg.rules) || !cfg.rules.every(r => r === 'tier' || r === 'score')) {
+      return '드래프트 규칙 옵션이 올바르지 않습니다';
+    }
+  }
   return null;
 }
 
@@ -516,6 +531,11 @@ export class AuctionRoom {
         code: this.S.code, title: this.S.title,
         mode: this.S.mode || 'auction',
         draftBalance: this.S.draft ? this.S.draft.balance : null,
+        // 규칙 조합 표시용. 예전 방은 balance 문자열 하나뿐이라 그것으로 만들어 줍니다.
+        draftRules: this.S.draft
+          ? (Array.isArray(this.S.draft.rules) ? this.S.draft.rules
+             : this.S.draft.balance === 'free' ? [] : [this.S.draft.balance])
+          : null,
         phase: this.S.phase, current: this.S.current,
         teams: this.S.teams.length, players: this.S.pool.length, sold,
         filled: this.S.teams.every(t => this.openSlots(t) <= 0),
@@ -627,8 +647,8 @@ export class AuctionRoom {
         name: String(l.name).trim().slice(0, 20) + ' 팀',
         leader: String(l.name).trim().slice(0, 20),
         leaderLine: LINES.includes(l.line) ? l.line : '',
-        grade: parseGrade(l.grade),   // 티어 균형 드래프트에서 팀장이 채우는 티어
-        score: parseScore(l.score),   // 점수 드래프트에서 팀 총점의 시작값
+        grade: parseGrade(l.grade),   // 클랜티어 균형에서 팀장이 채우는 밴드
+        score: parseScore(l.score),   // 클랜점수 — 팀 총점의 시작값
         start, points: start, players: []
       };
     });
@@ -647,10 +667,10 @@ export class AuctionRoom {
       line: LINES.includes(p.line) ? p.line : '',
       sub: (LINES.includes(p.sub) || p.sub === 'ALL') ? p.sub : '',   // 부포지션: 5라인 또는 전체(ALL)
       tier: String(p.tier || '').trim().slice(0, 20),
-      // 주최측 실력 등급. 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
-      // 셀 전체가 1~5 숫자일 때만 인정합니다(티어 텍스트 오독 방지).
+      // 클랜티어(주최측이 매긴 실력 티어). 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
+      // 셀 전체가 1~5 숫자일 때만 인정합니다(솔랭티어 텍스트 오독 방지).
       grade: parseGrade(p.grade),
-      // 클랜 자체 점수(0~999 정수). 점수 드래프트에서 지명 순서를 정하는 값. 등급과 별개.
+      // 클랜점수(0~999 정수). 지명 순서를 정하는 값. 클랜티어와 별개.
       score: parseScore(p.score),
       champs: (Array.isArray(p.champs) ? p.champs : [])
         .slice(0, 3).map(c => String(c || '').trim().slice(0, 20)).filter(Boolean),
@@ -671,40 +691,43 @@ export class AuctionRoom {
     const mode = cfg.mode === 'draft' ? 'draft' : 'auction';
     let draft = null;
     if (mode === 'draft') {
-      const balance = cfg.draftBalance === 'tier' ? 'tier'
-        : cfg.draftBalance === 'score' ? 'score' : 'free';
-      const size = cfg.size | 0;
-      const picksPerTeam = balance === 'tier' ? 4 : size - 1;
-      if (picksPerTeam < 1) return json({ error: '팀 인원이 너무 적어 드래프트를 만들 수 없습니다' }, 400);
-      // 자유·티어 공통: 지명해야 할 총 인원만큼 매물이 있어야 멈추지 않고 끝납니다.
+      // 규칙은 독립 토글. 클랜티어 균형은 '무엇을' 뽑을지, 클랜점수는 '누가 언제' 뽑을지를 정한다.
+      // 둘 다 켜면 순서는 클랜점수(총점 오름차순), 제약은 클랜티어 밴드 — 서로 다른 축이라 충돌하지 않는다.
+      const rules = [];
+      if (cfg.rules ? cfg.rules.includes('tier') : cfg.draftBalance === 'tier') rules.push('tier');
+      if (cfg.rules ? cfg.rules.includes('score') : cfg.draftBalance === 'score') rules.push('score');
+      const picksPerTeam = TEAM_SIZE - 1;
       if (pool.length < teams.length * picksPerTeam) return json({ error: `드래프트 매물이 부족합니다 (필요 ${teams.length * picksPerTeam}명, 현재 ${pool.length}명)` }, 400);
-      if (balance === 'tier') {
-        // 티어 균형: 팀 인원 5(팀장+4), 모든 팀장 등급, 각 티어 매물이 필요 수만큼 있어야 함.
-        if (size !== 5) return json({ error: '티어 균형 드래프트는 팀 인원 5명(팀장 포함)이어야 합니다' }, 400);
-        const noGrade = teams.filter(t => gradeBand(t.grade) < 0);
-        if (noGrade.length) return json({ error: `팀장 등급(1~5)을 입력해야 합니다: ${noGrade.map(t => t.leader).join(', ')}` }, 400);
+      if (rules.includes('tier')) {
+        // 클랜티어 균형: 팀장·참가자 전원 클랜티어 필수 + 각 밴드 매물이 필요 수만큼 있어야 함.
+        const noGL = teams.filter(t => gradeBand(t.grade) < 0);
+        if (noGL.length) return json({ error: `팀장 클랜티어(1~5)를 입력해야 합니다: ${noGL.map(t => t.leader).join(', ')}` }, 400);
+        const noGP = pool.filter(p => gradeBand(p.grade) < 0).length;
+        if (noGP) return json({ error: `참가자 클랜티어(1~5)가 없는 사람이 ${noGP}명 있습니다` }, 400);
         for (let b = 0; b < 5; b++) {
-          const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 티어를 지명해야 하는 팀 수
+          const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 밴드를 지명해야 하는 팀 수
           const have = pool.filter(p => gradeBand(p.grade) === b).length;
-          if (have < need) return json({ error: `${b + 1}티어 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
+          if (have < need) return json({ error: `클랜티어 ${b + 1} 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
         }
       }
-      if (balance === 'score') {
-        // 점수 드래프트: 팀장·매물 전원에게 점수가 있어야 순서를 정할 수 있습니다.
-        const noS = teams.filter(t => t.score == null);
-        if (noS.length) return json({ error: `팀장 점수(0~999)를 입력해야 합니다: ${noS.map(t => t.leader).join(', ')}` }, 400);
-        const noPS = pool.filter(p => p.score == null).length;
-        if (noPS) return json({ error: `참가자 점수(0~999)가 없는 사람이 ${noPS}명 있습니다` }, 400);
+      if (rules.includes('score')) {
+        // 클랜점수: 팀장·매물 전원에게 점수가 있어야 순서를 정할 수 있습니다.
+        const noSL = teams.filter(t => t.score == null);
+        if (noSL.length) return json({ error: `팀장 클랜점수(0~999)를 입력해야 합니다: ${noSL.map(t => t.leader).join(', ')}` }, 400);
+        const noSP = pool.filter(p => p.score == null).length;
+        if (noSP) return json({ error: `참가자 클랜점수(0~999)가 없는 사람이 ${noSP}명 있습니다` }, 400);
       }
       // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서).
       // seq는 this.S 배정 뒤 resetSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
-      draft = { balance, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam };
+      // balance는 예전 방·관리자 목록 호환용 대표값입니다.
+      const balance = rules.includes('score') ? 'score' : rules.includes('tier') ? 'tier' : 'free';
+      draft = { balance, rules, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam };
     }
 
     this.S = {
       code, mode, draft,
       title: String(cfg.title || '경매').slice(0, 40),
-      base, size: cfg.size | 0, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
+      base, size: TEAM_SIZE, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
       teams, pool, orderMode, order,
       current: null, bid: null, deadline: null, pausedLeft: null,
       log: [], phase: 'ready', createdAt: Date.now()
@@ -719,7 +742,7 @@ export class AuctionRoom {
 
   /* ── 파생 계산 ── */
   team(id) { return this.S.teams.find(t => t.id === id); }
-  // 팀이 이미 채운 티어 밴드 집합(팀장 등급 + 지명한 선수들). 티어 균형 드래프트 판정용.
+  // 팀이 이미 채운 클랜티어 밴드 집합(팀장 + 지명한 선수들). 클랜티어 균형 판정용.
   teamBands(t) {
     const s = new Set();
     const lb = gradeBand(t.grade); if (lb >= 0) s.add(lb);
@@ -770,7 +793,7 @@ export class AuctionRoom {
   resetSeq() {
     const d = this.S.draft;
     d.ptr = 0; d.tie = null; d.roll = null; d.seq = [];
-    if (d.balance === 'score') { this.openScoreRound(); return; }
+    if (draftHas(d, 'score')) { this.openScoreRound(); return; }
     for (let r = 0; r < d.picksPerTeam; r++) {
       d.seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
     }
@@ -1035,21 +1058,21 @@ export class AuctionRoom {
         const t = this.team(curId);
         if (!t) return deny('팀을 찾을 수 없습니다');
         if (this.openSlots(t) <= 0) return deny('로스터가 이미 찼습니다');
-        if (d.balance === 'tier') {
+        if (draftHas(d, 'tier')) {
           const b = gradeBand(p.grade);
-          if (b < 0) return deny('등급이 없는 선수는 티어 드래프트에서 지명할 수 없습니다');
-          if (this.teamBands(t).has(b)) return deny(`${t.name}은 이미 ${b + 1}티어를 채웠습니다`);
+          if (b < 0) return deny('클랜티어가 없는 선수는 클랜티어 균형 드래프트에서 지명할 수 없습니다');
+          if (this.teamBands(t).has(b)) return deny(`${t.name}은 이미 클랜티어 ${b + 1}을 채웠습니다`);
         }
         await this.snapshot();
         p.status = 'sold'; p.teamId = t.id; p.price = 0;
-        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade });   // grade: 팀 명단에 티어 표기용
+        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade });   // grade: 팀 명단에 클랜티어 표기용
         this.S.log.unshift({ kind: 'pick', player: p.name, team: t.name });
         this.S.log = this.S.log.slice(0, 60);
         d.ptr++;
         // 점수 드래프트: 한 라운드가 끝나면 바뀐 총점으로 다음 라운드를 엽니다.
         // 동점이 있으면 seq를 늘리지 않고 d.tie를 세워 진행자 정리를 기다립니다.
         let tie = false;
-        if (d.balance === 'score' && d.ptr === d.seq.length && d.seq.length < this.totalPicks()) {
+        if (draftHas(d, 'score') && d.ptr === d.seq.length && d.seq.length < this.totalPicks()) {
           tie = this.openScoreRound();
         }
         if (d.ptr >= this.totalPicks() || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
