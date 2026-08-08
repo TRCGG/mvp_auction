@@ -14,13 +14,87 @@ const INVITE_TTL = 30 * 86400e3;  // 방 생성 코드 유효 기간
 const MANAGER_MAX = 10;           // 매니저 코드 하나로 만들 수 있는 동시 경매방 수
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
 
-// 실력 등급 파싱: '1'~'5.9' → 숫자, 아니면 null. (드래프트 티어 판정·매물 등급 공용)
+// 클랜티어 파싱: '1'~'5.9' → 숫자, 아니면 null. (밴드 판정·매물 표기 공용)
 const parseGrade = v => {
   const m = String(v ?? '').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i);
   return m ? Math.round(parseFloat(m[1]) * 10) / 10 : null;
 };
-// 티어 밴드 0~4 (1티어→0 … 5티어→4), 등급 없으면 -1. 소수는 같은 티어(정수부)로 본다.
+// 클랜티어 밴드 0~4 (1→0 … 5→4), 값 없으면 -1. 소수는 같은 밴드(정수부)로 본다.
 const gradeBand = g => { const n = Number(g); return (g == null || !Number.isFinite(n) || n < 1) ? -1 : Math.min(4, Math.floor(n) - 1); };
+
+// 팀 인원: 롤이 5:5라 팀장 1명 + 지명 4명으로 고정. 예전 방은 저장된 S.size를 그대로 쓴다.
+const TEAM_SIZE = 5;
+
+// 드래프트 규칙은 클랜티어 균형('tier')·클랜점수('score')를 각각 켜고 끌 수 있다(둘 다 끄면 자유).
+// 예전 방은 balance에 문자열 하나만 있으므로 그 값도 흡수한다.
+const draftHas = (d, rule) => !d ? false
+  : Array.isArray(d.rules) ? d.rules.includes(rule)
+  : d.balance === rule;
+
+// 클랜점수: 0~999 정수. 클랜티어와 달리 높을수록 강하다.
+// 소수를 받지 않는 이유 — 총점 합산에 부동소수 오차가 끼면 동점 타이브레이크가 조용히 깨진다.
+// (소수를 넣으려면 총점 계산 전체를 십분위 정수로 바꾼 뒤에만 가능. SCORE_DRAFT_PLAN.md 참조)
+const parseScore = v => {
+  const m = String(v ?? '').trim().match(/^(\d{1,3})\s*(?:점|p)?$/i);
+  return m ? +m[1] : null;
+};
+// 팀 총점 = 팀장 클랜점수 + 그 팀이 지명한 매물 클랜점수 합. pool을 기준으로 읽는다(teamBands와 동일).
+// 정렬 비교자 안에서 팀마다 pool을 훑지 않도록 한 번에 id→총점 맵을 만든다.
+const scoreTotals = (teams, pool) => {
+  const tot = new Map(teams.map(t => [t.id, t.score || 0]));
+  for (const p of pool) if (tot.has(p.teamId)) tot.set(p.teamId, tot.get(p.teamId) + (p.score || 0));
+  return tot;
+};
+// 점수 드래프트 한 라운드의 지명 순서: 총점 오름차순, 동점이면 baseOrder(동점 우선순위).
+const scoreOrder = (teams, pool, baseOrder) => {
+  const tot = scoreTotals(teams, pool);
+  const rank = new Map(baseOrder.map((id, i) => [id, i]));
+  return teams.slice()
+    .sort((a, b) => tot.get(a.id) - tot.get(b.id) || rank.get(a.id) - rank.get(b.id))
+    .map(t => t.id);
+};
+// 총점이 같은 팀 묶음(2팀 이상)만 골라냅니다. 순서 안에서 baseOrder대로 정렬해 둡니다.
+// 이 묶음이 있으면 진행자가 주사위 또는 수동으로 우선순위를 정해야 라운드가 시작됩니다.
+const tieGroups = (teams, pool, baseOrder) => {
+  const tot = scoreTotals(teams, pool);
+  const rank = new Map(baseOrder.map((id, i) => [id, i]));
+  const by = new Map();
+  for (const t of teams) {
+    const k = tot.get(t.id);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(t.id);
+  }
+  return [...by.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .sort((a, b) => a[0] - b[0])                       // 총점 낮은 묶음부터
+    .map(([total, ids]) => ({ total, ids: ids.slice().sort((x, y) => rank.get(x) - rank.get(y)) }));
+};
+// baseOrder에서 주어진 팀들의 자리만 새 순서로 바꿉니다(다른 팀의 상대 우선순위는 유지).
+const reprioritize = (baseOrder, ids, ordered) => {
+  const slots = baseOrder.map((id, i) => ids.includes(id) ? i : -1).filter(i => i >= 0);
+  const out = baseOrder.slice();
+  slots.forEach((slot, k) => { out[slot] = ordered[k]; });
+  return out;
+};
+const shuffled = arr => {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+// 동점 정리 주사위: 팀마다 1~99를 굴리고 높은 값이 먼저 뽑는다.
+// 1~99에서 '중복 없이' 뽑으므로 같은 값이 나와 순서를 못 가리는 일이 없다.
+const rollDice = ids => {
+  const bag = Array.from({ length: 99 }, (_, i) => i + 1);
+  return ids
+    .map(id => {
+      const k = crypto.getRandomValues(new Uint32Array(1))[0] % bag.length;
+      return { id, v: bag.splice(k, 1)[0], by: 'dice' };
+    })
+    .sort((a, b) => b.v - a.v);
+};
 
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)))
   .map(b => CODE_CHARS[b % CODE_CHARS.length]).join('');
@@ -343,11 +417,17 @@ function validate(cfg) {
   if (!Array.isArray(cfg.pool) || !cfg.pool.length) return '선수 명단이 비어 있습니다';
   if (cfg.pool.length > 200) return '선수는 최대 200명까지입니다';
   if (!cfg.pool.every(p => p && typeof p === 'object' && String(p.name || '').trim())) return '닉네임이 빈 참가자가 있습니다';
-  if (!(cfg.size >= 2 && cfg.size <= 6)) return '팀 인원은 2~6명이어야 합니다';
+  // 팀 인원은 롤이 5:5라 5명(팀장 + 4명)으로 고정입니다. cfg.size는 받지 않고 서버가 정합니다.
   if (!(cfg.minBid >= 1 && cfg.minBid <= 100000)) return '최소 입찰 단위는 1~100000이어야 합니다';
   if (!(cfg.base >= 1 && cfg.base <= 100000000)) return '기본 시작 포인트는 1 이상이어야 합니다';
   if (!(cfg.clock >= 5 && cfg.clock <= 300)) return '제한 시간은 5~300초여야 합니다';
   if (cfg.order != null && cfg.order !== 'random' && cfg.order !== 'draw') return '매물 순서 옵션이 올바르지 않습니다';
+  // 드래프트 규칙: ['tier','score'] 부분집합만 허용(빈 배열 = 자유).
+  if (cfg.rules != null) {
+    if (!Array.isArray(cfg.rules) || !cfg.rules.every(r => r === 'tier' || r === 'score')) {
+      return '드래프트 규칙 옵션이 올바르지 않습니다';
+    }
+  }
   return null;
 }
 
@@ -451,6 +531,11 @@ export class AuctionRoom {
         code: this.S.code, title: this.S.title,
         mode: this.S.mode || 'auction',
         draftBalance: this.S.draft ? this.S.draft.balance : null,
+        // 규칙 조합 표시용. 예전 방은 balance 문자열 하나뿐이라 그것으로 만들어 줍니다.
+        draftRules: this.S.draft
+          ? (Array.isArray(this.S.draft.rules) ? this.S.draft.rules
+             : this.S.draft.balance === 'free' ? [] : [this.S.draft.balance])
+          : null,
         phase: this.S.phase, current: this.S.current,
         teams: this.S.teams.length, players: this.S.pool.length, sold,
         filled: this.S.teams.every(t => this.openSlots(t) <= 0),
@@ -562,7 +647,8 @@ export class AuctionRoom {
         name: String(l.name).trim().slice(0, 20) + ' 팀',
         leader: String(l.name).trim().slice(0, 20),
         leaderLine: LINES.includes(l.line) ? l.line : '',
-        grade: parseGrade(l.grade),   // 티어 균형 드래프트에서 팀장이 채우는 티어
+        grade: parseGrade(l.grade),   // 클랜티어 균형에서 팀장이 채우는 밴드
+        score: parseScore(l.score),   // 클랜점수 — 팀 총점의 시작값
         start, points: start, players: []
       };
     });
@@ -581,9 +667,11 @@ export class AuctionRoom {
       line: LINES.includes(p.line) ? p.line : '',
       sub: (LINES.includes(p.sub) || p.sub === 'ALL') ? p.sub : '',   // 부포지션: 5라인 또는 전체(ALL)
       tier: String(p.tier || '').trim().slice(0, 20),
-      // 주최측 실력 등급. 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
-      // 셀 전체가 1~5 숫자일 때만 인정합니다(티어 텍스트 오독 방지).
-      grade: (mt => mt ? Math.round(parseFloat(mt[1]) * 10) / 10 : null)(String(p.grade ?? '').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i)),
+      // 클랜티어(주최측이 매긴 실력 티어). 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
+      // 셀 전체가 1~5 숫자일 때만 인정합니다(솔랭티어 텍스트 오독 방지).
+      grade: parseGrade(p.grade),
+      // 클랜점수(0~999 정수). 지명 순서를 정하는 값. 클랜티어와 별개.
+      score: parseScore(p.score),
       champs: (Array.isArray(p.champs) ? p.champs : [])
         .slice(0, 3).map(c => String(c || '').trim().slice(0, 20)).filter(Boolean),
       status: 'wait', teamId: null, price: 0
@@ -603,38 +691,48 @@ export class AuctionRoom {
     const mode = cfg.mode === 'draft' ? 'draft' : 'auction';
     let draft = null;
     if (mode === 'draft') {
-      const balance = cfg.draftBalance === 'tier' ? 'tier' : 'free';
-      const size = cfg.size | 0;
-      const picksPerTeam = balance === 'tier' ? 4 : size - 1;
-      if (picksPerTeam < 1) return json({ error: '팀 인원이 너무 적어 드래프트를 만들 수 없습니다' }, 400);
-      // 자유·티어 공통: 지명해야 할 총 인원만큼 매물이 있어야 멈추지 않고 끝납니다.
+      // 규칙은 독립 토글. 클랜티어 균형은 '무엇을' 뽑을지, 클랜점수는 '누가 언제' 뽑을지를 정한다.
+      // 둘 다 켜면 순서는 클랜점수(총점 오름차순), 제약은 클랜티어 밴드 — 서로 다른 축이라 충돌하지 않는다.
+      const rules = [];
+      if (cfg.rules ? cfg.rules.includes('tier') : cfg.draftBalance === 'tier') rules.push('tier');
+      if (cfg.rules ? cfg.rules.includes('score') : cfg.draftBalance === 'score') rules.push('score');
+      const picksPerTeam = TEAM_SIZE - 1;
       if (pool.length < teams.length * picksPerTeam) return json({ error: `드래프트 매물이 부족합니다 (필요 ${teams.length * picksPerTeam}명, 현재 ${pool.length}명)` }, 400);
-      if (balance === 'tier') {
-        // 티어 균형: 팀 인원 5(팀장+4), 모든 팀장 등급, 각 티어 매물이 필요 수만큼 있어야 함.
-        if (size !== 5) return json({ error: '티어 균형 드래프트는 팀 인원 5명(팀장 포함)이어야 합니다' }, 400);
-        const noGrade = teams.filter(t => gradeBand(t.grade) < 0);
-        if (noGrade.length) return json({ error: `팀장 등급(1~5)을 입력해야 합니다: ${noGrade.map(t => t.leader).join(', ')}` }, 400);
+      if (rules.includes('tier')) {
+        // 클랜티어 균형: 팀장·참가자 전원 클랜티어 필수 + 각 밴드 매물이 필요 수만큼 있어야 함.
+        const noGL = teams.filter(t => gradeBand(t.grade) < 0);
+        if (noGL.length) return json({ error: `팀장 클랜티어(1~5)를 입력해야 합니다: ${noGL.map(t => t.leader).join(', ')}` }, 400);
+        const noGP = pool.filter(p => gradeBand(p.grade) < 0).length;
+        if (noGP) return json({ error: `참가자 클랜티어(1~5)가 없는 사람이 ${noGP}명 있습니다` }, 400);
         for (let b = 0; b < 5; b++) {
-          const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 티어를 지명해야 하는 팀 수
+          const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 밴드를 지명해야 하는 팀 수
           const have = pool.filter(p => gradeBand(p.grade) === b).length;
-          if (have < need) return json({ error: `${b + 1}티어 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
+          if (have < need) return json({ error: `클랜티어 ${b + 1} 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
         }
       }
-      // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서). 이후는 스네이크(역순 반복).
-      const baseOrder = teams.map(t => t.id);
-      const seq = [];
-      for (let r = 0; r < picksPerTeam; r++) seq.push(...(r % 2 === 0 ? baseOrder : baseOrder.slice().reverse()));
-      draft = { balance, baseOrder, seq, ptr: 0, picksPerTeam };
+      if (rules.includes('score')) {
+        // 클랜점수: 팀장·매물 전원에게 점수가 있어야 순서를 정할 수 있습니다.
+        const noSL = teams.filter(t => t.score == null);
+        if (noSL.length) return json({ error: `팀장 클랜점수(0~999)를 입력해야 합니다: ${noSL.map(t => t.leader).join(', ')}` }, 400);
+        const noSP = pool.filter(p => p.score == null).length;
+        if (noSP) return json({ error: `참가자 클랜점수(0~999)가 없는 사람이 ${noSP}명 있습니다` }, 400);
+      }
+      // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서).
+      // seq는 this.S 배정 뒤 resetSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
+      // balance는 예전 방·관리자 목록 호환용 대표값입니다.
+      const balance = rules.includes('score') ? 'score' : rules.includes('tier') ? 'tier' : 'free';
+      draft = { balance, rules, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam };
     }
 
     this.S = {
       code, mode, draft,
       title: String(cfg.title || '경매').slice(0, 40),
-      base, size: cfg.size | 0, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
+      base, size: TEAM_SIZE, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
       teams, pool, orderMode, order,
       current: null, bid: null, deadline: null, pausedLeft: null,
       log: [], phase: 'ready', createdAt: Date.now()
     };
+    if (draft) this.resetSeq();   // draft는 this.S 안의 같은 객체입니다
     this.um = { top: 0, count: 0 };
     await this.ctx.storage.put({ S: this.S, auth: this.auth, um: this.um });
     await this.armExpiry();
@@ -644,7 +742,7 @@ export class AuctionRoom {
 
   /* ── 파생 계산 ── */
   team(id) { return this.S.teams.find(t => t.id === id); }
-  // 팀이 이미 채운 티어 밴드 집합(팀장 등급 + 지명한 선수들). 티어 균형 드래프트 판정용.
+  // 팀이 이미 채운 클랜티어 밴드 집합(팀장 + 지명한 선수들). 클랜티어 균형 판정용.
   teamBands(t) {
     const s = new Set();
     const lb = gradeBand(t.grade); if (lb >= 0) s.add(lb);
@@ -663,6 +761,43 @@ export class AuctionRoom {
   canBid(t) { return this.openSlots(t) > 0 && this.maxBid(t) >= this.minNext(); }
   allFull() { return this.S.teams.every(t => this.openSlots(t) <= 0); }
   remaining() { return this.S.pool.filter(p => p.status !== 'sold'); }
+
+  /** 드래프트 전체 지명 수. seq.length는 점수 모드에서 '지금까지 정해진 라운드'까지만이라
+   *  총 지명 수로 쓸 수 없습니다. */
+  totalPicks() {
+    const d = this.S.draft;
+    return d ? this.S.teams.length * d.picksPerTeam : 0;
+  }
+  /** 점수 모드의 다음 라운드 지명 순서(현재 총점 기준). */
+  nextRoundOrder() {
+    const d = this.S.draft;
+    return scoreOrder(this.S.teams, this.S.pool, d.baseOrder);
+  }
+  /** 점수 모드 라운드 시작. 총점 동점이 있으면 seq를 늘리지 않고 d.tie에 올려
+   *  진행자가 주사위/수동으로 우선순위를 정할 때까지 기다립니다.
+   *  @returns 동점으로 멈췄으면 true */
+  openScoreRound() {
+    const d = this.S.draft;
+    const groups = tieGroups(this.S.teams, this.S.pool, d.baseOrder);
+    if (groups.length) {
+      d.tie = { round: d.seq.length / this.S.teams.length + 1, groups };
+      this.S.deadline = null;      // 정리하는 동안 픽 시계를 멈춥니다
+      return true;
+    }
+    d.tie = null;
+    d.seq.push(...this.nextRoundOrder());
+    return false;
+  }
+  /** 드래프트 순서를 처음부터 다시 만듭니다(생성·초기화·추첨·시작 공용).
+   *  스네이크는 전량, 점수 모드는 1라운드만 — 첫 라운드부터 동점이면 d.tie를 세우고 멈춥니다. */
+  resetSeq() {
+    const d = this.S.draft;
+    d.ptr = 0; d.tie = null; d.roll = null; d.seq = [];
+    if (draftHas(d, 'score')) { this.openScoreRound(); return; }
+    for (let r = 0; r < d.picksPerTeam; r++) {
+      d.seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
+    }
+  }
 
   /** 클라이언트에 내려보내는 형태 (한도를 미리 계산해 붙임) */
   view() {
@@ -836,7 +971,10 @@ export class AuctionRoom {
         this.S.current = null; this.S.bid = null;
         this.S.deadline = null; this.S.pausedLeft = null;
         // 드래프트 진행 중 되돌리기면 픽 타이머를 다시 채웁니다(0/"시간 초과"로 보이지 않게).
-        if (this.S.mode === 'draft' && this.S.phase === 'live') this.S.deadline = Date.now() + this.S.clock * 1000;
+        // 단, 총점 동점 정리 대기 상태로 되돌아갔으면 순서가 없어 지명이 막히므로 시계도 멈춰 둡니다.
+        if (this.S.mode === 'draft' && this.S.phase === 'live' && !(this.S.draft && this.S.draft.tie)) {
+          this.S.deadline = Date.now() + this.S.clock * 1000;
+        }
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'undo' } });
@@ -863,14 +1001,9 @@ export class AuctionRoom {
         this.S.deadline = null; this.S.pausedLeft = null;
         this.S.log = [];
         this.S.phase = 'ready';
-        // 드래프트면 팀 순서 재추첨 + 스네이크 재생성, 포인터 처음으로.
-        if (this.S.mode === 'draft' && this.S.draft) {
-          // 순서는 유지하고 포인터만 처음으로. 준비 화면에서 진행자가 순서를 다시 정할 수 있습니다.
-          const d = this.S.draft;
-          const seq = [];
-          for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
-          d.seq = seq; d.ptr = 0;
-        }
+        // 드래프트면 순서를 다시 만들고 포인터를 처음으로.
+        // 우선순위(baseOrder)는 유지합니다 — 준비 화면에서 진행자가 다시 정할 수 있습니다.
+        if (this.S.mode === 'draft' && this.S.draft) this.resetSeq();
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'reset' } });
@@ -886,14 +1019,13 @@ export class AuctionRoom {
           let order = Array.isArray(m.order) ? m.order.filter(x => ids.includes(x)) : [];
           if (order.length !== ids.length || new Set(order).size !== ids.length) order = ids;
           d.baseOrder = order;
-          const seq = [];
-          for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? order : order.slice().reverse()));
-          d.seq = seq; d.ptr = 0;
+          this.resetSeq();
         }
         await this.snapshot();   // 시작 직후 '되돌리기'로 준비 상태로 돌아갈 수 있게.
         this.S.phase = 'live';
         // 픽 제한시간은 화면 표시용입니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명합니다.
-        this.S.deadline = Date.now() + this.S.clock * 1000;
+        // 첫 라운드부터 총점 동점이면 순서가 아직 없으므로 시계를 띄우지 않습니다.
+        this.S.deadline = this.S.draft.tie ? null : Date.now() + this.S.clock * 1000;
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'draftstart' } });
@@ -904,15 +1036,8 @@ export class AuctionRoom {
         if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
         if (this.S.phase !== 'ready') return deny('시작 전에만 추첨할 수 있습니다');
         const d = this.S.draft;
-        const order = d.baseOrder.slice();
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-          [order[i], order[j]] = [order[j], order[i]];
-        }
-        d.baseOrder = order;
-        const seq = [];
-        for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? order : order.slice().reverse()));
-        d.seq = seq; d.ptr = 0;
+        d.baseOrder = shuffled(d.baseOrder);
+        this.resetSeq();
         await this.save();
         return this.broadcast({ event: { kind: 'draworder' } });
       }
@@ -922,6 +1047,7 @@ export class AuctionRoom {
         if (this.S.phase !== 'live') return deny('드래프트가 진행 중이 아닙니다');
         if (this.S.pausedLeft != null) return deny('일시정지 상태입니다');
         const d = this.S.draft;
+        if (d.tie) return deny('총점 동점을 정리하는 중입니다. 진행자가 우선순위를 정해야 합니다');
         const curId = d.seq[d.ptr];
         // 화면이 아직 갱신되지 않은 채로 연타하면 다음 차례 팀에 잘못 지명될 수 있어, 클라가 보낸 순번과 대조합니다.
         if (typeof m.ptr === 'number' && m.ptr !== d.ptr) return deny('화면이 막 갱신되었습니다. 다시 지명해주세요');
@@ -932,22 +1058,59 @@ export class AuctionRoom {
         const t = this.team(curId);
         if (!t) return deny('팀을 찾을 수 없습니다');
         if (this.openSlots(t) <= 0) return deny('로스터가 이미 찼습니다');
-        if (d.balance === 'tier') {
+        if (draftHas(d, 'tier')) {
           const b = gradeBand(p.grade);
-          if (b < 0) return deny('등급이 없는 선수는 티어 드래프트에서 지명할 수 없습니다');
-          if (this.teamBands(t).has(b)) return deny(`${t.name}은 이미 ${b + 1}티어를 채웠습니다`);
+          if (b < 0) return deny('클랜티어가 없는 선수는 클랜티어 균형 드래프트에서 지명할 수 없습니다');
+          if (this.teamBands(t).has(b)) return deny(`${t.name}은 이미 클랜티어 ${b + 1}을 채웠습니다`);
         }
         await this.snapshot();
         p.status = 'sold'; p.teamId = t.id; p.price = 0;
-        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade });   // grade: 팀 명단에 티어 표기용
+        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade });   // grade: 팀 명단에 클랜티어 표기용
         this.S.log.unshift({ kind: 'pick', player: p.name, team: t.name });
         this.S.log = this.S.log.slice(0, 60);
         d.ptr++;
-        if (d.ptr >= d.seq.length || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
-        else { this.S.deadline = Date.now() + this.S.clock * 1000; }
+        // 점수 드래프트: 한 라운드가 끝나면 바뀐 총점으로 다음 라운드를 엽니다.
+        // 동점이 있으면 seq를 늘리지 않고 d.tie를 세워 진행자 정리를 기다립니다.
+        let tie = false;
+        if (draftHas(d, 'score') && d.ptr === d.seq.length && d.seq.length < this.totalPicks()) {
+          tie = this.openScoreRound();
+        }
+        if (d.ptr >= this.totalPicks() || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
+        else if (!tie) { this.S.deadline = Date.now() + this.S.clock * 1000; }
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'pick', player: p.name, team: t.name } });
+      }
+      case 'tiebreak': {
+        // 총점 동점 정리. 진행자가 주사위를 굴리거나(mode:'roll') 우선순위를 직접 지정합니다(order).
+        if (hostOnly()) return;
+        if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
+        const d = this.S.draft;
+        if (!d || !d.tie) return deny('정리할 동점이 없습니다');
+        await this.snapshot();   // 주사위 결과도 되돌릴 수 있게
+        // m.order는 '먼저 뽑게 할 팀'을 앞에서부터 적은 목록(일부만 적어도 됩니다).
+        // 지정된 팀을 앞에 두고, 남은 팀은 주사위로 정합니다 → 항상 순서가 확정됩니다.
+        const pref = Array.isArray(m.order) ? m.order : [];
+        let base = d.baseOrder.slice(), rolled = false;
+        // 정리 결과를 남겨 전원 화면에 '주사위 87 > 42' 형태로 보여줍니다.
+        const result = { round: d.tie.round, groups: [] };
+        for (const g of d.tie.groups) {
+          const head = [...new Set(pref.filter(x => g.ids.includes(x)))];
+          const rest = g.ids.filter(x => !head.includes(x));
+          const diced = rest.length > 1 ? rollDice(rest) : rest.map(id => ({ id, v: null, by: 'only' }));
+          if (rest.length > 1) rolled = true;
+          const order = head.map(id => ({ id, v: null, by: 'host' })).concat(diced);
+          result.groups.push({ total: g.total, order });
+          base = reprioritize(base, g.ids, order.map(o => o.id));
+        }
+        d.baseOrder = base;
+        d.roll = result;
+        d.tie = null;
+        d.seq.push(...this.nextRoundOrder());
+        this.S.deadline = Date.now() + this.S.clock * 1000;
+        await this.armExpiry();
+        await this.save();
+        return this.broadcast({ event: { kind: 'tiebreak', rolled, roll: result } });
       }
     }
   }
