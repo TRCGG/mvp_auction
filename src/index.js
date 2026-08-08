@@ -36,13 +36,44 @@ const scoreTotals = (teams, pool) => {
   for (const p of pool) if (tot.has(p.teamId)) tot.set(p.teamId, tot.get(p.teamId) + (p.score || 0));
   return tot;
 };
-// 점수 드래프트 한 라운드의 지명 순서: 총점 오름차순, 동점이면 baseOrder(시작 시 추첨 순서).
+// 점수 드래프트 한 라운드의 지명 순서: 총점 오름차순, 동점이면 baseOrder(동점 우선순위).
 const scoreOrder = (teams, pool, baseOrder) => {
   const tot = scoreTotals(teams, pool);
   const rank = new Map(baseOrder.map((id, i) => [id, i]));
   return teams.slice()
     .sort((a, b) => tot.get(a.id) - tot.get(b.id) || rank.get(a.id) - rank.get(b.id))
     .map(t => t.id);
+};
+// 총점이 같은 팀 묶음(2팀 이상)만 골라냅니다. 순서 안에서 baseOrder대로 정렬해 둡니다.
+// 이 묶음이 있으면 진행자가 주사위 또는 수동으로 우선순위를 정해야 라운드가 시작됩니다.
+const tieGroups = (teams, pool, baseOrder) => {
+  const tot = scoreTotals(teams, pool);
+  const rank = new Map(baseOrder.map((id, i) => [id, i]));
+  const by = new Map();
+  for (const t of teams) {
+    const k = tot.get(t.id);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(t.id);
+  }
+  return [...by.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .sort((a, b) => a[0] - b[0])                       // 총점 낮은 묶음부터
+    .map(([total, ids]) => ({ total, ids: ids.slice().sort((x, y) => rank.get(x) - rank.get(y)) }));
+};
+// baseOrder에서 주어진 팀들의 자리만 새 순서로 바꿉니다(다른 팀의 상대 우선순위는 유지).
+const reprioritize = (baseOrder, ids, ordered) => {
+  const slots = baseOrder.map((id, i) => ids.includes(id) ? i : -1).filter(i => i >= 0);
+  const out = baseOrder.slice();
+  slots.forEach((slot, k) => { out[slot] = ordered[k]; });
+  return out;
+};
+const shuffled = arr => {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 };
 
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)))
@@ -655,7 +686,7 @@ export class AuctionRoom {
         if (noPS) return json({ error: `참가자 점수(0~999)가 없는 사람이 ${noPS}명 있습니다` }, 400);
       }
       // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서).
-      // seq는 this.S 배정 뒤 buildSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
+      // seq는 this.S 배정 뒤 resetSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
       draft = { balance, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam };
     }
 
@@ -667,7 +698,7 @@ export class AuctionRoom {
       current: null, bid: null, deadline: null, pausedLeft: null,
       log: [], phase: 'ready', createdAt: Date.now()
     };
-    if (draft) draft.seq = this.buildSeq();   // draft는 this.S 안의 같은 객체입니다
+    if (draft) this.resetSeq();   // draft는 this.S 안의 같은 객체입니다
     this.um = { top: 0, count: 0 };
     await this.ctx.storage.put({ S: this.S, auth: this.auth, um: this.um });
     await this.armExpiry();
@@ -708,14 +739,30 @@ export class AuctionRoom {
     const d = this.S.draft;
     return scoreOrder(this.S.teams, this.S.pool, d.baseOrder);
   }
-  /** 드래프트 시작 시점의 seq. 스네이크는 전량, 점수 모드는 1라운드만 만든다
-   *  (점수 모드의 나머지 라운드는 pick에서 라운드 경계마다 이어붙인다). */
-  buildSeq() {
+  /** 점수 모드 라운드 시작. 총점 동점이 있으면 seq를 늘리지 않고 d.tie에 올려
+   *  진행자가 주사위/수동으로 우선순위를 정할 때까지 기다립니다.
+   *  @returns 동점으로 멈췄으면 true */
+  openScoreRound() {
     const d = this.S.draft;
-    if (d.balance === 'score') return this.nextRoundOrder();
-    const seq = [];
-    for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
-    return seq;
+    const groups = tieGroups(this.S.teams, this.S.pool, d.baseOrder);
+    if (groups.length) {
+      d.tie = { round: d.seq.length / this.S.teams.length + 1, groups };
+      this.S.deadline = null;      // 정리하는 동안 픽 시계를 멈춥니다
+      return true;
+    }
+    d.tie = null;
+    d.seq.push(...this.nextRoundOrder());
+    return false;
+  }
+  /** 드래프트 순서를 처음부터 다시 만듭니다(생성·초기화·추첨·시작 공용).
+   *  스네이크는 전량, 점수 모드는 1라운드만 — 첫 라운드부터 동점이면 d.tie를 세우고 멈춥니다. */
+  resetSeq() {
+    const d = this.S.draft;
+    d.ptr = 0; d.tie = null; d.seq = [];
+    if (d.balance === 'score') { this.openScoreRound(); return; }
+    for (let r = 0; r < d.picksPerTeam; r++) {
+      d.seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
+    }
   }
 
   /** 클라이언트에 내려보내는 형태 (한도를 미리 계산해 붙임) */
@@ -917,12 +964,9 @@ export class AuctionRoom {
         this.S.deadline = null; this.S.pausedLeft = null;
         this.S.log = [];
         this.S.phase = 'ready';
-        // 드래프트면 팀 순서 재추첨 + 스네이크 재생성, 포인터 처음으로.
-        if (this.S.mode === 'draft' && this.S.draft) {
-          // 순서는 유지하고 포인터만 처음으로. 준비 화면에서 진행자가 순서를 다시 정할 수 있습니다.
-          const d = this.S.draft;
-          d.seq = this.buildSeq(); d.ptr = 0;
-        }
+        // 드래프트면 순서를 다시 만들고 포인터를 처음으로.
+        // 우선순위(baseOrder)는 유지합니다 — 준비 화면에서 진행자가 다시 정할 수 있습니다.
+        if (this.S.mode === 'draft' && this.S.draft) this.resetSeq();
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'reset' } });
@@ -938,12 +982,13 @@ export class AuctionRoom {
           let order = Array.isArray(m.order) ? m.order.filter(x => ids.includes(x)) : [];
           if (order.length !== ids.length || new Set(order).size !== ids.length) order = ids;
           d.baseOrder = order;
-          d.seq = this.buildSeq(); d.ptr = 0;
+          this.resetSeq();
         }
         await this.snapshot();   // 시작 직후 '되돌리기'로 준비 상태로 돌아갈 수 있게.
         this.S.phase = 'live';
         // 픽 제한시간은 화면 표시용입니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명합니다.
-        this.S.deadline = Date.now() + this.S.clock * 1000;
+        // 첫 라운드부터 총점 동점이면 순서가 아직 없으므로 시계를 띄우지 않습니다.
+        this.S.deadline = this.S.draft.tie ? null : Date.now() + this.S.clock * 1000;
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'draftstart' } });
@@ -954,13 +999,8 @@ export class AuctionRoom {
         if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
         if (this.S.phase !== 'ready') return deny('시작 전에만 추첨할 수 있습니다');
         const d = this.S.draft;
-        const order = d.baseOrder.slice();
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-          [order[i], order[j]] = [order[j], order[i]];
-        }
-        d.baseOrder = order;
-        d.seq = this.buildSeq(); d.ptr = 0;
+        d.baseOrder = shuffled(d.baseOrder);
+        this.resetSeq();
         await this.save();
         return this.broadcast({ event: { kind: 'draworder' } });
       }
@@ -970,6 +1010,7 @@ export class AuctionRoom {
         if (this.S.phase !== 'live') return deny('드래프트가 진행 중이 아닙니다');
         if (this.S.pausedLeft != null) return deny('일시정지 상태입니다');
         const d = this.S.draft;
+        if (d.tie) return deny('총점 동점을 정리하는 중입니다. 진행자가 우선순위를 정해야 합니다');
         const curId = d.seq[d.ptr];
         // 화면이 아직 갱신되지 않은 채로 연타하면 다음 차례 팀에 잘못 지명될 수 있어, 클라가 보낸 순번과 대조합니다.
         if (typeof m.ptr === 'number' && m.ptr !== d.ptr) return deny('화면이 막 갱신되었습니다. 다시 지명해주세요');
@@ -991,15 +1032,42 @@ export class AuctionRoom {
         this.S.log.unshift({ kind: 'pick', player: p.name, team: t.name });
         this.S.log = this.S.log.slice(0, 60);
         d.ptr++;
-        // 점수 드래프트: 한 라운드가 끝나면 바뀐 총점으로 다음 라운드 순서를 정해 이어붙입니다.
+        // 점수 드래프트: 한 라운드가 끝나면 바뀐 총점으로 다음 라운드를 엽니다.
+        // 동점이 있으면 seq를 늘리지 않고 d.tie를 세워 진행자 정리를 기다립니다.
+        let tie = false;
         if (d.balance === 'score' && d.ptr === d.seq.length && d.seq.length < this.totalPicks()) {
-          d.seq.push(...this.nextRoundOrder());
+          tie = this.openScoreRound();
         }
         if (d.ptr >= this.totalPicks() || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
-        else { this.S.deadline = Date.now() + this.S.clock * 1000; }
+        else if (!tie) { this.S.deadline = Date.now() + this.S.clock * 1000; }
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'pick', player: p.name, team: t.name } });
+      }
+      case 'tiebreak': {
+        // 총점 동점 정리. 진행자가 주사위를 굴리거나(mode:'roll') 우선순위를 직접 지정합니다(order).
+        if (hostOnly()) return;
+        if (this.S.mode !== 'draft') return deny('드래프트 방이 아닙니다');
+        const d = this.S.draft;
+        if (!d || !d.tie) return deny('정리할 동점이 없습니다');
+        await this.snapshot();   // 주사위 결과도 되돌릴 수 있게
+        // m.order는 '먼저 뽑게 할 팀'을 앞에서부터 적은 목록(일부만 적어도 됩니다).
+        // 지정된 팀을 앞에 두고, 남은 팀은 주사위로 정합니다 → 항상 순서가 확정됩니다.
+        const pref = Array.isArray(m.order) ? m.order : [];
+        let base = d.baseOrder.slice(), rolled = false;
+        for (const g of d.tie.groups) {
+          const head = [...new Set(pref.filter(x => g.ids.includes(x)))];
+          const rest = g.ids.filter(x => !head.includes(x));
+          if (rest.length > 1) rolled = true;
+          base = reprioritize(base, g.ids, head.concat(rest.length > 1 ? shuffled(rest) : rest));
+        }
+        d.baseOrder = base;
+        d.tie = null;
+        d.seq.push(...this.nextRoundOrder());
+        this.S.deadline = Date.now() + this.S.clock * 1000;
+        await this.armExpiry();
+        await this.save();
+        return this.broadcast({ event: { kind: 'tiebreak', rolled, order: d.baseOrder } });
       }
     }
   }

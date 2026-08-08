@@ -194,6 +194,8 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .ordchip b{font-family:var(--num);font-size:13px;font-weight:400;color:var(--gold)}
 .ord-list{display:flex;flex-direction:column;gap:6px}
 .ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+/* 동점 정리 목록에서 내 팀 행 강조 */
+.ord-row.me{border-color:var(--gold);background:var(--gold-soft)}
 /* 번호는 흐리고 크게(색인), 이름은 밝고 굵게(주인공) — 둘이 같은 층으로 읽히지 않게 위계를 벌립니다. */
 .ord-n{font-family:var(--num);font-size:19px;color:var(--muted);min-width:22px;text-align:center}
 .ord-nm{flex:1;font-weight:700;letter-spacing:-.02em;color:var(--text)}
@@ -399,6 +401,7 @@ let opCode=null, setupMode='admin';   // 방 생성: 관리자 직접('admin') �
 let managerMode=false;                 // 매니저 코드로 들어왔는지(다회용, 최대 10개)
 let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·티어순('tier')·등급순('grade')·점수순('score')
 let draftOrder=null;                   // 드래프트 첫 라운드 지명 순서(팀 id 배열). 진행자가 준비 화면에서 정함.
+let tiePick=[];                        // 동점 정리 중 진행자가 '먼저'로 지정한 팀 (묶음별 id 배열)
 let sfxMuted=(()=>{ try{ return localStorage.getItem('sfxMuted')==='1'; }catch{ return false; } })();  // 소리 음소거(클라이언트별)
 const sfxOn=()=>me&&me.role==='host'&&!sfxMuted;   // 연출 사운드는 진행자 화면 위주로 재생
 const fmtInv=c=>c.length===8?c.slice(0,4)+'-'+c.slice(4):c;
@@ -485,9 +488,20 @@ function onEvent(ev){
   else if(ev.kind==='bid' && me.role!=='host') beep();
   else if(ev.kind==='clock' && me.role!=='host') toast(`제한시간이 ${ev.clock}초로 바뀌었습니다`);
   else if(ev.kind==='reset') toast('처음 상태로 초기화되었습니다');
-  else if(ev.kind==='pick'){ flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} 지명</span>`); if(sfxOn()) soldChime(); }
-  else if(ev.kind==='draftstart') toast('드래프트가 시작되었습니다');
+  else if(ev.kind==='pick'){
+    flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} 지명</span>`); if(sfxOn()) soldChime();
+    // 이 지명으로 라운드가 끝나며 총점 동점이 생겼으면 곧바로 알립니다.
+    if(S.draft&&S.draft.tie) toast('총점 동점 — 다음 라운드 순서를 정해야 합니다',true);
+  }
+  else if(ev.kind==='draftstart'){
+    toast(S.draft&&S.draft.tie?'총점 동점 — 첫 라운드 순서를 정해야 합니다':'드래프트가 시작되었습니다',!!(S.draft&&S.draft.tie));
+  }
   else if(ev.kind==='draworder'){ if(S.draft&&S.draft.baseOrder) draftOrder=S.draft.baseOrder.slice(); paint(); if(me.role==='host') toast('지명 순서를 추첨했습니다'); }
+  else if(ev.kind==='tiebreak'){
+    tiePick=[];
+    flash(ev.rolled?'🎲 주사위로 순서 결정':'순서 지정 완료');
+    if(sfxOn()) beep();
+  }
 }
 function flash(html){
   const f=$('flash'); if(!f) return;
@@ -828,6 +842,40 @@ function picksUntilMyTurn(d){
   return 0;
 }
 
+// 총점 동점 정리 화면. 진행자는 주사위를 굴리거나 특정 팀장을 먼저 뽑게 지정할 수 있고,
+// 팀장·관전자는 누가 동점인지와 대기 중임을 봅니다. 정리 전에는 지명이 막힙니다.
+function tieBody(d){
+  const host=me.role==='host';
+  const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.leader:id; };
+  const groups=d.tie.groups.map((g,gi)=>{
+    const chosen=tiePick[gi]||[];
+    const rows=g.ids.map(id=>{
+      const n=chosen.indexOf(id);
+      const mine=me.teamId===id;
+      return `<div class="ord-row${mine?' me':''}">
+        <span class="ord-n">${n>=0?n+1:'·'}</span>
+        <span class="ord-nm">${esc(nm(id))} 팀${mine?' <b style="color:var(--gold)">(나)</b>':''}</span>
+        ${host?`<span class="ord-btns"><button class="btn ghost" data-tiefirst="${gi}:${id}" ${n>=0?'disabled':''}>먼저</button></span>`:''}
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:12px">
+      <div class="lbl" style="margin-bottom:6px">총점 <b class="num" style="color:var(--gold)">${g.total}</b> 동점 ${g.ids.length}팀</div>
+      <div class="ord-list">${rows}</div>
+      ${host&&chosen.length?`<div class="row" style="margin-top:6px"><button class="btn ghost" data-tieclear="${gi}" style="padding:4px 12px;font-size:12px">지정 취소</button></div>`:''}
+    </div>`;
+  }).join('');
+  const anyPick=tiePick.some(a=>a&&a.length);
+  return `<div class="lot-empty" style="padding:16px 20px">🎲 총점 동점<br>ROUND ${d.tie.round} 지명 순서를 정해야 합니다</div>
+    ${groups}
+    ${host
+      ? `<p class="hint" style="margin:9px 0 12px">주사위를 굴리면 동점 팀 순서를 무작위로 정합니다. <b>먼저</b>를 눌러 특정 팀장을 앞에 지정할 수도 있고, 지정하지 않은 팀은 주사위로 정해집니다.</p>
+         <div class="row">
+           <button class="btn gold" style="flex:1" id="bTieRoll">🎲 주사위 굴리기</button>
+           ${anyPick?'<button class="btn gold" style="flex:1" id="bTieApply">지정한 순서로 진행</button>':''}
+         </div>`
+      : `<p class="hint" style="margin:9px 0">총점이 같은 팀이 있어 진행자가 순서를 정하는 중입니다.</p>`}`;
+}
+
 // 드래프트 진행판(경매의 lotBody 자리). 준비/진행/완료 단계별로 그립니다.
 function draftBody(){
   const d=S.draft||{seq:[],ptr:0,balance:'free',picksPerTeam:0};
@@ -866,6 +914,8 @@ function draftBody(){
         <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">드래프트 초기화</button>
       </div>`:''}`;
   }
+  // 총점 동점 정리 대기 — 순서가 아직 정해지지 않아 지명을 받지 않습니다.
+  if(d.tie) return tieBody(d);
   // 진행 중
   const curId=d.seq[d.ptr];
   const t=S.teams.find(x=>x.id===curId);
@@ -1093,6 +1143,14 @@ function wire(){
   on('bLinks',openLinksModal);
   document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
   document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
+  // 동점 정리: '먼저'로 지정한 순서를 모아두고, 주사위나 지정 적용으로 서버에 보냅니다.
+  document.querySelectorAll('[data-tiefirst]').forEach(b=>b.onclick=()=>{
+    const [gi,id]=b.dataset.tiefirst.split(':');
+    (tiePick[+gi]=tiePick[+gi]||[]).push(id); paint();
+  });
+  document.querySelectorAll('[data-tieclear]').forEach(b=>b.onclick=()=>{ tiePick[+b.dataset.tieclear]=[]; paint(); });
+  on('bTieRoll',()=>{ tiePick=[]; send('tiebreak'); });
+  on('bTieApply',()=>{ send('tiebreak',{order:tiePick.flat().filter(Boolean)}); tiePick=[]; });
   on('bSell',()=>send('sell'));
   on('bPass',()=>{ if(S.bid){ askConfirm({title:'유찰 처리할까요?',msg:`최고 입찰 ${S.bid.amount}P가 있습니다. 유찰하면 이 매물은 뒤로 밀립니다.`,confirmLabel:'유찰'}).then(ok=>{ if(ok) send('pass'); }); return; } send('pass'); });
   on('bPause',()=>send(S.pausedLeft!=null?'resume':'pause'));
