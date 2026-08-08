@@ -408,8 +408,10 @@ const copyText=txt=>navigator.clipboard.writeText(txt).then(()=>toast('복사했
 });
 let leaders=[{name:'',line:'TOP',points:null},{name:'',line:'JGL',points:null},
              {name:'',line:'MID',points:null},{name:'',line:'ADC',points:null}];
-// 진행 방식 설정: 경매(auction) / 드래프트(draft). 드래프트 균형: 티어(tier)/자유(free).
+// 진행 방식 설정: 경매(auction) / 드래프트(draft). 드래프트 균형: 티어(tier)/자유(free)/점수(score).
 let gameMode='auction', draftBalance='tier';
+// 점수 드래프트 기본 지명 시간(초). 매물 점수를 훑어보고 골라야 해서 입찰(15초)보다 길게 둡니다.
+const SCORE_CLOCK=60;
 // 규칙 입력값은 모드 전환 시 재렌더돼도 유지되도록 모듈 상태로 보관합니다.
 let rules={title:'클랜 내전',size:5,clock:15,base:1000,minBid:10,order:'random'};
 function syncRules(){
@@ -418,6 +420,10 @@ function syncRules(){
   rules.title=g('cTitle',rules.title); rules.clock=n('cClock',rules.clock);
   const sz=$('cSize'); if(sz&&!sz.readOnly&&sz.value!=='') rules.size=+sz.value;   // 티어(readonly 5)일 땐 사용자의 경매 인원값 보존
   rules.base=n('cBase',rules.base); rules.minBid=n('cMin',rules.minBid); rules.order=g('cOrder',rules.order);
+}
+// 모드/균형을 바꾼 직후에만 그 모드의 기본값을 채웁니다(진행자가 더 길게 잡아둔 값은 유지).
+function applyModeDefaults(){
+  if(gameMode==='draft'&&draftBalance==='score'&&rules.clock<SCORE_CLOCK) rules.clock=SCORE_CLOCK;
 }
 
 // 링크는 /#/r/CODE?k=... 형태라 쿼리가 해시 뒤에 옵니다.
@@ -1592,7 +1598,7 @@ function renderSetup(mode){
         </div>
         <p class="hint" style="margin-top:12px">${gameMode==='draft'
           ? (draftBalance==='score'
-              ? '라운드마다 팀 전원이 1회씩 지명하고, <b>라운드 안의 순서는 팀 총점이 낮은 팀부터</b>입니다. 비싼 매물을 데려가면 다음 라운드에 순서가 뒤로 밀립니다. 총점 상한은 없고, 동점이면 시작 시 추첨 순서를 따릅니다. 아래에서 <b>팀장 점수(0~999)</b>를, 참가자 명단에는 <b>점수</b>를 모두 입력해야 합니다.'
+              ? '라운드마다 팀 전원이 1회씩 지명하고, <b>라운드 안의 순서는 팀 총점이 낮은 팀부터</b>입니다. 비싼 매물을 데려가면 다음 라운드에 순서가 뒤로 밀립니다. 총점 상한은 없고, 동점이면 시작 시 추첨 순서를 따릅니다. 아래에서 <b>팀장 점수(0~999)</b>를, 참가자 명단에는 <b>점수</b>를 모두 입력해야 합니다. 지명 시간은 매물을 훑어볼 시간이 필요해 기본 <b>60초</b>입니다.'
               : '팀장이 <b>스네이크 순서</b>로 선수를 직접 지명합니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다.'+(draftBalance==='tier'?' <b>티어 균형</b>은 팀 인원 5명 고정이며, 아래에서 <b>팀장 등급(1~5)</b>을 입력해야 합니다.':''))
           : '입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.'}</p>
       </div>
@@ -1660,8 +1666,8 @@ function renderSetup(mode){
   $('bText').onclick=addText;
   $('bAdd').onclick=()=>{leaders.push({name:'',line:'',points:null});drawLeaders();};
   const bClear=$('bClear'); if(bClear) bClear.onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
-  document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{ syncRules(); gameMode=b.dataset.gm; renderSetup(setupMode); });
-  const bal=$('cBalance'); if(bal) bal.onchange=()=>{ syncRules(); draftBalance=bal.value; renderSetup(setupMode); };
+  document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{ syncRules(); gameMode=b.dataset.gm; applyModeDefaults(); renderSetup(setupMode); });
+  const bal=$('cBalance'); if(bal) bal.onchange=()=>{ syncRules(); draftBalance=bal.value; applyModeDefaults(); renderSetup(setupMode); };
   $('bCreate').onclick=createRoom;
 }
 
