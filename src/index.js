@@ -948,7 +948,10 @@ export class AuctionRoom {
         this.S.current = null; this.S.bid = null;
         this.S.deadline = null; this.S.pausedLeft = null;
         // 드래프트 진행 중 되돌리기면 픽 타이머를 다시 채웁니다(0/"시간 초과"로 보이지 않게).
-        if (this.S.mode === 'draft' && this.S.phase === 'live') this.S.deadline = Date.now() + this.S.clock * 1000;
+        // 단, 총점 동점 정리 대기 상태로 되돌아갔으면 순서가 없어 지명이 막히므로 시계도 멈춰 둡니다.
+        if (this.S.mode === 'draft' && this.S.phase === 'live' && !(this.S.draft && this.S.draft.tie)) {
+          this.S.deadline = Date.now() + this.S.clock * 1000;
+        }
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'undo' } });
