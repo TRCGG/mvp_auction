@@ -71,13 +71,22 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 /* 설정 */
 .setup{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-/* 드래프트 적용 규칙 체크박스 — 켜지면 골드 테두리로 상태를 분명히 한다. */
-.rulechk{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px;padding:10px 12px;cursor:pointer;
-  background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:12.5px;color:var(--body2);line-height:1.6}
-.rulechk.on{border-color:var(--gold);background:var(--gold-soft)}
-.rulechk input{width:17px;height:17px;margin:1px 0 0;flex:none;accent-color:var(--gold)}
-.rulechk b{display:block;font-size:13.5px;color:var(--text);margin-bottom:1px}
-.rulechk.on b{color:var(--gold)}
+/* 좁은 화면에서 '드래프트 (순서 지명)'이 '지/명'으로 잘리는 것을 막는다. */
+.modesel .btn{word-break:keep-all}
+/* 드래프트 규칙 — 네 조합을 카드로 고른다. 세 항목(순서·제약·필요)을 모든 카드의
+   같은 자리에 두어 카드끼리 세로로 비교되게 한다. 골드 테두리가 선택 상태. */
+.ruleopt{display:block;width:100%;margin-bottom:7px;padding:9px 12px 10px;text-align:left;cursor:pointer;
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--body2)}
+.ruleopt:hover{border-color:#3A4B59}
+.ruleopt.on{border-color:var(--gold);background:var(--gold-soft)}
+.ruleopt>b{display:block;font-size:13.5px;color:var(--text);margin-bottom:5px}
+.ruleopt.on>b{color:var(--gold)}
+.ruleopt.on>b::after{content:'✓';margin-left:6px;font-size:12px}
+/* keep-all이 없으면 '주사위'가 '주/사위'로 잘립니다 — 설명문은 어절 단위로 끊습니다. */
+.ruleopt>span{display:grid;grid-template-columns:31px 1fr;gap:7px;font-size:11.5px;line-height:1.55;word-break:keep-all}
+.ruleopt>span+span{margin-top:3px}
+.ruleopt>span>i{font-style:normal;font-size:11px;color:var(--muted)}
+.ruleopt>span b{color:var(--text);font-weight:600}
 /* 방을 만들 수 없는 이유 목록 */
 .blockbox{margin-top:12px;padding:10px 13px;background:var(--danger-bg);border:1px solid var(--danger-bd);
   border-radius:8px;font-size:12.5px;color:#E88A85;line-height:1.7}
@@ -456,6 +465,28 @@ let gameMode='auction';
 // tier=클랜티어 균형(무엇을 뽑을지 제약) · score=클랜점수(누가 언제 뽑을지 순서)
 let draftRules={tier:true,score:false};
 const anyRule=()=>draftRules.tier||draftRules.score;
+/* 규칙 두 개를 각각 켜고 끄게 하면 네 조합의 결과를 진행자가 머릿속에서 합성해야 합니다.
+   그래서 조합 자체를 선택지로 내놓고, 두 규칙이 실제로 건드리는 축(순서·제약)과
+   추가로 받아야 하는 값을 카드마다 같은 자리에 적습니다. 저장 형태는 그대로 {tier,score}. */
+const RULESETS=[
+  {k:'free',tier:false,score:false,name:'자유',
+   ord:'스네이크 — 1번 팀부터 차례로, 다음 라운드는 역순',
+   lim:'없음 — 남은 참가자 누구든 지명',
+   req:'없음 — 닉네임과 라인만'},
+  {k:'tier',tier:true,score:false,name:'클랜티어 균형',
+   ord:'스네이크 — 1번 팀부터 차례로, 다음 라운드는 역순',
+   lim:'팀마다 <b>클랜티어 1·2·3·4·5를 1명씩</b>. 팀장이 채운 티어는 다시 뽑지 못합니다',
+   req:'팀장·참가자 <b>전원 클랜티어를 명단 양식에 기입</b> (1~5, 소수점 첫째자리까지 가능). 한 명이라도 비면 방을 만들 수 없습니다'},
+  {k:'score',tier:false,score:true,name:'클랜점수',
+   ord:'라운드마다 팀 총점을 다시 계산해 <b>총점 낮은 팀부터</b>. 총점이 같으면 진행자가 주사위나 지정으로 정합니다',
+   lim:'없음 — 남은 참가자 누구든 지명',
+   req:'팀장·참가자 <b>전원 클랜점수를 명단 양식에 기입</b> (0~999 정수). 한 명이라도 비면 방을 만들 수 없습니다'},
+  {k:'both',tier:true,score:true,name:'클랜티어 균형 + 클랜점수',
+   ord:'<b>클랜점수</b> — 총점 낮은 팀부터',
+   lim:'<b>클랜티어 균형</b> — 팀마다 1·2·3·4·5를 1명씩',
+   req:'전원 <b>클랜티어와 클랜점수를 둘 다 기입</b>. 하나라도 비면 방을 만들 수 없습니다'},
+];
+const curRuleset=()=>(RULESETS.find(r=>r.tier===draftRules.tier&&r.score===draftRules.score)||RULESETS[0]).k;
 // 팀 인원은 롤이 5:5라 5명(팀장 + 지명 4명) 고정. 입력받지 않습니다.
 const TEAM_SIZE=5;
 // 점수 드래프트 기본 지명 시간(초). 매물 점수를 훑어보고 골라야 해서 입찰(15초)보다 길게 둡니다.
@@ -467,9 +498,7 @@ function syncRules(){
   const n=(id,d)=>{ const el=$(id); return el&&el.value!==''?+el.value:d; };
   rules.title=g('cTitle',rules.title); rules.clock=n('cClock',rules.clock);
   rules.base=n('cBase',rules.base); rules.minBid=n('cMin',rules.minBid); rules.order=g('cOrder',rules.order);
-  const rt=$('cRuleTier'), rs=$('cRuleScore');
-  if(rt) draftRules.tier=rt.checked;
-  if(rs) draftRules.score=rs.checked;
+  // draftRules는 카드를 누를 때 바로 정해지므로 여기서 DOM을 읽지 않습니다.
 }
 // 모드/규칙을 바꾼 직후에만 그 모드의 기본값을 채웁니다(진행자가 더 길게 잡아둔 값은 유지).
 function applyModeDefaults(){
@@ -1743,12 +1772,13 @@ function renderSetup(mode){
           <button type="button" class="btn ${gameMode==='draft'?'gold':'ghost'}" data-gm="draft" style="flex:1">드래프트 (순서 지명)</button>
         </div>
         ${gameMode==='draft'?`
-        <div style="margin-bottom:14px"><span class="lbl">적용 규칙 (여러 개 선택 가능)</span>
-          <label class="rulechk ${draftRules.tier?'on':''}"><input type="checkbox" id="cRuleTier" ${draftRules.tier?'checked':''}>
-            <span><b>클랜티어 균형</b>팀마다 클랜티어 1·2·3·4·5를 1명씩(팀장 포함). 참가자 <b>클랜티어</b> 필수</span></label>
-          <label class="rulechk ${draftRules.score?'on':''}"><input type="checkbox" id="cRuleScore" ${draftRules.score?'checked':''}>
-            <span><b>클랜점수</b>팀 총점이 낮은 팀부터 지명. 참가자 <b>클랜점수</b> 필수</span></label>
-          <p class="hint" style="margin-top:7px">${anyRule()?'':'둘 다 해제하면 <b>자유 드래프트</b>입니다 — 제약 없이 스네이크 순서로 지명합니다.'}</p>
+        <div style="margin-bottom:14px"><span class="lbl">드래프트 규칙</span>
+          ${RULESETS.map(r=>`<button type="button" class="ruleopt${curRuleset()===r.k?' on':''}" data-rs="${r.k}">
+            <b>${r.name}</b>
+            <span><i>순서</i><span>${r.ord}</span></span>
+            <span><i>제약</i><span>${r.lim}</span></span>
+            <span><i>필요</i><span>${r.req}</span></span>
+          </button>`).join('')}
         </div>`:''}
         <div class="grid2">
           <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="${esc(rules.title)}"></div>
@@ -1787,7 +1817,7 @@ function renderSetup(mode){
         <p class="hint" style="margin-top:10px">${gameMode==='draft'
           ? (anyRule()
               ? [
-                  draftRules.tier?'<b>클랜티어</b>(1~5, 소수 가능) — 그 팀장이 채우는 밴드가 되어 팀은 나머지 4개를 지명합니다. <b>전원 필수</b>.':'',
+                  draftRules.tier?'<b>클랜티어</b>(1~5, 소수점 첫째자리까지 가능) — 그 팀장이 채우는 티어가 되어 팀은 나머지 4개를 지명합니다. <b>전원 필수</b>.':'',
                   draftRules.score?'<b>클랜점수</b>(0~999 정수) — 팀 총점의 시작값이 되어 첫 라운드 순서를 정합니다. <b>전원 필수</b>.':''
                 ].filter(Boolean).join('<br>')
               : '자유 드래프트는 팀장 값을 받지 않습니다. 닉네임과 라인만 입력하세요.')
@@ -1845,8 +1875,9 @@ function renderSetup(mode){
   $('bAdd').onclick=()=>{leaders.push({name:'',line:'',points:null});drawLeaders();};
   const bClear=$('bClear'); if(bClear) bClear.onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
   document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{ syncRules(); gameMode=b.dataset.gm; applyModeDefaults(); renderSetup(setupMode); });
-  ['cRuleTier','cRuleScore'].forEach(id=>{
-    const el=$(id); if(el) el.onchange=()=>{ syncRules(); applyModeDefaults(); renderSetup(setupMode); };
+  document.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{
+    const r=RULESETS.find(x=>x.k===b.dataset.rs); if(!r||curRuleset()===r.k) return;
+    syncRules(); draftRules={tier:r.tier,score:r.score}; applyModeDefaults(); renderSetup(setupMode);
   });
   $('bCreate').onclick=createRoom;
 }
