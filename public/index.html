@@ -189,8 +189,9 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .treq.bad b{color:var(--danger)}
 .ord-list{display:flex;flex-direction:column;gap:6px}
 .ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
-.ord-n{font-family:var(--num);font-size:16px;color:var(--text);min-width:20px;text-align:center}
-.ord-nm{flex:1;font-weight:600}
+/* 번호는 흐리고 크게(색인), 이름은 밝고 굵게(주인공) — 둘이 같은 층으로 읽히지 않게 위계를 벌립니다. */
+.ord-n{font-family:var(--num);font-size:19px;color:var(--muted);min-width:22px;text-align:center}
+.ord-nm{flex:1;font-weight:700;letter-spacing:-.02em;color:var(--text)}
 .ord-btns{display:flex;gap:4px}
 .ord-btns button{padding:10px 14px;font-size:14px;min-width:44px}
 /* 진행 중 다음 지명 차례 띠 — 스네이크 순서대로 앞으로 나올 팀들 */
@@ -259,6 +260,8 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .pc-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .pc-nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-gr{font-family:var(--num);font-weight:700;font-size:15px;flex:none}
+/* 점수 드래프트 매물 카드의 점수 — 등급 자리를 대신 쓴다. */
+.pc-sc{font-family:var(--num);font-weight:700;font-size:15px;color:var(--gold);flex:none}
 .pc-pass{font-size:11px;font-weight:700;color:#E88A85;background:#2C1817;border-radius:4px;padding:1px 6px;flex:none}
 .pc-bot{display:flex;justify-content:space-between;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:5px;font-size:12px;color:var(--muted)}
 .pc-line{font-weight:700;letter-spacing:.03em}
@@ -391,7 +394,7 @@ let S=null, me=null, ws=null, connected=false, skew=0, links=null;
 let players=[];
 let opCode=null, setupMode='admin';   // 방 생성: 관리자 직접('admin') 또는 생성 코드('op')
 let managerMode=false;                 // 매니저 코드로 들어왔는지(다회용, 최대 10개)
-let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·티어순('tier')·등급순('grade')
+let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·티어순('tier')·등급순('grade')·점수순('score')
 let draftOrder=null;                   // 드래프트 첫 라운드 지명 순서(팀 id 배열). 진행자가 준비 화면에서 정함.
 let sfxMuted=(()=>{ try{ return localStorage.getItem('sfxMuted')==='1'; }catch{ return false; } })();  // 소리 음소거(클라이언트별)
 const sfxOn=()=>me&&me.role==='host'&&!sfxMuted;   // 연출 사운드는 진행자 화면 위주로 재생
@@ -521,6 +524,14 @@ function teamBandsClient(t){
   const s=new Set(); const lb=gradeBand(t.grade); if(lb>=0)s.add(lb);
   S.pool.forEach(p=>{ if(p.teamId===t.id){ const b=gradeBand(p.grade); if(b>=0)s.add(b); } });
   return s;
+}
+// 점수 드래프트인가.
+const scoreMode=()=>!!S&&S.mode==='draft'&&!!S.draft&&S.draft.balance==='score';
+// 팀 총점 = 팀장 점수 + 지명한 매물 점수 합. 서버 scoreTotal과 동일 규칙(pool 기준).
+function teamTotal(t){
+  let n=t.score||0;
+  S.pool.forEach(p=>{ if(p.teamId===t.id) n+=p.score||0; });
+  return n;
 }
 const leftMs=()=>{
   if(!S) return 0;
@@ -712,7 +723,10 @@ function teamCard(t){
     return pl?`<div class="slot on" style="color:var(--${(pl.line||'none').toLowerCase()})">${pl.line||'●'}</div>`
              :'<div class="slot">빈자리</div>';
   }).join('');
-  const ptBlock=draft
+  const sc=scoreMode();
+  const ptBlock=sc
+    ? `<div class="team-pt"><b>${teamTotal(t)}</b><i>총점</i></div>`
+    : draft
     ? `<div class="team-pt"><b>${t.players.length}${S.draft?'/'+S.draft.picksPerTeam:''}</b><i>지명</i></div>`
     : `<div class="team-pt"><b>${t.points}</b><i>POINT</i></div>`;
   const tierRow=(draft&&S.draft&&S.draft.balance==='tier')
@@ -725,15 +739,15 @@ function teamCard(t){
   return `<div class="team ${mineT?'me':''} ${top?'top':''} ${turn?'turn':''} ${t.open<=0&&!allDone()?'full':''}" ${dropAttr}>
     <div class="team-hd">
       <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}${turn?'<span class="turn-badge">지명중</span>':''}${top?`<span class="turn-badge" style="background:var(--ok)">최고 ${S.bid.amount}P</span>`:''}</div>
-      <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${draft&&lgBand>=0?` · ${lgBand+1}티어`:(!draft&&t.start!==S.base?` · 시작 ${t.start}P`:'')}</div></div>
+      <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${sc?` · 점수 ${t.score??0}`:draft&&lgBand>=0?` · ${lgBand+1}티어`:(!draft&&t.start!==S.base?` · 시작 ${t.start}P`:'')}</div></div>
       ${ptBlock}
     </div>
     ${draft?'':`<div class="gauge"><i style="width:${pct}%"></i></div>`}
     ${tierRow}
     <div class="slots">${slots}</div>
     <div class="roster">
-      <div class="lead"><b><i class="lead-star">★</i>${esc(t.leader)}</b><span>${draft?tierTag(t.grade)+posIcon(t.leaderLine):posIcon(t.leaderLine)}</span></div>
-      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${draft?tierTag(p.grade)+posIcon(p.line):p.price+posIcon(p.line)}</span></div>`).join('')}
+      <div class="lead"><b><i class="lead-star">★</i>${esc(t.leader)}</b><span>${sc?(t.score??0)+posIcon(t.leaderLine):draft?tierTag(t.grade)+posIcon(t.leaderLine):posIcon(t.leaderLine)}</span></div>
+      ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${sc?(p.score??0)+posIcon(p.line):draft?tierTag(p.grade)+posIcon(p.line):p.price+posIcon(p.line)}</span></div>`).join('')}
       ${(!draft&&t.open>0)?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
     </div>
   </div>`;
@@ -749,9 +763,13 @@ function ensureDraftOrder(){
   }
 }
 
-// 진행 중 '다음 지명 차례' 띠. 현재 픽 이후 최대 5팀을 스네이크 순서대로, 라운드가 바뀌는 자리엔 R표시.
+// 진행 중 '다음 지명 차례' 띠. 현재 픽 이후 최대 5팀을 순서대로, 라운드가 바뀌는 자리엔 R표시.
+// 점수 드래프트는 seq에 현재 라운드까지만 들어 있습니다(다음 순서는 라운드 시작 때 총점으로 결정).
+// 그래서 라운드 끝에서 '마지막 지명'으로 오해하지 않게 따로 안내합니다.
 function nextTurnBar(d){
   const n=S.teams.length||1;
+  const totalPicks=n*(d.picksPerTeam||0);
+  const undecided=d.balance==='score'&&d.ptr+1<totalPicks&&d.seq.length<totalPicks;
   const items=[];
   for(let i=d.ptr+1;i<d.seq.length&&items.length<5;i++){
     const t=S.teams.find(x=>x.id===d.seq[i]);
@@ -763,10 +781,19 @@ function nextTurnBar(d){
     const op=mine?1:Math.max(.5,Math.round((1-k*.18)*100)/100);   // 뒤로 갈수록 옅게
     items.push(`${head}<span class="turn-item${mine?' mine':''}" style="opacity:${op}"><b>${i+1}</b>${mine?'내 차례':esc(t.leader)}</span>`);
   }
-  if(!items.length) return `<div class="turnbar"><span class="turn-lb">다음</span><span class="turn-more">마지막 지명입니다</span></div>`;
+  if(!items.length) return `<div class="turnbar"><span class="turn-lb">다음</span><span class="turn-more">${
+    undecided?'라운드 종료 · 다음 순서는 총점으로 정해집니다':'마지막 지명입니다'}</span></div>`;
   const more=d.seq.length-(d.ptr+1)-items.length;
   return `<div class="turnbar"><span class="turn-lb">다음</span>${
-    items.join('')}${more>0?`<span class="turn-more">+${more}</span>`:''}</div>`;
+    items.join('')}${more>0?`<span class="turn-more">+${more}</span>`:''}${
+    undecided?'<span class="turn-more">이후 총점순</span>':''}</div>`;
+}
+
+// 서버 scoreOrder와 동일 규칙 — 총점 오름차순, 동점은 주어진 우선순위(baseOrder) 순.
+function scoreOrderClient(base){
+  return S.teams.slice()
+    .sort((a,b)=>teamTotal(a)-teamTotal(b)||base.indexOf(a.id)-base.indexOf(b.id))
+    .map(t=>t.id);
 }
 
 // 내 차례가 몇 픽 뒤인지(팀장 화면 안내용). 현재 차례거나 남은 차례가 없으면 0.
@@ -788,12 +815,23 @@ function draftBody(){
         <span class="ord-nm">${esc(nm(id))} 팀</span>
         ${host?`<span class="ord-btns"><button class="btn ghost" data-ordup="${i}" ${i===0?'disabled':''}>▲</button><button class="btn ghost" data-orddn="${i}" ${i===draftOrder.length-1?'disabled':''}>▼</button></span>`:''}
       </div>`).join('');
-    return `<div class="lot-empty" style="padding:16px 20px">${d.balance==='tier'?'티어 균형':'자유'} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명</div>
-      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">첫 지명 순서</span>${host?`<button class="btn ghost" id="bDraw" style="margin-left:auto;padding:4px 12px;font-size:12px">🎲 추첨</button>`:''}</div>
+    const sc=d.balance==='score';
+    // 점수 모드에선 진행자가 정하는 순서가 '첫 지명 순서'가 아니라 동점 시 우선순위입니다.
+    // 실제 첫 라운드 순서는 팀장 점수로 결정되므로 따로 계산해 보여줍니다.
+    const firstOrder=sc?scoreOrderClient(draftOrder).map((id,i)=>{
+      const t=S.teams.find(x=>x.id===id);
+      return `<span class="treq">${i+1}. ${esc(t?t.leader:id)} <b>${t?teamTotal(t):0}</b></span>`;
+    }).join(''):'';
+    return `<div class="lot-empty" style="padding:16px 20px">${d.balance==='tier'?'티어 균형':sc?'점수':'자유'} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명</div>
+      ${sc?`<div class="lbl" style="margin-bottom:6px">첫 라운드 지명 순서 (총점 낮은 순)</div>
+      <div class="treqrow" style="margin-bottom:12px">${firstOrder}</div>`:''}
+      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">${sc?'동점 시 우선순위':'첫 지명 순서'}</span>${host?`<button class="btn ghost" id="bDraw" style="margin-left:auto;padding:4px 12px;font-size:12px">🎲 추첨</button>`:''}</div>
       <div class="ord-list">${list}</div>
       ${host
-        ? `<p class="hint" style="margin:9px 0 12px">추첨을 누르면 모두가 보는 앞에서 순서가 정해집니다. ▲▼로 직접 조정도 가능하고, 이후는 스네이크(다음 라운드부터 역순)로 진행됩니다.</p>
-           <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">이 순서로 드래프트 시작</button></div>`
+        ? `<p class="hint" style="margin:9px 0 12px">${sc
+            ? '점수 드래프트는 <b>매 라운드 총점이 낮은 팀부터</b> 지명합니다. 여기서 정하는 순서는 <b>총점이 같을 때만</b> 쓰이는 우선순위입니다. 추첨을 누르면 모두가 보는 앞에서 정해지고, ▲▼로 직접 조정도 가능합니다.'
+            : '추첨을 누르면 모두가 보는 앞에서 순서가 정해집니다. ▲▼로 직접 조정도 가능하고, 이후는 스네이크(다음 라운드부터 역순)로 진행됩니다.'}</p>
+           <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">${sc?'드래프트 시작':'이 순서로 드래프트 시작'}</button></div>`
         : `<p class="hint" style="margin:9px 0">진행자가 순서를 정하고 곧 시작합니다.</p>`}`;
   }
   if(S.phase==='done'){
@@ -815,9 +853,11 @@ function draftBody(){
     const rem=[0,1,2,3,4].filter(b=>!teamBandsClient(t).has(b)).map(b=>b+1);
     need=` · 지명할 티어 <b style="color:var(--gold)">${rem.join('·')}</b>`;
   }
-  return `<div class="lot-no">ROUND ${round}/${d.picksPerTeam} · PICK ${Math.min(d.ptr+1,d.seq.length)}/${d.seq.length}</div>
+  // 총 픽 수는 seq.length가 아니라 팀수×라운드로 셉니다. 점수 모드의 seq에는 현재 라운드까지만 들어 있습니다.
+  const totalPicks=S.teams.length*(d.picksPerTeam||0);
+  return `<div class="lot-no">ROUND ${round}/${d.picksPerTeam} · PICK ${Math.min(d.ptr+1,totalPicks)}/${totalPicks}</div>
     <div class="lot-name" style="font-size:clamp(26px,4vw,42px)">${esc(t?t.leader:'')} <span style="font-size:.5em;color:var(--muted)">팀 차례</span></div>
-    <div class="hint" style="margin-bottom:12px">${d.balance==='tier'?'티어 균형':'자유'} 드래프트${need}</div>
+    <div class="hint" style="margin-bottom:12px">${d.balance==='tier'?'티어 균형':d.balance==='score'?'점수':'자유'} 드래프트${need}</div>
     <div class="clock ${ms<=5000?'hot':''}">
       <b class="num" id="clockVal">${Math.max(0,Math.ceil(ms/1000))}</b>
       <div class="bar"><i id="clockBar" style="width:${pct}%"></i></div>
@@ -860,19 +900,22 @@ function poolPanel(){
   const rem=remaining().filter(p=>p.id!==S.current);
   const posline=LINES.map(l=>`${l} ${rem.filter(p=>p.line===l).length}`).join(' · ');
   const noline=rem.filter(p=>!p.line).length;
+  const sc=scoreMode();
   const chip=p=>{
-    // 2줄 카드: 윗줄 닉네임·등급, 아랫줄 주포/부포·티어.
+    // 2줄 카드: 윗줄 닉네임·등급(점수 모드는 점수), 아랫줄 주포/부포·티어.
     // 테두리 색 = 등급색 우선, 없으면 티어색, 둘 다 없으면 무채색.
     const gc=gradeColor(p.grade);
     const hasG=p.grade!=null&&p.grade!=='';
     const bc=gc||tierColor(p.tier)||'var(--line)';
+    // 점수 드래프트에선 오른쪽 위가 점수 자리입니다. 등급은 카드 테두리 색으로 계속 전달됩니다.
     const inner=`<div class="pc-top">
         <span class="pc-nm">${esc(p.name)}</span>
-        ${hasG?`<span class="pc-gr" style="color:${gc}">${esc(p.grade)}</span>`
-             :p.status==='pass'?'<span class="pc-pass">유찰</span>':''}
+        ${sc?`<span class="pc-sc">${p.score??0}</span>`
+            :hasG?`<span class="pc-gr" style="color:${gc}">${esc(p.grade)}</span>`
+            :p.status==='pass'?'<span class="pc-pass">유찰</span>':''}
       </div>
       <div class="pc-bot">
-        <span class="pc-line">${esc(p.line)||'-'}${p.sub?`<span class="pc-sub">/${esc(subLabel(p.sub))}</span>`:''}${hasG&&p.status==='pass'?' <span class="pc-pass">유찰</span>':''}</span>
+        <span class="pc-line">${esc(p.line)||'-'}${p.sub?`<span class="pc-sub">/${esc(subLabel(p.sub))}</span>`:''}${(hasG||sc)&&p.status==='pass'?' <span class="pc-pass">유찰</span>':''}</span>
         <span class="pc-tier">${esc(p.tier)||'-'}</span>
       </div>`;
     const bst=`style="border-color:${bc};border-left-width:4px"`;
@@ -895,31 +938,39 @@ function poolPanel(){
   const renderGroups=groups=>{ const shown=groups.filter(([,a])=>a.length);
     return shown.length?shown.map(([label,a])=>`<div class="pgroup">${label} · ${a.length}</div>${poolDiv(a)}`).join(''):'<span class="hint">남은 매물이 없습니다</span>'; };
 
+  // 점수순 보기는 점수 드래프트에서만 존재합니다. 다른 방으로 넘어와도 남아 있으면
+  // 버튼도 없는데 헤더가 '남은 매물'로 잘못 표시되므로 여기서 등록순으로 되돌립니다.
+  const view=(poolView==='score'&&!sc)?'order':poolView;
   let body;
-  if(poolView==='pos'){
+  if(view==='pos'){
     body=renderGroups(LINES.map(l=>[l,rem.filter(p=>p.line===l)]).concat([['미지정',rem.filter(p=>!p.line)]]));
-  }else if(poolView==='tier'){
+  }else if(view==='tier'){
     // 티어별 그룹(상위→하위), 그룹 내 LP·단수 정렬. 못 알아본 티어는 '미분류'.
     const tg=TIERS.map((t,i)=>[t.k[0], rem.filter(p=>tierIdx(p.tier)===i).sort((a,b)=>tierRank(b.tier)-tierRank(a.tier))])
              .concat([['미분류', rem.filter(p=>tierIdx(p.tier)<0)]]);
     body=renderGroups(tg);
-  }else if(poolView==='grade'){
+  }else if(view==='grade'){
     // 등급 구간별 그룹(1티어 상위), 그룹 내 소수 오름차순. 등급 없으면 '등급 미정'.
     // gradeBand로 완전분할 → 범위 밖·구데이터 등 어떤 값도 누락 없이 한 그룹에만 속함(카운트=목록 일치).
     const gg=[0,1,2,3,4].map(b=>[`${b+1}티어`, rem.filter(p=>gradeBand(p.grade)===b).sort((x,y)=>Number(x.grade)-Number(y.grade))])
              .concat([['등급 미정', rem.filter(p=>gradeBand(p.grade)<0)]]);
     body=renderGroups(gg);
+  }else if(view==='score'){
+    // 점수 내림차순(높을수록 강함). 점수 없는 매물은 뒤로 모읍니다.
+    const has=rem.filter(p=>p.score!=null).sort((a,b)=>b.score-a.score);
+    body=renderGroups([['점수순',has],['점수 미정',rem.filter(p=>p.score==null)]]);
   }else{
     body=poolDiv(draw?nextUpList():rem);
   }
   return `<div class="panel" style="margin-top:12px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span class="lbl" style="margin:0">${draw&&poolView==='order'?'매물 순서':'남은 매물'} <b class="num" style="color:var(--gold);font-size:15px">${rem.length}</b></span>
+      <span class="lbl" style="margin:0">${draw&&view==='order'?'매물 순서':'남은 매물'} <b class="num" style="color:var(--gold);font-size:15px">${rem.length}</b></span>
       <div class="psort" role="group" aria-label="매물 정렬">
-        <button id="pv-order" data-pv="order" aria-pressed="${poolView==='order'}" class="${poolView==='order'?'on':''}">${draw?'순서':'등록순'}</button>
-        <button id="pv-pos" data-pv="pos" aria-pressed="${poolView==='pos'}" class="${poolView==='pos'?'on':''}">포지션</button>
-        <button id="pv-tier" data-pv="tier" aria-pressed="${poolView==='tier'}" class="${poolView==='tier'?'on':''}">티어순</button>
-        <button id="pv-grade" data-pv="grade" aria-pressed="${poolView==='grade'}" class="${poolView==='grade'?'on':''}">등급순</button>
+        <button id="pv-order" data-pv="order" aria-pressed="${view==='order'}" class="${view==='order'?'on':''}">${draw?'순서':'등록순'}</button>
+        <button id="pv-pos" data-pv="pos" aria-pressed="${view==='pos'}" class="${view==='pos'?'on':''}">포지션</button>
+        <button id="pv-tier" data-pv="tier" aria-pressed="${view==='tier'}" class="${view==='tier'?'on':''}">티어순</button>
+        <button id="pv-grade" data-pv="grade" aria-pressed="${view==='grade'}" class="${view==='grade'?'on':''}">등급순</button>
+        ${sc?`<button id="pv-score" data-pv="score" aria-pressed="${view==='score'}" class="${view==='score'?'on':''}">점수순</button>`:''}
       </div>
     </div>
     <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin:8px 0 2px"><b style="letter-spacing:.06em">등급색</b>${GRADE_COLORS.map((c,i)=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${c};vertical-align:-1px"></i> ${i+1}</span>`).join('')}<span style="color:#5A6B7C">·</span><span>낮을수록 상위</span></div>
@@ -945,6 +996,7 @@ function saveResultImage(){
   const perTeam=(draft&&S.draft)?S.draft.picksPerTeam:0;
   // 드래프트 명단은 teamCard와 같이 풀에서 읽습니다(t.players에 등급이 없는 예전 지명분 대비).
   const rosterOf=t=>draft?S.pool.filter(p=>p.teamId===t.id):t.players;
+  const smode=scoreMode();   // 주의: 아래 sc는 캔버스 배율이라 이름을 겹치지 않게 씁니다.
   const teams=S.teams, sc=2, colW=300, pad=28, headH=96, rowH=30, gap=16;
   const cols=Math.min(teams.length,4), rowsN=Math.ceil(teams.length/cols);
   const maxP=Math.max(0,...teams.map(t=>rosterOf(t).length));
@@ -965,22 +1017,25 @@ function saveResultImage(){
     x.fillStyle='#E6ECF2'; x.font='700 17px sans-serif'; x.fillText(t.name,cx+16,cy+13,colW-32);
     x.fillStyle='#7E90A2'; x.font='12px sans-serif'; x.fillText('팀장 '+t.leader,cx+16,cy+38,colW-120);
     x.fillStyle='#D4A94E'; x.textAlign='right';
-    x.fillText(draft?(rosterOf(t).length+(perTeam?'/'+perTeam:'')+' 지명'):('잔여 '+t.points+'P'),cx+colW-16,cy+38,90); x.textAlign='left';
+    x.fillText(smode?('총점 '+teamTotal(t))
+      :draft?(rosterOf(t).length+(perTeam?'/'+perTeam:'')+' 지명')
+      :('잔여 '+t.points+'P'),cx+colW-16,cy+38,90); x.textAlign='left';
     let ry=cy+64;
-    // 오른쪽 끝 값: 경매는 낙찰가, 드래프트는 등급색 티어(웹 명단의 tierTag와 같은 정보).
-    const rightVal=(g,price,ry2)=>{
+    // 오른쪽 끝 값: 경매는 낙찰가, 점수 드래프트는 점수, 그 외 드래프트는 등급색 티어.
+    const rightVal=(g,price,scoreV,ry2)=>{
       x.font='600 13px sans-serif'; x.textAlign='right';
-      if(draft){ const b=gradeBand(g); if(b>=0){ x.fillStyle=GRADE_COLORS[b]; x.fillText((b+1)+'티어',cx+colW-16,ry2,80); } }
+      if(smode){ x.fillStyle='#D4A94E'; x.fillText((scoreV??0)+'점',cx+colW-16,ry2,80); }
+      else if(draft){ const b=gradeBand(g); if(b>=0){ x.fillStyle=GRADE_COLORS[b]; x.fillText((b+1)+'티어',cx+colW-16,ry2,80); } }
       else { x.fillStyle='#D4A94E'; x.fillText(price+'P',cx+colW-16,ry2,80); }
       x.textAlign='left';
     };
     x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.fillText('★ '+t.leader,cx+16,ry,colW-70);
-    if(draft) rightVal(t.grade,null,ry);
+    if(draft) rightVal(t.grade,null,t.score,ry);
     ry+=rowH;
     rosterOf(t).forEach(pl=>{
       x.fillStyle=POS[pl.line]||'#7E90A2'; x.fillRect(cx+16,ry+3,3,13);
       x.fillStyle='#E6ECF2'; x.font='13px sans-serif'; x.fillText(pl.name,cx+26,ry,colW-130);
-      rightVal(pl.grade,pl.price,ry);
+      rightVal(pl.grade,pl.price,pl.score,ry);
       ry+=rowH;
     });
   });
@@ -1287,7 +1342,7 @@ async function renderRooms(){
       return `<div class="room ${st[2]}">
         <div class="rc">${r.code}</div>
         <div>
-          <div class="rt">${esc(r.title)} <span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트'+(r.draftBalance==='tier'?' · 티어':r.draftBalance==='free'?' · 자유':'')):'경매'}</span> <span class="pill ${st[0]}">${st[1]}</span></div>
+          <div class="rt">${esc(r.title)} <span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트'+(r.draftBalance==='tier'?' · 티어':r.draftBalance==='score'?' · 점수':r.draftBalance==='free'?' · 자유':'')):'경매'}</span> <span class="pill ${st[0]}">${st[1]}</span></div>
           <div class="rs">
             ${r.missing?'<span>방 데이터가 없습니다</span>':`
             <span>${r.teams}팀 · 참가자 ${r.players}명</span>
@@ -1499,6 +1554,7 @@ function renderSetup(mode){
         <div style="margin-bottom:14px"><label class="lbl" for="cBalance">균형 규칙</label>
           <select id="cBalance">
             <option value="tier" ${draftBalance==='tier'?'selected':''}>티어 균형 — 팀마다 1·2·3·4·5티어 1명씩(팀장 포함)</option>
+            <option value="score" ${draftBalance==='score'?'selected':''}>점수 — 팀 총점이 낮은 팀부터 지명</option>
             <option value="free" ${draftBalance==='free'?'selected':''}>자유 — 제약 없이 지명</option>
           </select>
         </div>`:''}
@@ -1517,7 +1573,9 @@ function renderSetup(mode){
           </div>`:''}
         </div>
         <p class="hint" style="margin-top:12px">${gameMode==='draft'
-          ? '팀장이 <b>스네이크 순서</b>로 선수를 직접 지명합니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다.'+(draftBalance==='tier'?' <b>티어 균형</b>은 팀 인원 5명 고정이며, 아래에서 <b>팀장 등급(1~5)</b>을 입력해야 합니다.':'')
+          ? (draftBalance==='score'
+              ? '라운드마다 팀 전원이 1회씩 지명하고, <b>라운드 안의 순서는 팀 총점이 낮은 팀부터</b>입니다. 비싼 매물을 데려가면 다음 라운드에 순서가 뒤로 밀립니다. 총점 상한은 없고, 동점이면 시작 시 추첨 순서를 따릅니다. 아래에서 <b>팀장 점수(0~999)</b>를, 참가자 명단에는 <b>점수</b>를 모두 입력해야 합니다.'
+              : '팀장이 <b>스네이크 순서</b>로 선수를 직접 지명합니다. 시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다.'+(draftBalance==='tier'?' <b>티어 균형</b>은 팀 인원 5명 고정이며, 아래에서 <b>팀장 등급(1~5)</b>을 입력해야 합니다.':''))
           : '입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.'}</p>
       </div>
       <div class="panel">
@@ -1528,7 +1586,9 @@ function renderSetup(mode){
           ${gameMode==='auction'?'<button class="btn ghost" id="bClear">포인트 초기화</button>':''}
         </div>
         <p class="hint" style="margin-top:10px">${gameMode==='draft'
-          ? '세 번째 칸은 <b>팀장 등급(1~5, 소수 가능)</b>입니다.'+(draftBalance==='tier'?' 그 팀장이 채우는 티어가 되어, 팀은 나머지 4개 티어를 지명합니다.':' 자유 드래프트에선 참고용입니다.')
+          ? (draftBalance==='score'
+              ? '세 번째 칸은 <b>팀장 점수(0~999 정수)</b>입니다. 이 점수가 팀 총점의 시작값이 되어 첫 라운드 지명 순서를 정합니다.'
+              : '세 번째 칸은 <b>팀장 등급(1~5, 소수 가능)</b>입니다.'+(draftBalance==='tier'?' 그 팀장이 채우는 티어가 되어, 팀은 나머지 4개 티어를 지명합니다.':' 자유 드래프트에선 참고용입니다.'))
           : '세 번째 칸은 그 팀장의 시작 포인트입니다. 비워두면 기본값을 씁니다.'}</p>
       </div>
     </div>
@@ -1550,11 +1610,14 @@ function renderSetup(mode){
         <details style="margin-top:14px">
           <summary class="hint" style="cursor:pointer">엑셀 없이 직접 입력하기</summary>
           <p class="hint" style="margin:8px 0 6px">엑셀 양식과 같은 순서로, 쉼표로 구분해 한 줄에 한 명씩 적습니다.<br>
-            <b>아이디, 티어, 등급, 주포지션, 부포지션, 주챔프1, 주챔프2, 주챔프3</b><br>
-            아이디는 <b>닉네임#태그</b>(예: 페이커#KR1), 아이디만 필수. 등급은 1~5 소수 가능(예 1.2·3.4, 1이 최상위, 없으면 생략).<br>
-            티어는 축약형 권장 — <b>M7</b>=마스터700 · <b>G3</b>=골드3 · <b>S4</b>=실버4 · <b>D1</b>=다이아1 (한글·영문도 인식).</p>
+            <b>아이디, 티어, 등급, 주포지션, 부포지션, 주챔프1, 주챔프2, 주챔프3, 점수</b><br>
+            아이디는 <b>닉네임#태그</b>(예: 페이커#KR1)이며 아이디만 필수입니다.<br><br>
+            <b>티어 · 등급 · 점수</b>는 이름이 비슷하지만 서로 다른 값입니다.<br>
+            · <b>티어</b> — 라이엇 <b>솔로랭크 티어</b>. 축약형 권장: <b>M7</b>=마스터700 · <b>G3</b>=골드3 · <b>S4</b>=실버4 · <b>D1</b>=다이아1 (한글·영문도 인식)<br>
+            · <b>등급</b> — <b>클랜에서 자체로 매긴 실력 티어</b>. 1~5, 소수 첫째자리까지(예 1.2·3.4). 1이 최상위, 없으면 생략<br>
+            · <b>점수</b> — <b>클랜에서 자체로 매긴 점수</b>. 0~999 정수, 높을수록 강함. <b>점수 드래프트</b>에서 지명 순서를 정하는 값입니다</p>
           <textarea id="cPool" rows="6" spellcheck="false"
-            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스&#10;홍길동#0415, G3, 3.4, TOP, , 가렌&#10;이영희#KR1"></textarea>
+            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스, 37&#10;홍길동#0415, G3, 3.4, TOP, , 가렌, , , 24&#10;이영희#KR1"></textarea>
           <button class="btn ghost" id="bText" style="margin-top:8px">목록에 추가</button>
         </details>
       </div>
@@ -1585,15 +1648,17 @@ function renderSetup(mode){
 }
 
 function drawLeaders(){
-  $('leaderList').innerHTML='<div class="leader-row" style="margin-bottom:4px"><span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em">닉네임</span><span style="font-size:11px;color:var(--muted);font-weight:600">라인</span><span style="font-size:11px;color:var(--muted);font-weight:600">'+(gameMode==='draft'?'등급':'시작 P')+'</span><span></span></div>'+leaders.map((l,i)=>`
+  $('leaderList').innerHTML='<div class="leader-row" style="margin-bottom:4px"><span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em">닉네임</span><span style="font-size:11px;color:var(--muted);font-weight:600">라인</span><span style="font-size:11px;color:var(--muted);font-weight:600">'+(gameMode!=='draft'?'시작 P':draftBalance==='score'?'점수':'등급')+'</span><span></span></div>'+leaders.map((l,i)=>`
     <div class="leader-row">
       <input type="text" placeholder="팀장 ${i+1} 닉네임" value="${esc(l.name)}" data-i="${i}" data-f="name">
       <select data-i="${i}" data-f="line" aria-label="팀장 ${i+1} 라인">
         ${['',...LINES].map(v=>`<option value="${v}" ${v===l.line?'selected':''}>${v||'라인'}</option>`).join('')}
       </select>
-      ${gameMode==='draft'
-        ? `<input type="text" placeholder="등급" value="${esc(l.grade??'')}" data-i="${i}" data-f="grade" aria-label="팀장 ${i+1} 등급(1~5)" style="text-align:center">`
-        : `<input type="number" min="0" placeholder="기본" value="${l.points??''}" data-i="${i}" data-f="points" aria-label="팀장 ${i+1} 시작 포인트" onwheel="this.blur()">`}
+      ${gameMode!=='draft'
+        ? `<input type="number" min="0" placeholder="기본" value="${l.points??''}" data-i="${i}" data-f="points" aria-label="팀장 ${i+1} 시작 포인트" onwheel="this.blur()">`
+        : draftBalance==='score'
+        ? `<input type="text" placeholder="점수" value="${esc(l.score??'')}" data-i="${i}" data-f="score" aria-label="팀장 ${i+1} 점수(0~999)" style="text-align:center">`
+        : `<input type="text" placeholder="등급" value="${esc(l.grade??'')}" data-i="${i}" data-f="grade" aria-label="팀장 ${i+1} 등급(1~5)" style="text-align:center">`}
       <button data-del="${i}" title="삭제" aria-label="팀장 ${i+1} 삭제">&times;</button>
     </div>`).join('');
   $('leaderList').querySelectorAll('[data-f]').forEach(el=>{
@@ -1627,6 +1692,8 @@ const subLabel=s=>s==='ALL'?'전체':s;
 const clean=v=>String(v??'').trim().replace(/\s+/g,' ').slice(0,24);
 // 실력 등급: 1~5 정수 + 소수점 첫째자리(예 1.2·3.4). 범위 밖·두 자리 소수는 인정 안 함.
 const gnum=v=>{ const m=String(v??'').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i); return m?m[1]:''; };
+// 점수 드래프트용 점수: 0~999 정수만. 소수는 인정 안 함(서버 parseScore와 동일 규칙).
+const snum=v=>{ const m=String(v??'').trim().match(/^(\d{1,3})\s*(?:점|p)?$/i); return m?m[1]:''; };
 // 아이디(닉네임#태그) 분리 → {name, tag}. 첫 # 기준, 태그는 12자·내부 # 제거(서버와 동일).
 function splitId(id){
   const s=String(id??'').trim();
@@ -1640,6 +1707,7 @@ function readSheet(rows){
   const want={아이디:'id',ID:'id',id:'id',
               '솔랭 티어':'tier',솔랭티어:'tier',티어:'tier',
               등급:'grade',티어등급:'grade','실력 등급':'grade',실력등급:'grade',
+              점수:'score','실력 점수':'score',실력점수:'score',스코어:'score',
               주포지션:'line',부포지션:'sub',
               주챔프1:'c1',주챔프2:'c2',주챔프3:'c3'};
   let h=-1, map={};
@@ -1661,7 +1729,7 @@ function readSheet(rows){
     if(!name) continue;
     out.push({
       name, tag,
-      tier:at('tier'), grade:gnum(at('grade')),
+      tier:at('tier'), grade:gnum(at('grade')), score:snum(at('score')),
       line:norm(at('line')), sub:normSub(at('sub')),
       champs:[at('c1'),at('c2'),at('c3')].filter(Boolean)
     });
@@ -1698,7 +1766,7 @@ async function loadFile(f){
   }catch(e){ toast(e.message,true); }
 }
 
-/* 직접 입력: 아이디(닉네임#태그), 티어, 등급, 주포, 부포, 주챔프1~3 */
+/* 직접 입력: 아이디(닉네임#태그), 티어, 등급, 주포, 부포, 주챔프1~3, 점수 */
 function addText(){
   let suspect=0;   // 옛 형식(닉네임,태그,주포…)으로 보이는 줄
   const add=$('cPool').value.split('\n').map(x=>x.trim()).filter(Boolean).map(raw=>{
@@ -1712,7 +1780,8 @@ function addText(){
       grade:gnum(p[2]),
       line:norm(p[3]),
       sub:normSub(p[4]),
-      champs:[p[5],p[6],p[7]].map(clean).filter(Boolean)
+      champs:[p[5],p[6],p[7]].map(clean).filter(Boolean),
+      score:snum(p[8])
     };
   }).filter(p=>p.name);
   if(!add.length) return toast('추가할 내용이 없습니다',true);
@@ -1729,7 +1798,9 @@ function drawPlayers(){
     <div class="prow ${dup.has(p.name+'#'+p.tag)?'dup':''}">
       <span class="nm">${esc(p.name)}${p.tag?` <i>#${esc(p.tag)}</i>`:''}</span>
       <span><span class="tag t-${p.line}">${esc(p.line)||'-'}</span></span>
-      <span class="tr">${gradeBadge(p.grade)} ${p.sub?esc(subLabel(p.sub))+' · ':''}${esc(p.tier)||'티어 미상'}</span>
+      <span class="tr">${gameMode==='draft'&&draftBalance==='score'
+        ? (snum(p.score)?`<b style="color:var(--gold)">${snum(p.score)}점</b> `:'<b style="color:var(--danger)">점수없음</b> ')
+        : ''}${gradeBadge(p.grade)} ${p.sub?esc(subLabel(p.sub))+' · ':''}${esc(p.tier)||'티어 미상'}</span>
       <span class="ch">${p.champs.map(esc).join(' · ')}</span>
       <button data-rm="${i}" title="삭제" aria-label="${esc(p.name)} 삭제">&times;</button>
     </div>`).join('');
@@ -1754,8 +1825,10 @@ function drawPlayers(){
 }
 
 // 티어 균형 드래프트: '티어별 현재/필요' 표를 설정 화면에 보여줘 만들기 전에 균형을 확인하게 합니다.
+// 점수 드래프트: 점수 누락 인원과 팀장 총점 시작값을 미리 보여줍니다.
 function drawTierReq(){
   const box=$('tierReq'); if(!box) return;
+  if(gameMode==='draft'&&draftBalance==='score'){ drawScoreReq(box); return; }
   if(!(gameMode==='draft'&&draftBalance==='tier')){ box.innerHTML=''; return; }
   const names=leaders.filter(l=>l.name.trim());
   const noGL=names.filter(l=>!gnum(l.grade)).length;
@@ -1769,6 +1842,22 @@ function drawTierReq(){
     <div class="treqrow">${rows}</div>
     ${noGL?`<p class="hint" style="color:var(--danger);margin-top:7px">팀장 ${noGL}명의 등급이 비어 있습니다. 등급을 입력해야 시작할 수 있습니다.</p>`:''}
     ${noGP?`<p class="hint" style="margin-top:7px">등급 없는 매물 ${noGP}명은 티어 드래프트에서 지명되지 않습니다(남는 매물로 유지).</p>`:''}`;
+}
+
+// 점수 드래프트 시작 전 확인: 점수 누락은 시작을 막으므로 몇 명인지 바로 보여줍니다.
+// 팀장 점수는 1라운드 지명 순서를 그대로 결정하므로 예상 순서까지 같이 보여줍니다.
+function drawScoreReq(box){
+  const names=leaders.filter(l=>l.name.trim());
+  const noSL=names.filter(l=>!snum(l.score)).length;
+  const noSP=players.filter(p=>!snum(p.score)).length;
+  const ready=names.filter(l=>snum(l.score));
+  // 서버 scoreOrder와 같은 규칙 — 총점(=아직 팀장 점수) 오름차순, 동점은 입력 순서.
+  const order=ready.map((l,i)=>({l,i})).sort((a,b)=>+snum(a.l.score)-+snum(b.l.score)||a.i-b.i)
+    .map(({l},n)=>`<span class="treq">${n+1}. ${esc(l.name)} <b>${snum(l.score)}</b></span>`).join('');
+  box.innerHTML=`<div class="lbl" style="margin:14px 0 6px">첫 라운드 지명 순서 (팀장 점수 낮은 순)</div>
+    <div class="treqrow">${order||'<span class="hint">팀장 점수를 입력하면 순서가 표시됩니다</span>'}</div>
+    ${noSL?`<p class="hint" style="color:var(--danger);margin-top:7px">팀장 ${noSL}명의 점수가 비어 있습니다. 0~999 정수를 입력해야 시작할 수 있습니다.</p>`:''}
+    ${noSP?`<p class="hint" style="color:var(--danger);margin-top:7px">참가자 ${noSP}명의 점수가 비어 있습니다. 점수 드래프트는 전원 점수가 있어야 시작할 수 있습니다.</p>`:''}`;
 }
 
 async function createRoom(){
@@ -1794,6 +1883,13 @@ async function createRoom(){
         const have=players.filter(p=>gradeBand(p.grade)===b).length;
         if(have<need) return toast(`${b+1}티어 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)`,true);
       }
+    }
+    if(draftBalance==='score'){
+      // 점수가 없으면 지명 순서를 정할 수 없으므로 전원 필수입니다(서버 검증과 동일).
+      const noS=names.filter(l=>!snum(l.score));
+      if(noS.length) return toast('팀장 점수(0~999)를 입력하세요: '+noS.map(l=>l.name).join(', '),true);
+      const noSP=players.filter(p=>!snum(p.score)).length;
+      if(noSP) return toast(`참가자 점수(0~999)가 없는 사람이 ${noSP}명 있습니다`,true);
     }
     // 드래프트는 포인트를 안 쓰므로 base/minBid는 서버 검증만 통과할 안전값으로 보냅니다.
     return submitRoom({ mode:'draft', draftBalance, title:rules.title.trim()||'드래프트',
