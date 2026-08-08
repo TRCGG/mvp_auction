@@ -193,6 +193,19 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .ord-nm{flex:1;font-weight:600}
 .ord-btns{display:flex;gap:4px}
 .ord-btns button{padding:10px 14px;font-size:14px;min-width:44px}
+/* 진행 중 다음 지명 차례 띠 — 스네이크 순서대로 앞으로 나올 팀들 */
+.turnbar{display:flex;align-items:center;gap:7px;margin-top:12px;padding:8px 10px;
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow-x:auto;white-space:nowrap}
+.turnbar::-webkit-scrollbar{height:4px}
+.turnbar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.turn-lb{font-size:11px;color:var(--muted);letter-spacing:.1em;flex-shrink:0}
+.turn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;flex-shrink:0}
+.turn b{font-family:var(--num);font-size:11px;font-weight:400;color:var(--muted)}
+.turn.mine{color:var(--gold)}
+.turn.mine b{color:var(--gold)}
+.turn-r{font-style:normal;font-family:var(--num);font-size:11px;color:var(--muted);
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-right:2px}
+.turn-ar,.turn-more{font-size:11px;color:var(--muted);flex-shrink:0}
 .pcard.pick{cursor:pointer}
 .pcard.pick:hover{border-color:var(--gold);background:var(--gold-soft)}
 .team.full{opacity:.55}
@@ -726,6 +739,29 @@ function ensureDraftOrder(){
   }
 }
 
+// 진행 중 '다음 지명 차례' 띠. 현재 픽 이후 최대 5팀을 스네이크 순서대로, 라운드가 바뀌는 자리엔 R표시.
+function nextTurnBar(d){
+  const n=S.teams.length||1;
+  const items=[];
+  for(let i=d.ptr+1;i<d.seq.length&&items.length<5;i++){
+    const t=S.teams.find(x=>x.id===d.seq[i]);
+    if(!t) continue;
+    items.push(`<span class="turn${me.teamId===t.id?' mine':''}">${
+      i%n===0?`<i class="turn-r">R${Math.floor(i/n)+1}</i>`:''}<b>${i+1}</b>${esc(t.leader)}</span>`);
+  }
+  if(!items.length) return `<div class="turnbar"><span class="turn-lb">다음</span><span class="turn-more">마지막 지명입니다</span></div>`;
+  const more=d.seq.length-(d.ptr+1)-items.length;
+  return `<div class="turnbar"><span class="turn-lb">다음</span>${
+    items.join('<span class="turn-ar">›</span>')}${more>0?`<span class="turn-more">+${more}</span>`:''}</div>`;
+}
+
+// 내 차례가 몇 픽 뒤인지(팀장 화면 안내용). 현재 차례거나 남은 차례가 없으면 0.
+function picksUntilMyTurn(d){
+  if(!me.teamId) return 0;
+  for(let i=d.ptr+1;i<d.seq.length;i++) if(d.seq[i]===me.teamId) return i-d.ptr;
+  return 0;
+}
+
 // 드래프트 진행판(경매의 lotBody 자리). 준비/진행/완료 단계별로 그립니다.
 function draftBody(){
   const d=S.draft||{seq:[],ptr:0,balance:'free',picksPerTeam:0};
@@ -759,6 +795,7 @@ function draftBody(){
   const myTurn=!!me.teamId&&me.teamId===curId;
   const ms=leftMs(), over=ms<=0, pct=Math.max(0,Math.min(100,ms/(S.clock*1000)*100));
   const round=Math.floor(d.ptr/S.teams.length)+1;
+  const wait=picksUntilMyTurn(d);
   let need='';
   if(d.balance==='tier'&&t){
     const rem=[0,1,2,3,4].filter(b=>!teamBandsClient(t).has(b)).map(b=>b+1);
@@ -772,9 +809,11 @@ function draftBody(){
       <div class="bar"><i id="clockBar" style="width:${pct}%"></i></div>
       ${S.pausedLeft!=null?'<span class="hint" style="color:var(--gold)">일시정지</span>':over?'<span class="hint" style="color:var(--danger)">시간 초과 · 지명 대기</span>':''}
     </div>
+    ${nextTurnBar(d)}
     <div class="hint" style="margin-top:14px">${
       myTurn?'<b style="color:var(--gold)">내 차례입니다.</b> 오른쪽 남은 매물에서 선수를 눌러 지명하세요.'
       :me.role==='host'?'현재 팀장이 고르는 중입니다. 오른쪽 매물을 클릭하면 진행자가 대신 지명합니다.'
+      :wait>0?`다른 팀 차례입니다. <b style="color:var(--gold)">내 차례까지 ${wait}픽</b> 남았습니다.`
       :'다른 팀 차례입니다. 남은 매물을 살펴보세요.'}</div>
     ${me.role==='host'?`<div class="row" style="margin-top:12px;justify-content:flex-end">
       <button class="btn" id="bPause" style="font-size:12px;padding:6px 12px">${S.pausedLeft!=null?'재개':'일시정지'}</button>
