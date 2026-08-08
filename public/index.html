@@ -194,18 +194,28 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .ord-btns{display:flex;gap:4px}
 .ord-btns button{padding:10px 14px;font-size:14px;min-width:44px}
 /* 진행 중 다음 지명 차례 띠 — 스네이크 순서대로 앞으로 나올 팀들 */
-.turnbar{display:flex;align-items:center;gap:7px;margin-top:12px;padding:8px 10px;
-  background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow-x:auto;white-space:nowrap}
+/* 주의: 항목 클래스는 .turn-item 입니다. .turn 은 팀 카드(.team.turn)가 이미 쓰고 있어 충돌합니다. */
+.turnbar{display:flex;align-items:center;gap:6px;margin-top:12px;padding:9px 11px;
+  background:var(--bg);border:1px solid var(--line);border-radius:9px;
+  overflow-x:auto;white-space:nowrap;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}
 .turnbar::-webkit-scrollbar{height:4px}
 .turnbar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
-.turn-lb{font-size:11px;color:var(--muted);letter-spacing:.1em;flex-shrink:0}
-.turn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;flex-shrink:0}
-.turn b{font-family:var(--num);font-size:11px;font-weight:400;color:var(--muted)}
-.turn.mine{color:var(--gold)}
-.turn.mine b{color:var(--gold)}
+.turn-lb{font-size:11px;color:var(--muted);letter-spacing:.12em;flex-shrink:0;margin-right:2px}
+.turn-item{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;
+  background:var(--panel2);border:1px solid var(--line);border-radius:99px;
+  padding:5px 11px 5px 7px;font-size:12.5px;font-weight:600}
+.turn-item b{font-family:var(--num);font-size:11px;font-weight:400;color:var(--muted);
+  min-width:9px;text-align:center}
+.turn-item.mine{background:var(--gold);color:#0A1017;font-weight:800;
+  padding:5px 12px 5px 8px;box-shadow:0 0 12px -3px var(--gold)}
+.turn-item.mine b{display:none}
+.turn-item.mine::before{content:'▶';font-size:11px}
+.turn-sep{width:1px;height:18px;background:var(--line);flex-shrink:0;margin:0 3px}
 .turn-r{font-style:normal;font-family:var(--num);font-size:11px;color:var(--muted);
-  border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-right:2px}
-.turn-ar,.turn-more{font-size:11px;color:var(--muted);flex-shrink:0}
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;flex-shrink:0}
+.turn-more{font-size:11px;color:var(--muted);flex-shrink:0}
 .pcard.pick{cursor:pointer}
 .pcard.pick:hover{border-color:var(--gold);background:var(--gold-soft)}
 .team.full{opacity:.55}
@@ -746,13 +756,17 @@ function nextTurnBar(d){
   for(let i=d.ptr+1;i<d.seq.length&&items.length<5;i++){
     const t=S.teams.find(x=>x.id===d.seq[i]);
     if(!t) continue;
-    items.push(`<span class="turn${me.teamId===t.id?' mine':''}">${
-      i%n===0?`<i class="turn-r">R${Math.floor(i/n)+1}</i>`:''}<b>${i+1}</b>${esc(t.leader)}</span>`);
+    const mine=me.teamId===t.id;
+    const k=items.length;
+    // 라운드가 바뀌는 자리엔 구분선 + R뱃지를 항목 앞에 따로 넣습니다.
+    const head=(i%n===0)?`<span class="turn-sep"></span><i class="turn-r">R${Math.floor(i/n)+1}</i>`:'';
+    const op=mine?1:Math.max(.5,Math.round((1-k*.18)*100)/100);   // 뒤로 갈수록 옅게
+    items.push(`${head}<span class="turn-item${mine?' mine':''}" style="opacity:${op}"><b>${i+1}</b>${mine?'내 차례':esc(t.leader)}</span>`);
   }
   if(!items.length) return `<div class="turnbar"><span class="turn-lb">다음</span><span class="turn-more">마지막 지명입니다</span></div>`;
   const more=d.seq.length-(d.ptr+1)-items.length;
   return `<div class="turnbar"><span class="turn-lb">다음</span>${
-    items.join('<span class="turn-ar">›</span>')}${more>0?`<span class="turn-more">+${more}</span>`:''}</div>`;
+    items.join('')}${more>0?`<span class="turn-more">+${more}</span>`:''}</div>`;
 }
 
 // 내 차례가 몇 픽 뒤인지(팀장 화면 안내용). 현재 차례거나 남은 차례가 없으면 0.
