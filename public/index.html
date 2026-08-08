@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0A1017; --panel:#141C26; --panel2:#1B2733; --line:#26343F;
+  --bg:#0A1017; --panel:#141C26; --panel2:#1B2733; --line:#26343F; --line2:#3A4B59;
   --gold:#D4A94E; --gold-soft:rgba(212,169,78,.14);
   --text:#E6ECF2; --muted:#93A6B8; --body2:#A9B8C6; --danger:#E06A64; --danger-bg:#3A1F1E; --danger-bd:#7A3531; --danger-solid:#B23B36; --ok:#5FA86B;
   --top:#E07A5F; --jgl:#7BB661; --mid:#6FA8DC; --adc:#E0B04A; --sup:#B58ADB; --none:#7E90A2;
@@ -23,7 +23,8 @@ button{cursor:pointer;background:none;border:none}
 ::selection{background:var(--gold);color:#0A1017}
 .wrap{max-width:1440px;margin:0 auto}
 .num{font-family:var(--num);letter-spacing:.02em;font-variant-numeric:tabular-nums}
-.hint{font-size:12.5px;color:var(--body2);line-height:1.65}
+/* 한국어 안내문은 어절 단위로 끊는다. keep-all이 없으면 '지명합니다'가 '지/명합니다'로 갈린다. */
+.hint{font-size:12.5px;color:var(--body2);line-height:1.65;word-break:keep-all}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
 .lbl{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
 input[type=text],input[type=number],input[type=password],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);
@@ -73,23 +74,32 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 /* 좁은 화면에서 '드래프트 (순서 지명)'이 '지/명'으로 잘리는 것을 막는다. */
 .modesel .btn{word-break:keep-all}
-/* 드래프트 규칙 — 네 조합을 카드로 고른다. 세 항목(순서·제약·필요)을 모든 카드의
-   같은 자리에 두어 카드끼리 세로로 비교되게 한다. 골드 테두리가 선택 상태. */
-.ruleopt{display:block;width:100%;margin-bottom:7px;padding:9px 12px 10px;text-align:left;cursor:pointer;
-  background:var(--bg);border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--body2)}
-.ruleopt:hover{border-color:#3A4B59}
-.ruleopt.on{border-color:var(--gold);background:var(--gold-soft)}
-.ruleopt>b{display:block;font-size:13.5px;color:var(--text);margin-bottom:5px}
-.ruleopt.on>b{color:var(--gold)}
-.ruleopt.on>b::after{content:'✓';margin-left:6px;font-size:12px}
-/* keep-all이 없으면 '주사위'가 '주/사위'로 잘립니다 — 설명문은 어절 단위로 끊습니다. */
-.ruleopt>span{display:grid;grid-template-columns:31px 1fr;gap:7px;font-size:11.5px;line-height:1.55;word-break:keep-all}
-.ruleopt>span+span{margin-top:3px}
-.ruleopt>span>i{font-style:normal;font-size:11px;color:var(--muted)}
-.ruleopt>span b{color:var(--text);font-weight:600}
+/* 드래프트 규칙 — 켤 수 있는 규칙만 체크박스로 두고, 지금 어떤 드래프트가 되는지는
+   아래 결과 줄이 이름과 함께 알려준다. 자유는 세 번째 규칙이 아니라 둘 다 꺼진 상태라
+   체크칸을 따로 두지 않는다(자유 ☑ + 클랜티어 ☑ 같은 불가능한 조합이 생긴다).
+   네이티브 체크박스라 선택 상태·키보드 조작은 브라우저가 맡는다. */
+.rulechk{display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;transition:.13s;
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  font-size:13px;color:var(--body2);word-break:keep-all}
+.rulechk:hover{border-color:var(--line2)}
+.rulechk.on{border-color:var(--gold);background:var(--gold-soft);color:var(--text)}
+.rulechk input{width:16px;height:16px;margin:0;flex:none;accent-color:var(--gold)}
+.rulechk i{font-style:normal;margin-left:auto;font-size:11.5px;color:var(--muted)}
+.rulechk.on i{color:var(--gold)}
+.rulegrp{display:flex;flex-direction:column;gap:6px}
+/* 결과 줄 — 체크 조합이 어떤 드래프트인지 이름과 순서·제약·필요로 확인해 준다.
+   앱이 진행 중 방에 쓰는 왼쪽 골드 띠(.room.st-live)를 그대로 쓴다. */
+.ruleout{margin-top:9px;padding:10px 12px;background:var(--bg);border:1px solid var(--gold);
+  border-radius:8px;box-shadow:inset 3px 0 0 var(--gold);word-break:keep-all}
+.ruleout>b{display:block;font-size:13.5px;color:var(--gold);margin-bottom:5px}
+/* .hint와 같은 크기·행간 */
+.ruleout>span{display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:12.5px;line-height:1.6;color:var(--body2)}
+.ruleout>span+span{margin-top:3px}
+.ruleout>span>i{font-style:normal;font-size:11px;color:var(--muted)}
+.ruleout>span b{font-weight:600;color:var(--text)}
 /* 방을 만들 수 없는 이유 목록 */
 .blockbox{margin-top:12px;padding:10px 13px;background:var(--danger-bg);border:1px solid var(--danger-bd);
-  border-radius:8px;font-size:12.5px;color:#E88A85;line-height:1.7}
+  border-radius:8px;font-size:12.5px;color:#E88A85;line-height:1.7;word-break:keep-all}
 .blockbox b{display:block;font-size:13px;margin-bottom:3px}
 .blockbox ul{margin:0;padding-left:17px}
 /* 고정값 표시(수정 불가) — input과 같은 높이로 맞춰 나란히 놓인다. */
@@ -146,7 +156,9 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .drop{border:1.5px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;
   transition:.15s;cursor:pointer}
 .drop:hover,.drop.over{border-color:var(--gold);background:var(--gold-soft)}
-.drop b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
+/* 자식 선택자여야 한다. 후손 선택자면 아래 안내문의 인라인 <b>까지 블록이 되어
+   "위 / 양식 다운로드 / 로 받아 채운 뒤…"로 문장이 갈라진다. */
+.drop>b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
 .plist{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;margin-top:12px}
 .prow{display:grid;grid-template-columns:1fr 62px 84px 1fr 40px;gap:9px;align-items:center;
   background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px}
@@ -350,7 +362,10 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .modal-hd b{font-size:15px}
 
-@media(max-width:900px){.setup,.stage{grid-template-columns:1fr}body{padding:12px}}
+@media(max-width:900px){.stage{grid-template-columns:1fr}body{padding:12px}}
+/* 설정 화면은 1100px 아래에서 1열로 둔다. 900px에서 2열로 갈리면 왼쪽 열이 417px로 좁아져
+   규칙 카드의 줄 수가 늘고, 창을 넓혔는데 입력칸이 오히려 화면 밖으로 나간다. */
+@media(max-width:1100px){.setup{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -468,42 +483,62 @@ const anyRule=()=>draftRules.tier||draftRules.score;
 /* 규칙 두 개를 각각 켜고 끄게 하면 네 조합의 결과를 진행자가 머릿속에서 합성해야 합니다.
    그래서 조합 자체를 선택지로 내놓고, 두 규칙이 실제로 건드리는 축(순서·제약)과
    추가로 받아야 하는 값을 카드마다 같은 자리에 적습니다. 저장 형태는 그대로 {tier,score}. */
+/* 같은 동작은 같은 문장으로 씁니다. 카드끼리 세로로 비교되게 하려면
+   짧은 문장이 '제약이 약하다'로 오해되지 않아야 합니다.
+   범위와 "없으면 방 못 만듦" 경고는 여기 쓰지 않습니다 — 규칙을 고르는 시점에는
+   손쓸 수 없고, 명단을 올린 뒤 blockerHtml·비활성 버튼이 실제 수치로 알려줍니다. */
+const ORD_SNAKE='<b>스네이크</b> — 다음 라운드는 역순';
+const ORD_SCORE='<b>총점 낮은 팀부터</b> — 라운드마다 다시 계산';
+const LIM_NONE='없음';
+const LIM_TIER='팀마다 <b>클랜티어</b> 1·2·3·4·5를 1명씩 (팀장이 채운 티어 제외)';
 const RULESETS=[
   {k:'free',tier:false,score:false,name:'자유',
-   ord:'스네이크 — 1번 팀부터 차례로, 다음 라운드는 역순',
-   lim:'없음 — 남은 참가자 누구든 지명',
-   req:'없음 — 닉네임과 라인만'},
+   ord:ORD_SNAKE, lim:LIM_NONE, req:'없음 — 닉네임과 라인만'},
   {k:'tier',tier:true,score:false,name:'클랜티어 균형',
-   ord:'스네이크 — 1번 팀부터 차례로, 다음 라운드는 역순',
-   lim:'팀마다 <b>클랜티어 1·2·3·4·5를 1명씩</b>. 팀장이 채운 티어는 다시 뽑지 못합니다',
-   req:'팀장·참가자 <b>전원 클랜티어를 명단 양식에 기입</b> (1~5, 소수점 첫째자리까지 가능). 한 명이라도 비면 방을 만들 수 없습니다'},
+   ord:ORD_SNAKE, lim:LIM_TIER, req:'팀장·참가자 전원 <b>클랜티어</b>'},
   {k:'score',tier:false,score:true,name:'클랜점수',
-   ord:'라운드마다 팀 총점을 다시 계산해 <b>총점 낮은 팀부터</b>. 총점이 같으면 진행자가 주사위나 지정으로 정합니다',
-   lim:'없음 — 남은 참가자 누구든 지명',
-   req:'팀장·참가자 <b>전원 클랜점수를 명단 양식에 기입</b> (0~999 정수). 한 명이라도 비면 방을 만들 수 없습니다'},
+   ord:ORD_SCORE, lim:LIM_NONE, req:'팀장·참가자 전원 <b>클랜점수</b>'},
   {k:'both',tier:true,score:true,name:'클랜티어 균형 + 클랜점수',
-   ord:'<b>클랜점수</b> — 총점 낮은 팀부터',
-   lim:'<b>클랜티어 균형</b> — 팀마다 1·2·3·4·5를 1명씩',
-   req:'전원 <b>클랜티어와 클랜점수를 둘 다 기입</b>. 하나라도 비면 방을 만들 수 없습니다'},
+   ord:ORD_SCORE, lim:LIM_TIER, req:'팀장·참가자 전원 <b>클랜티어</b> + <b>클랜점수</b>'},
 ];
 const curRuleset=()=>(RULESETS.find(r=>r.tier===draftRules.tier&&r.score===draftRules.score)||RULESETS[0]).k;
+const curRule=()=>RULESETS.find(r=>r.k===curRuleset());
+// 켜고 끄는 단위는 규칙 두 개다. 조합의 이름·설명은 위 RULESETS가 갖고 있다.
+const RULE_DEFS=[
+  {key:'tier', name:'클랜티어 균형', gist:'팀마다 1~5를 1명씩'},
+  {key:'score',name:'클랜점수',     gist:'총점 낮은 팀부터'},
+];
 // 팀 인원은 롤이 5:5라 5명(팀장 + 지명 4명) 고정. 입력받지 않습니다.
 const TEAM_SIZE=5;
 // 점수 드래프트 기본 지명 시간(초). 매물 점수를 훑어보고 골라야 해서 입찰(15초)보다 길게 둡니다.
 const SCORE_CLOCK=60;
 // 규칙 입력값은 모드 전환 시 재렌더돼도 유지되도록 모듈 상태로 보관합니다.
 let rules={title:'클랜 내전',clock:15,base:1000,minBid:10,order:'random'};
+const CLOCK_DEFAULT={auction:15,draft:15,score:SCORE_CLOCK};
+// 진행자가 직접 고친 시간은 건드리지 않습니다. 우리가 채운 값과 구분할 수 없으면
+// 클랜점수를 눌러봤다가 되돌려도 60초가 남아 원치 않는 방이 만들어집니다.
+let clockTouched=false;
+// 직접 입력한 명단은 DOM에만 있어서 재렌더에 사라집니다. 모듈 상태로 보관합니다.
+let poolText='';
 function syncRules(){
   const g=(id,d)=>{ const el=$(id); return el?el.value:d; };
   const n=(id,d)=>{ const el=$(id); return el&&el.value!==''?+el.value:d; };
-  rules.title=g('cTitle',rules.title); rules.clock=n('cClock',rules.clock);
+  rules.title=g('cTitle',rules.title);
   rules.base=n('cBase',rules.base); rules.minBid=n('cMin',rules.minBid); rules.order=g('cOrder',rules.order);
+  const c=n('cClock',rules.clock);
+  if(c!==rules.clock) clockTouched=true;
+  rules.clock=c;
+  poolText=g('cPool',poolText);
   // draftRules는 카드를 누를 때 바로 정해지므로 여기서 DOM을 읽지 않습니다.
 }
-// 모드/규칙을 바꾼 직후에만 그 모드의 기본값을 채웁니다(진행자가 더 길게 잡아둔 값은 유지).
+// 모드/규칙을 바꾼 직후에만 그 모드의 기본값을 채웁니다(진행자가 고친 값은 유지).
 function applyModeDefaults(){
-  if(gameMode==='draft'&&draftRules.score&&rules.clock<SCORE_CLOCK) rules.clock=SCORE_CLOCK;
+  if(clockTouched) return;
+  rules.clock=gameMode==='draft'&&draftRules.score?CLOCK_DEFAULT.score
+    :gameMode==='draft'?CLOCK_DEFAULT.draft:CLOCK_DEFAULT.auction;
 }
+// 재렌더로 파괴된 컨트롤에 포커스를 돌려줍니다(정렬 토글 1327행과 같은 방식).
+function refocus(sel){ const el=document.querySelector(sel); if(el) el.focus(); }
 
 // 링크는 /#/r/CODE?k=... 형태라 쿼리가 해시 뒤에 옵니다.
 const [hPath,hQuery]=location.hash.slice(1).split('?');
@@ -1772,13 +1807,21 @@ function renderSetup(mode){
           <button type="button" class="btn ${gameMode==='draft'?'gold':'ghost'}" data-gm="draft" style="flex:1">드래프트 (순서 지명)</button>
         </div>
         ${gameMode==='draft'?`
-        <div style="margin-bottom:14px"><span class="lbl">드래프트 규칙</span>
-          ${RULESETS.map(r=>`<button type="button" class="ruleopt${curRuleset()===r.k?' on':''}" data-rs="${r.k}">
-            <b>${r.name}</b>
+        <div style="margin-bottom:14px"><span class="lbl">적용 규칙</span>
+          <div class="rulegrp">
+          ${RULE_DEFS.map(d=>`<label class="rulechk${draftRules[d.key]?' on':''}">
+            <input type="checkbox" data-rs="${d.key}"${draftRules[d.key]?' checked':''}>
+            <span>${d.name}</span><i>${d.gist}</i>
+          </label>`).join('')}
+          </div>
+          ${/* aria-live는 두지 않습니다 — 이 블록은 매번 새로 만들어지므로 live 영역으로
+                동작하지 않습니다. 상태 변화는 포커스가 돌아간 체크박스가 알려줍니다. */''}
+          ${(r=>`<div class="ruleout">
+            <b>${r.name} 드래프트</b>
             <span><i>순서</i><span>${r.ord}</span></span>
             <span><i>제약</i><span>${r.lim}</span></span>
             <span><i>필요</i><span>${r.req}</span></span>
-          </button>`).join('')}
+          </div>`)(curRule())}
         </div>`:''}
         <div class="grid2">
           <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="${esc(rules.title)}"></div>
@@ -1796,15 +1839,13 @@ function renderSetup(mode){
         </div>
         <p class="hint" style="margin-top:12px">${gameMode==='draft'
           ? [
+              // 순서·제약은 위 규칙 카드가 이미 설명합니다. 여기는 카드에 담기지 않는 것만 씁니다.
               draftRules.score
-                ? '<b>순서</b> — 라운드마다 팀 전원이 1회씩 지명하고, 라운드 안의 순서는 <b>팀 총점이 낮은 팀부터</b>입니다. 비싼 매물을 데려가면 다음 라운드에 뒤로 밀립니다. 총점 상한은 없습니다. 총점이 같은 팀이 생기면 <b>진행이 멈추고</b> 진행자가 🎲 주사위(1~99, 높은 값이 먼저) 또는 <b>먼저</b> 지정으로 정합니다.'
-                : '<b>순서</b> — 팀장이 <b>스네이크 순서</b>(다음 라운드부터 역순)로 지명합니다.',
-              draftRules.tier
-                ? '<b>제약</b> — 팀마다 클랜티어 1·2·3·4·5를 1명씩 채웁니다(팀장 클랜티어 포함). 이미 채운 클랜티어는 지명할 수 없습니다.'
-                : '<b>제약</b> — 없습니다. 남은 매물 중 아무나 지명할 수 있습니다.',
+                ? '비싼 매물을 데려가면 다음 라운드에 뒤로 밀립니다. 총점 상한은 없습니다. 총점이 같은 팀이 생기면 <b>진행이 멈추고</b> 진행자가 🎲 주사위(1~99, 높은 값이 먼저) 또는 <b>먼저</b> 지정으로 순서를 정합니다.'
+                : '',
               '시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다.'
                 +(draftRules.score?' 지명 시간은 매물을 훑어볼 시간이 필요해 기본 <b>60초</b>입니다.':'')
-            ].join('<br>')
+            ].filter(Boolean).join('<br>')
           : '입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.'}</p>
       </div>
       <div class="panel">
@@ -1839,7 +1880,7 @@ function renderSetup(mode){
         <div class="plist" id="plist"></div>
         <div class="psum" id="psum"></div>
         <div id="tierReq"></div>
-        <details style="margin-top:14px">
+        <details style="margin-top:14px"${poolText?' open':''}>
           <summary class="hint" style="cursor:pointer">엑셀 없이 직접 입력하기</summary>
           <p class="hint" style="margin:8px 0 6px">엑셀 양식과 같은 순서로, 쉼표로 구분해 한 줄에 한 명씩 적습니다.<br>
             <b>아이디, 솔랭티어, 클랜티어, 주포지션, 부포지션, 주챔프1, 주챔프2, 주챔프3, 클랜점수</b><br>
@@ -1849,7 +1890,7 @@ function renderSetup(mode){
             · <b>클랜티어</b> — 클랜이 매긴 실력 티어. 1~5, 소수 첫째자리까지(예 1.2·3.4). 1이 최상위. <b>클랜티어 균형</b>에서 쓰입니다<br>
             · <b>클랜점수</b> — 클랜이 매긴 점수. 0~999 정수, 높을수록 강함. <b>클랜점수</b> 규칙에서 지명 순서를 정합니다</p>
           <textarea id="cPool" rows="6" spellcheck="false"
-            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스, 37&#10;홍길동#0415, G3, 3.4, TOP, , 가렌, , , 24&#10;이영희#KR1"></textarea>
+            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스, 37&#10;홍길동#0415, G3, 3.4, TOP, , 가렌, , , 24&#10;이영희#KR1">${esc(poolText)}</textarea>
           <button class="btn ghost" id="bText" style="margin-top:8px">목록에 추가</button>
         </details>
       </div>
@@ -1874,10 +1915,17 @@ function renderSetup(mode){
   $('bText').onclick=addText;
   $('bAdd').onclick=()=>{leaders.push({name:'',line:'',points:null});drawLeaders();};
   const bClear=$('bClear'); if(bClear) bClear.onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
-  document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{ syncRules(); gameMode=b.dataset.gm; applyModeDefaults(); renderSetup(setupMode); });
-  document.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{
-    const r=RULESETS.find(x=>x.k===b.dataset.rs); if(!r||curRuleset()===r.k) return;
-    syncRules(); draftRules={tier:r.tier,score:r.score}; applyModeDefaults(); renderSetup(setupMode);
+  document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{
+    if(gameMode===b.dataset.gm) return;   // 이미 켜진 모드면 재렌더할 이유가 없다
+    syncRules(); gameMode=b.dataset.gm; applyModeDefaults();
+    renderSetup(setupMode); refocus('[data-gm="'+gameMode+'"]');
+  });
+  // 규칙을 켜고 끄면 화면 전체를 다시 그리므로 누른 체크박스가 파괴된다.
+  // 정렬 토글(1327행)과 같이 재렌더 뒤 그 자리로 포커스를 돌려준다.
+  document.querySelectorAll('[data-rs]').forEach(b=>b.onchange=()=>{
+    const k=b.dataset.rs;
+    syncRules(); draftRules={...draftRules,[k]:b.checked}; applyModeDefaults();
+    renderSetup(setupMode); refocus('[data-rs="'+k+'"]');
   });
   $('bCreate').onclick=createRoom;
 }
@@ -2038,7 +2086,7 @@ function addText(){
     };
   }).filter(p=>p.name);
   if(!add.length) return toast('추가할 내용이 없습니다',true);
-  players=players.concat(add); $('cPool').value=''; drawPlayers();
+  players=players.concat(add); $('cPool').value=''; poolText=''; drawPlayers();
   if(suspect) toast(`${add.length}명 추가 — 다만 ${suspect}줄이 옛 순서처럼 보입니다. 새 순서(아이디, 솔랭티어, 클랜티어, 주포…)인지 확인하세요.`,true);
   else toast(`${add.length}명을 추가했습니다`);
 }
