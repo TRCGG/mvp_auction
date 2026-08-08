@@ -196,6 +196,17 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
 /* 동점 정리 목록에서 내 팀 행 강조 */
 .ord-row.me{border-color:var(--gold);background:var(--gold-soft)}
+/* 동점 정리 결과 띠 — 굴린 값과 순서를 한 줄로 */
+.rollbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 11px;
+  background:var(--bg);border:1px solid var(--line);border-radius:9px;font-size:12.5px}
+.roll-lb{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.roll-item{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--body2)}
+.roll-item b{font-family:var(--num);font-size:15px;font-weight:400;color:var(--text)}
+.roll-item.win{color:var(--text)} .roll-item.win b{color:var(--gold)}
+.roll-item.mine{color:var(--gold)}
+.roll-gt{font-style:normal;color:var(--muted);font-size:11px}
+.roll-first{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.06em;color:#0A1017;
+  background:var(--gold);border-radius:99px;padding:2px 9px;white-space:nowrap}
 /* 번호는 흐리고 크게(색인), 이름은 밝고 굵게(주인공) — 둘이 같은 층으로 읽히지 않게 위계를 벌립니다. */
 .ord-n{font-family:var(--num);font-size:19px;color:var(--muted);min-width:22px;text-align:center}
 .ord-nm{flex:1;font-weight:700;letter-spacing:-.02em;color:var(--text)}
@@ -499,7 +510,13 @@ function onEvent(ev){
   else if(ev.kind==='draworder'){ if(S.draft&&S.draft.baseOrder) draftOrder=S.draft.baseOrder.slice(); paint(); if(me.role==='host') toast('지명 순서를 추첨했습니다'); }
   else if(ev.kind==='tiebreak'){
     tiePick=[];
-    flash(ev.rolled?'🎲 주사위로 순서 결정':'순서 지정 완료');
+    // 굴린 값과 1순위 팀을 큰 연출로 알립니다.
+    const g=ev.roll&&ev.roll.groups&&ev.roll.groups[0];
+    const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.leader:id; };
+    if(g){
+      const vals=g.order.map(o=>o.by==='host'?'지정':o.v==null?'단독':o.v).join(' > ');
+      flash(`${ev.rolled?'🎲 ':''}${esc(vals)}<br><span style="font-size:.5em">${esc(nm(g.order[0].id))} 먼저</span>`);
+    } else flash('순서 지정 완료');
     if(sfxOn()) beep();
   }
 }
@@ -842,6 +859,25 @@ function picksUntilMyTurn(d){
   return 0;
 }
 
+// 동점 정리 결과 띠 — '주사위 87 > 42' 처럼 굴린 값과 그래서 누가 먼저인지 보여줍니다.
+// 진행자가 직접 지정한 팀은 값 대신 '지정'으로 표시합니다.
+function rollBar(roll){
+  const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.leader:id; };
+  return roll.groups.map(g=>{
+    const chain=g.order.map((o,i)=>{
+      const mine=me.teamId===o.id;
+      const val=o.by==='host'?'지정':o.v==null?'단독':o.v;
+      return `${i?'<i class="roll-gt">&gt;</i>':''}<span class="roll-item${mine?' mine':''}${i===0?' win':''}">${esc(nm(o.id))}<b>${val}</b></span>`;
+    }).join('');
+    // 진행자가 전부 지정한 묶음은 주사위를 굴리지 않았으므로 🎲를 붙이지 않습니다.
+    const diced=g.order.some(o=>o.by==='dice');
+    return `<div class="rollbar">
+      <span class="roll-lb">${diced?'🎲 ':''}총점 ${g.total} 동점</span>${chain}
+      <span class="roll-first">${esc(nm(g.order[0].id))} 먼저</span>
+    </div>`;
+  }).join('');
+}
+
 // 총점 동점 정리 화면. 진행자는 주사위를 굴리거나 특정 팀장을 먼저 뽑게 지정할 수 있고,
 // 팀장·관전자는 누가 동점인지와 대기 중임을 봅니다. 정리 전에는 지명이 막힙니다.
 function tieBody(d){
@@ -931,6 +967,7 @@ function draftBody(){
   return `<div class="lot-no">ROUND ${round}/${d.picksPerTeam} · PICK ${d.ptr+1}/${totalPicks(d)}</div>
     <div class="lot-name" style="font-size:clamp(26px,4vw,42px)">${esc(t?t.leader:'')} <span style="font-size:.5em;color:var(--muted)">팀 차례</span></div>
     <div class="hint" style="margin-bottom:12px">${BAL[d.balance]} 드래프트${need}</div>
+    ${(d.roll&&d.roll.round===round)?rollBar(d.roll):''}
     <div class="clock ${ms<=5000?'hot':''}">
       <b class="num" id="clockVal">${Math.max(0,Math.ceil(ms/1000))}</b>
       <div class="bar"><i id="clockBar" style="width:${pct}%"></i></div>

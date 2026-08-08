@@ -75,6 +75,17 @@ const shuffled = arr => {
   }
   return a;
 };
+// 동점 정리 주사위: 팀마다 1~99를 굴리고 높은 값이 먼저 뽑는다.
+// 1~99에서 '중복 없이' 뽑으므로 같은 값이 나와 순서를 못 가리는 일이 없다.
+const rollDice = ids => {
+  const bag = Array.from({ length: 99 }, (_, i) => i + 1);
+  return ids
+    .map(id => {
+      const k = crypto.getRandomValues(new Uint32Array(1))[0] % bag.length;
+      return { id, v: bag.splice(k, 1)[0], by: 'dice' };
+    })
+    .sort((a, b) => b.v - a.v);
+};
 
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)))
   .map(b => CODE_CHARS[b % CODE_CHARS.length]).join('');
@@ -758,7 +769,7 @@ export class AuctionRoom {
    *  스네이크는 전량, 점수 모드는 1라운드만 — 첫 라운드부터 동점이면 d.tie를 세우고 멈춥니다. */
   resetSeq() {
     const d = this.S.draft;
-    d.ptr = 0; d.tie = null; d.seq = [];
+    d.ptr = 0; d.tie = null; d.roll = null; d.seq = [];
     if (d.balance === 'score') { this.openScoreRound(); return; }
     for (let r = 0; r < d.picksPerTeam; r++) {
       d.seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
@@ -1055,19 +1066,25 @@ export class AuctionRoom {
         // 지정된 팀을 앞에 두고, 남은 팀은 주사위로 정합니다 → 항상 순서가 확정됩니다.
         const pref = Array.isArray(m.order) ? m.order : [];
         let base = d.baseOrder.slice(), rolled = false;
+        // 정리 결과를 남겨 전원 화면에 '주사위 87 > 42' 형태로 보여줍니다.
+        const result = { round: d.tie.round, groups: [] };
         for (const g of d.tie.groups) {
           const head = [...new Set(pref.filter(x => g.ids.includes(x)))];
           const rest = g.ids.filter(x => !head.includes(x));
+          const diced = rest.length > 1 ? rollDice(rest) : rest.map(id => ({ id, v: null, by: 'only' }));
           if (rest.length > 1) rolled = true;
-          base = reprioritize(base, g.ids, head.concat(rest.length > 1 ? shuffled(rest) : rest));
+          const order = head.map(id => ({ id, v: null, by: 'host' })).concat(diced);
+          result.groups.push({ total: g.total, order });
+          base = reprioritize(base, g.ids, order.map(o => o.id));
         }
         d.baseOrder = base;
+        d.roll = result;
         d.tie = null;
         d.seq.push(...this.nextRoundOrder());
         this.S.deadline = Date.now() + this.S.clock * 1000;
         await this.armExpiry();
         await this.save();
-        return this.broadcast({ event: { kind: 'tiebreak', rolled, order: d.baseOrder } });
+        return this.broadcast({ event: { kind: 'tiebreak', rolled, roll: result } });
       }
     }
   }
