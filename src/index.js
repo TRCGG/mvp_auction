@@ -30,12 +30,20 @@ const parseScore = v => {
   return m ? +m[1] : null;
 };
 // 팀 총점 = 팀장 점수 + 그 팀이 지명한 매물 점수 합. pool을 기준으로 읽는다(teamBands와 동일).
-const scoreTotal = (t, pool) =>
-  (t.score || 0) + pool.reduce((a, p) => a + (p.teamId === t.id ? (p.score || 0) : 0), 0);
+// 정렬 비교자 안에서 팀마다 pool을 훑지 않도록 한 번에 id→총점 맵을 만든다.
+const scoreTotals = (teams, pool) => {
+  const tot = new Map(teams.map(t => [t.id, t.score || 0]));
+  for (const p of pool) if (tot.has(p.teamId)) tot.set(p.teamId, tot.get(p.teamId) + (p.score || 0));
+  return tot;
+};
 // 점수 드래프트 한 라운드의 지명 순서: 총점 오름차순, 동점이면 baseOrder(시작 시 추첨 순서).
-const scoreOrder = (teams, pool, baseOrder) => teams.slice().sort((a, b) =>
-  scoreTotal(a, pool) - scoreTotal(b, pool) || baseOrder.indexOf(a.id) - baseOrder.indexOf(b.id)
-).map(t => t.id);
+const scoreOrder = (teams, pool, baseOrder) => {
+  const tot = scoreTotals(teams, pool);
+  const rank = new Map(baseOrder.map((id, i) => [id, i]));
+  return teams.slice()
+    .sort((a, b) => tot.get(a.id) - tot.get(b.id) || rank.get(a.id) - rank.get(b.id))
+    .map(t => t.id);
+};
 
 const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)))
   .map(b => CODE_CHARS[b % CODE_CHARS.length]).join('');
@@ -599,7 +607,7 @@ export class AuctionRoom {
       tier: String(p.tier || '').trim().slice(0, 20),
       // 주최측 실력 등급. 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
       // 셀 전체가 1~5 숫자일 때만 인정합니다(티어 텍스트 오독 방지).
-      grade: (mt => mt ? Math.round(parseFloat(mt[1]) * 10) / 10 : null)(String(p.grade ?? '').trim().match(/^([1-5](?:\.\d)?)\s*(?:티어|t)?$/i)),
+      grade: parseGrade(p.grade),
       // 클랜 자체 점수(0~999 정수). 점수 드래프트에서 지명 순서를 정하는 값. 등급과 별개.
       score: parseScore(p.score),
       champs: (Array.isArray(p.champs) ? p.champs : [])
@@ -646,13 +654,9 @@ export class AuctionRoom {
         const noPS = pool.filter(p => p.score == null).length;
         if (noPS) return json({ error: `참가자 점수(0~999)가 없는 사람이 ${noPS}명 있습니다` }, 400);
       }
-      // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서). 이후는 스네이크(역순 반복).
-      // 점수 드래프트만 예외 — 순서가 총점에 따라 달라지므로 라운드 단위로 이어붙입니다.
-      const baseOrder = teams.map(t => t.id);
-      const seq = [];
-      if (balance === 'score') seq.push(...scoreOrder(teams, pool, baseOrder));
-      else for (let r = 0; r < picksPerTeam; r++) seq.push(...(r % 2 === 0 ? baseOrder : baseOrder.slice().reverse()));
-      draft = { balance, baseOrder, seq, ptr: 0, picksPerTeam };
+      // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서).
+      // seq는 this.S 배정 뒤 buildSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
+      draft = { balance, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam };
     }
 
     this.S = {
@@ -663,6 +667,7 @@ export class AuctionRoom {
       current: null, bid: null, deadline: null, pausedLeft: null,
       log: [], phase: 'ready', createdAt: Date.now()
     };
+    if (draft) draft.seq = this.buildSeq();   // draft는 this.S 안의 같은 객체입니다
     this.um = { top: 0, count: 0 };
     await this.ctx.storage.put({ S: this.S, auth: this.auth, um: this.um });
     await this.armExpiry();
@@ -692,11 +697,22 @@ export class AuctionRoom {
   allFull() { return this.S.teams.every(t => this.openSlots(t) <= 0); }
   remaining() { return this.S.pool.filter(p => p.status !== 'sold'); }
 
-  /** 드래프트 지명 순서 생성. 스네이크는 전량, 점수 모드는 현재 총점 기준 1라운드만 만든다.
-   *  (점수 모드의 다음 라운드는 pick에서 라운드 경계마다 이어붙인다) */
+  /** 드래프트 전체 지명 수. seq.length는 점수 모드에서 '지금까지 정해진 라운드'까지만이라
+   *  총 지명 수로 쓸 수 없습니다. */
+  totalPicks() {
+    const d = this.S.draft;
+    return d ? this.S.teams.length * d.picksPerTeam : 0;
+  }
+  /** 점수 모드의 다음 라운드 지명 순서(현재 총점 기준). */
+  nextRoundOrder() {
+    const d = this.S.draft;
+    return scoreOrder(this.S.teams, this.S.pool, d.baseOrder);
+  }
+  /** 드래프트 시작 시점의 seq. 스네이크는 전량, 점수 모드는 1라운드만 만든다
+   *  (점수 모드의 나머지 라운드는 pick에서 라운드 경계마다 이어붙인다). */
   buildSeq() {
     const d = this.S.draft;
-    if (d.balance === 'score') return scoreOrder(this.S.teams, this.S.pool, d.baseOrder);
+    if (d.balance === 'score') return this.nextRoundOrder();
     const seq = [];
     for (let r = 0; r < d.picksPerTeam; r++) seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
     return seq;
@@ -971,18 +987,15 @@ export class AuctionRoom {
         }
         await this.snapshot();
         p.status = 'sold'; p.teamId = t.id; p.price = 0;
-        // grade·score: 팀 명단에 티어/점수를 표기하기 위해 함께 싣습니다.
-        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade, score: p.score });
+        t.players.push({ name: p.name, line: p.line, price: 0, grade: p.grade });   // grade: 팀 명단에 티어 표기용
         this.S.log.unshift({ kind: 'pick', player: p.name, team: t.name });
         this.S.log = this.S.log.slice(0, 60);
         d.ptr++;
         // 점수 드래프트: 한 라운드가 끝나면 바뀐 총점으로 다음 라운드 순서를 정해 이어붙입니다.
-        // 아래 done 판정(ptr >= seq.length)보다 먼저 해야 라운드 경계에서 조기 종료되지 않습니다.
-        if (d.balance === 'score' && d.ptr === d.seq.length
-            && d.seq.length < this.S.teams.length * d.picksPerTeam) {
-          d.seq.push(...scoreOrder(this.S.teams, this.S.pool, d.baseOrder));
+        if (d.balance === 'score' && d.ptr === d.seq.length && d.seq.length < this.totalPicks()) {
+          d.seq.push(...this.nextRoundOrder());
         }
-        if (d.ptr >= d.seq.length || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
+        if (d.ptr >= this.totalPicks() || this.allFull() || !this.remaining().length) { this.S.phase = 'done'; this.S.deadline = null; }
         else { this.S.deadline = Date.now() + this.S.clock * 1000; }
         await this.armExpiry();
         await this.save();
