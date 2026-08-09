@@ -92,6 +92,10 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .ruleout{margin-top:9px;padding:10px 12px;background:var(--bg);border:1px solid var(--gold);
   border-radius:8px;box-shadow:inset 3px 0 0 var(--gold);word-break:keep-all}
 .ruleout>b{display:block;font-size:13.5px;color:var(--gold);margin-bottom:5px}
+/* 요약 배지 — 조합이 뭘 하는지 한 줄로 먼저 말해 준다 */
+.rule-sum{margin:0 0 9px;padding:8px 10px;background:rgba(212,169,78,.10);
+  border-radius:6px;font-size:12.5px;line-height:1.55;color:var(--text);word-break:keep-all}
+.rule-sum b{color:var(--gold);font-weight:600}
 /* .hint와 같은 크기·행간 */
 .ruleout>span{display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:12.5px;line-height:1.6;color:var(--body2)}
 .ruleout>span+span{margin-top:3px}
@@ -488,18 +492,24 @@ const anyRule=()=>draftRules.tier||draftRules.score;
    범위와 "없으면 방 못 만듦" 경고는 여기 쓰지 않습니다 — 규칙을 고르는 시점에는
    손쓸 수 없고, 명단을 올린 뒤 blockerHtml·비활성 버튼이 실제 수치로 알려줍니다. */
 const ORD_SNAKE='<b>스네이크</b> — 다음 라운드는 역순';
-const ORD_SCORE='<b>총점 낮은 팀부터</b> — 라운드마다 다시 계산';
+const ORD_SCORE='<b>총점 낮은 팀부터</b> · 라운드마다 재계산';
 const LIM_NONE='없음';
-const LIM_TIER='팀마다 <b>클랜티어</b> 1·2·3·4·5를 1명씩 (팀장이 채운 티어 제외)';
+const LIM_TIER='팀마다 <b>클랜티어</b> 1~5 한 명씩 (팀장이 채운 티어 제외)';
+const SUM_TIER='팀마다 <b>티어 1~5를 하나씩</b> 가져갑니다.';
+const SUM_SCORE='<b>점수가 낮은 팀이 먼저</b> 뽑습니다.';
 const RULESETS=[
   {k:'free',tier:false,score:false,name:'자유',
-   ord:ORD_SNAKE, lim:LIM_NONE, req:'없음 — 닉네임과 라인만'},
+   sum:'<b>순서만 정하고 제약 없이</b> 자유롭게 뽑습니다.',
+   ord:ORD_SNAKE, lim:LIM_NONE, req:'닉네임과 라인만'},
   {k:'tier',tier:true,score:false,name:'클랜티어 균형',
-   ord:ORD_SNAKE, lim:LIM_TIER, req:'팀장·참가자 전원 <b>클랜티어</b>'},
+   sum:SUM_TIER,
+   ord:ORD_SNAKE, lim:LIM_TIER, req:'전원 <b>클랜티어</b>'},
   {k:'score',tier:false,score:true,name:'클랜점수',
-   ord:ORD_SCORE, lim:LIM_NONE, req:'팀장·참가자 전원 <b>클랜점수</b>'},
+   sum:SUM_SCORE,
+   ord:ORD_SCORE, lim:LIM_NONE, req:'전원 <b>클랜점수</b>'},
   {k:'both',tier:true,score:true,name:'클랜티어 균형 + 클랜점수',
-   ord:ORD_SCORE, lim:LIM_TIER, req:'팀장·참가자 전원 <b>클랜티어</b> + <b>클랜점수</b>'},
+   sum:'<b>점수가 낮은 팀이 먼저</b> 뽑고, 팀마다 <b>티어 1~5를 하나씩</b> 가져갑니다.',
+   ord:ORD_SCORE, lim:LIM_TIER, req:'전원 <b>클랜티어</b> + <b>클랜점수</b>'},
 ];
 const curRuleset=()=>(RULESETS.find(r=>r.tier===draftRules.tier&&r.score===draftRules.score)||RULESETS[0]).k;
 const curRule=()=>RULESETS.find(r=>r.k===curRuleset());
@@ -1818,6 +1828,7 @@ function renderSetup(mode){
                 동작하지 않습니다. 상태 변화는 포커스가 돌아간 체크박스가 알려줍니다. */''}
           ${(r=>`<div class="ruleout">
             <b>${r.name} 드래프트</b>
+            <p class="rule-sum">${r.sum}</p>
             <span><i>순서</i><span>${r.ord}</span></span>
             <span><i>제약</i><span>${r.lim}</span></span>
             <span><i>필요</i><span>${r.req}</span></span>
