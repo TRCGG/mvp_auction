@@ -510,13 +510,14 @@ const RULE_DEFS=[
 ];
 // 팀 인원은 롤이 5:5라 5명(팀장 + 지명 4명) 고정. 입력받지 않습니다.
 const TEAM_SIZE=5;
-// 점수 드래프트 기본 지명 시간(초). 매물 점수를 훑어보고 골라야 해서 입찰(15초)보다 길게 둡니다.
-const SCORE_CLOCK=60;
 // 규칙 입력값은 모드 전환 시 재렌더돼도 유지되도록 모듈 상태로 보관합니다.
 let rules={title:'클랜 내전',clock:15,base:1000,minBid:10,order:'random'};
-const CLOCK_DEFAULT={auction:15,draft:15,score:SCORE_CLOCK};
+/* 모드별 기본 제한 시간(초).
+   드래프트는 팀장이 남은 매물을 훑어보고 골라야 해서 입찰보다 길게 둡니다.
+   경매는 입찰이 들어올 때마다 시간이 다시 채워지므로 짧게 둡니다. */
+const CLOCK_DEFAULT={auction:15,draft:60};
 // 진행자가 직접 고친 시간은 건드리지 않습니다. 우리가 채운 값과 구분할 수 없으면
-// 클랜점수를 눌러봤다가 되돌려도 60초가 남아 원치 않는 방이 만들어집니다.
+// 모드를 오가는 동안 원치 않는 값이 남아 그대로 방이 만들어집니다.
 let clockTouched=false;
 // 직접 입력한 명단은 DOM에만 있어서 재렌더에 사라집니다. 모듈 상태로 보관합니다.
 let poolText='';
@@ -531,11 +532,10 @@ function syncRules(){
   poolText=g('cPool',poolText);
   // draftRules는 카드를 누를 때 바로 정해지므로 여기서 DOM을 읽지 않습니다.
 }
-// 모드/규칙을 바꾼 직후에만 그 모드의 기본값을 채웁니다(진행자가 고친 값은 유지).
+// 모드를 바꾼 직후에만 그 모드의 기본값을 채웁니다(진행자가 고친 값은 유지).
 function applyModeDefaults(){
   if(clockTouched) return;
-  rules.clock=gameMode==='draft'&&draftRules.score?CLOCK_DEFAULT.score
-    :gameMode==='draft'?CLOCK_DEFAULT.draft:CLOCK_DEFAULT.auction;
+  rules.clock=CLOCK_DEFAULT[gameMode==='draft'?'draft':'auction'];
 }
 // 재렌더로 파괴된 컨트롤에 포커스를 돌려줍니다(정렬 토글 1327행과 같은 방식).
 function refocus(sel){ const el=document.querySelector(sel); if(el) el.focus(); }
@@ -1843,8 +1843,7 @@ function renderSetup(mode){
               draftRules.score
                 ? '비싼 매물을 데려가면 다음 라운드에 뒤로 밀립니다. 총점 상한은 없습니다. 총점이 같은 팀이 생기면 <b>진행이 멈추고</b> 진행자가 🎲 주사위(1~99, 높은 값이 먼저) 또는 <b>먼저</b> 지정으로 순서를 정합니다.'
                 : '',
-              '시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다.'
-                +(draftRules.score?' 지명 시간은 매물을 훑어볼 시간이 필요해 기본 <b>60초</b>입니다.':'')
+              `시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다. 지명 시간은 남은 매물을 훑어볼 시간이 필요해 기본 <b>${CLOCK_DEFAULT.draft}초</b>입니다.`
             ].filter(Boolean).join('<br>')
           : '입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.'}</p>
       </div>
