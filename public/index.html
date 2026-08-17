@@ -350,6 +350,12 @@ body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offse
 .panel.sub{background:transparent;box-shadow:none}
 .log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:var(--fs-xs)}
 .log-list div{color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
+/* 동점 주사위 기록 — 팀마다 한 줄씩 값, 마지막 줄에 확정 순서 */
+.log-list .lr{align-items:flex-start;flex-wrap:nowrap}
+.lr-b{display:flex;flex-direction:column;gap:2px}
+.lr-b>span{color:var(--muted)}
+.lr-b>span .num{color:var(--gold);font-size:var(--fs-base)}
+.lr-b>b{color:var(--text);font-weight:600;margin-top:2px}
 .log-list div b{font-weight:500;color:var(--text)}
 .log-list em{font-family:var(--num);font-size:var(--fs-base);color:var(--body2);font-style:normal}
 
@@ -884,9 +890,9 @@ function stage(){
           :l.kind==='pick'
           ?`<div><em style="color:var(--gold)">지명</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
           :l.kind==='roll'
-          ?`<div><em style="color:var(--gold)">${l.order.some(o=>o.by==='dice')?'🎲':'지정'}</em>총점 ${l.total} 동점 · ${
-              l.order.map(o=>`${esc(o.n)} <b class="num">${o.by==='host'?'지정':o.v==null?'단독':o.v}</b>`).join(' &gt; ')
-            } · <b>${esc(l.order[0].n)} 먼저</b></div>`
+          ?`<div class="lr"><em style="color:var(--gold)">${l.order.some(o=>o.by==='dice')?'🎲':'지정'}</em><span class="lr-b">${
+              l.order.map(o=>`<span>${esc(o.n)} 팀 ${o.by==='dice'?`주사위: <b class="num">${o.v}</b>`:o.by==='host'?'— 지정':'— 단독'}</span>`).join('')
+            }<b>${l.order.map(o=>esc(o.n)).join(' &gt; ')}</b></span></div>`
           :`<div><em style="color:var(--danger)">유찰</em><b>${esc(l.player)}</b></div>`).join('')
           :'<span class="hint">아직 기록이 없습니다</span>'}</div>
       </div>
