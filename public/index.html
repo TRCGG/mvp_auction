@@ -1057,23 +1057,29 @@ function ensureDraftOrder(){
   }
 }
 
-// 진행 중 '지명 차례' 띠. 현재 지명 중인 팀 + 바로 다음 순서 몇 팀만 간단히 보여줍니다.
+// 진행 중 '지명 차례' 띠. 현재 지명 중인 팀부터 6칩을 라운드 경계와 무관하게 쭉 이어서 보여줍니다.
 // 순번·라운드 같은 부가 정보는 싣지 않습니다 — 칩의 나열 순서가 곧 지명 순서이고,
 // 전체 진행도는 위의 ROUND/PICK이, '내 차례까지 몇 픽'은 아래 안내문이 담당합니다.
+// 점수 모드는 다음 라운드 순서가 라운드 시작 때 확정되므로, 그 전까지는 현재 총점 기준
+// 예상 순서로 이어붙입니다(라운드가 열리면 확정값이 자리를 대체하고, 동점은 정리 화면이 뜹니다).
 function nextTurnBar(d){
   const all=totalPicks(d);
-  const SHOW=8;   // 현재 포함 최대 8칩 — 그 뒤는 +N픽으로 줄입니다
-  const end=Math.min(d.seq.length,d.ptr+SHOW);
-  const items=[];
-  for(let i=d.ptr;i<end;i++){
-    const t=S.teams.find(x=>x.id===d.seq[i]);
-    if(!t) continue;
-    const mine=me.teamId===t.id;
-    items.push(`<span class="turn-item${i===d.ptr?' now':''}${mine?' mine':''}">${esc(t.leader)}${mine?'<i class="turn-me">나</i>':''}</span>`);
+  const n=S.teams.length||1;
+  const SHOW=6;   // 현재 포함 6칩 — 그 뒤는 +N픽으로 줄입니다
+  const ids=[];
+  for(let i=d.ptr;i<d.seq.length&&ids.length<SHOW;i++) ids.push({id:d.seq[i],now:i===d.ptr});
+  if(d.balance==='score'){
+    const proj=scoreOrderClient(d.baseOrder||S.teams.map(t=>t.id));
+    for(let idx=d.seq.length;ids.length<SHOW&&idx<all;idx++) ids.push({id:proj[idx%n],now:false});
   }
+  const items=ids.map(({id,now})=>{
+    const t=S.teams.find(x=>x.id===id);
+    if(!t) return '';
+    const mine=me.teamId===t.id;
+    return `<span class="turn-item${now?' now':''}${mine?' mine':''}">${esc(t.leader)}${mine?'<i class="turn-me">나</i>':''}</span>`;
+  }).filter(Boolean);
   if(!items.length) return `<div class="turnbar"><span class="turn-lb">순서</span><span class="turn-more">마지막 지명입니다</span></div>`;
-  // 남은 픽 수는 전체 기준으로 셉니다. seq.length로 세면 점수 모드에서 다음 라운드가 빠집니다.
-  const more=all-end;
+  const more=all-(d.ptr+items.length);
   return `<div class="turnbar"><span class="turn-lb">순서</span>${
     items.join('')}${more>0?`<span class="turn-more">+${more}픽</span>`:''}</div>`;
 }
