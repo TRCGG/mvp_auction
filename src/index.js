@@ -361,6 +361,27 @@ export default {
       const stub = env.ROOM.get(env.ROOM.idFromName(peek[1]));
       return stub.fetch('https://do/peek');
     }
+    // 방 설정 수정 — hostKey 검증과 상태 검사는 DO가 합니다(시작 전에만 허용).
+    if (peek && req.method === 'PATCH') {
+      let cfg;
+      try { cfg = await req.json(); } catch { return json({ error: '잘못된 요청입니다' }, 400); }
+      const err = validate(cfg);
+      if (err) return json({ error: err }, 400);
+      const stub = env.ROOM.get(env.ROOM.idFromName(peek[1]));
+      const res = await stub.fetch('https://do/update', {
+        method: 'POST',
+        body: JSON.stringify({ k: url.searchParams.get('k') || '', cfg })
+      });
+      if (res.ok) {
+        // 관리자·매니저 목록의 제목 동기화. /add를 다시 부르면 createdAt·via가 초기화되므로 전용 경로를 씁니다.
+        try {
+          await registry(env).fetch('https://do/retitle', {
+            method: 'POST', body: JSON.stringify({ code: peek[1], title: String(cfg.title || '경매').slice(0, 40) })
+          });
+        } catch { /* 목록 제목 동기화 실패는 치명적이지 않습니다 */ }
+      }
+      return res;
+    }
 
     // 진행자 전용: 방 안에서 접속 링크 다시 보기 (hostKey 검증은 DO에서)
     const linksM = path.match(/^\/api\/room\/([A-Z0-9]{6})\/links$/);
@@ -429,6 +450,86 @@ function validate(cfg) {
     }
   }
   return null;
+}
+
+/* init()과 update()가 공유하는 빌더들 — 여기 규칙을 바꾸면 생성·수정이 함께 바뀝니다. */
+// leaders → teams. keepIds(기존 팀 id 집합)가 주어지면 l.id가 그 안에 있을 때 id를 보존해
+// 이미 배포된 팀 링크(auth.teams의 토큰→id 매핑)가 계속 유효하게 합니다. 새 팀은 빈 id를 받습니다.
+function buildTeams(cfg, base, keepIds = null) {
+  const used = new Set(), claimed = new Set();
+  // 신규 팀의 id는 '기존에 존재했던 모든 id'와도 겹치면 안 됩니다. 삭제된 팀의 id를
+  // 재사용하면 tokenOf 역맵이 그 팀의 옛 토큰을 신규 팀에 물려줘 폐기가 무효가 됩니다.
+  if (keepIds) for (const id of keepIds) used.add(id);
+  let n = 0;
+  const nextId = () => { while (used.has('t' + n)) n++; const id = 't' + n; used.add(id); return id; };
+  return cfg.leaders.map(l => {
+    const keep = keepIds && l.id && keepIds.has(l.id) && !claimed.has(l.id);
+    if (keep) claimed.add(l.id);
+    const start = Math.max(0, l.points == null ? base : l.points | 0);
+    return {
+      id: keep ? l.id : nextId(),
+      name: String(l.name).trim().slice(0, 20) + ' 팀',
+      leader: String(l.name).trim().slice(0, 20),
+      leaderLine: LINES.includes(l.line) ? l.line : '',
+      grade: parseGrade(l.grade),   // 클랜티어 균형에서 팀장이 채우는 밴드
+      score: parseScore(l.score),   // 클랜점수 — 팀 총점의 시작값
+      start, points: start, players: []
+    };
+  });
+}
+// pool 정규화. id는 호출측이 부여합니다(생성은 순번, 수정은 name#tag 매칭으로 기존 id·사진 보존).
+function buildPool(cfg) {
+  return cfg.pool.slice(0, 200).map(p => ({
+    name: String(p.name || '').trim().slice(0, 24),
+    tag: String(p.tag || '').trim().replace(/^#/, '').slice(0, 12),
+    line: LINES.includes(p.line) ? p.line : '',
+    sub: (LINES.includes(p.sub) || p.sub === 'ALL') ? p.sub : '',   // 부포지션: 5라인 또는 전체(ALL)
+    tier: String(p.tier || '').trim().slice(0, 20),
+    // 클랜티어(주최측이 매긴 실력 티어). 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
+    // 셀 전체가 1~5 숫자일 때만 인정합니다(솔랭티어 텍스트 오독 방지).
+    grade: parseGrade(p.grade),
+    // 클랜점수(0~999 정수). 지명 순서를 정하는 값. 클랜티어와 별개.
+    score: parseScore(p.score),
+    champs: (Array.isArray(p.champs) ? p.champs : [])
+      .slice(0, 3).map(c => String(c || '').trim().slice(0, 20)).filter(Boolean),
+    status: 'wait', teamId: null, price: 0
+  })).filter(p => p.name);
+}
+// 드래프트 규칙 검증 + draft 골격 생성. 실패하면 {error}, 성공하면 {draft}(경매 모드면 {draft:null}).
+function buildDraft(cfg, teams, pool) {
+  const mode = cfg.mode === 'draft' ? 'draft' : 'auction';
+  if (mode !== 'draft') return { draft: null };
+  // 규칙은 독립 토글. 클랜티어 균형은 '무엇을' 뽑을지, 클랜점수는 '누가 언제' 뽑을지를 정한다.
+  // 둘 다 켜면 순서는 클랜점수(총점 오름차순), 제약은 클랜티어 밴드 — 서로 다른 축이라 충돌하지 않는다.
+  const rules = [];
+  if (cfg.rules ? cfg.rules.includes('tier') : cfg.draftBalance === 'tier') rules.push('tier');
+  if (cfg.rules ? cfg.rules.includes('score') : cfg.draftBalance === 'score') rules.push('score');
+  const picksPerTeam = TEAM_SIZE - 1;
+  if (pool.length < teams.length * picksPerTeam) return { error: `드래프트 매물이 부족합니다 (필요 ${teams.length * picksPerTeam}명, 현재 ${pool.length}명)` };
+  if (rules.includes('tier')) {
+    // 클랜티어 균형: 팀장·참가자 전원 클랜티어 필수 + 각 밴드 매물이 필요 수만큼 있어야 함.
+    const noGL = teams.filter(t => gradeBand(t.grade) < 0);
+    if (noGL.length) return { error: `팀장 클랜티어(1~5)를 입력해야 합니다: ${noGL.map(t => t.leader).join(', ')}` };
+    const noGP = pool.filter(p => gradeBand(p.grade) < 0).length;
+    if (noGP) return { error: `참가자 클랜티어(1~5)가 없는 사람이 ${noGP}명 있습니다` };
+    for (let b = 0; b < 5; b++) {
+      const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 밴드를 지명해야 하는 팀 수
+      const have = pool.filter(p => gradeBand(p.grade) === b).length;
+      if (have < need) return { error: `클랜티어 ${b + 1} 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` };
+    }
+  }
+  if (rules.includes('score')) {
+    // 클랜점수: 팀장·매물 전원에게 점수가 있어야 순서를 정할 수 있습니다.
+    const noSL = teams.filter(t => t.score == null);
+    if (noSL.length) return { error: `팀장 클랜점수(0~999)를 입력해야 합니다: ${noSL.map(t => t.leader).join(', ')}` };
+    const noSP = pool.filter(p => p.score == null).length;
+    if (noSP) return { error: `참가자 클랜점수(0~999)가 없는 사람이 ${noSP}명 있습니다` };
+  }
+  // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서).
+  // seq는 this.S 배정 뒤 resetSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
+  // balance는 예전 방·관리자 목록 호환용 대표값입니다.
+  const balance = rules.includes('score') ? 'score' : rules.includes('tier') ? 'tier' : 'free';
+  return { draft: { balance, rules, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam } };
 }
 
 /* ══════════════════════════════════════════════════════ */
@@ -517,6 +618,7 @@ export class AuctionRoom {
     if (this.S && Date.now() >= this.expireAt()) await this.selfDestruct();
 
     if (url.pathname === '/init') return this.init(req);
+    if (url.pathname === '/update') return this.update(req);
 
     if (url.pathname === '/peek') {
       if (!this.S) return json({ error: '없는 방 코드입니다' }, 404);
@@ -640,18 +742,7 @@ export class AuctionRoom {
     const { code, cfg } = await req.json();
 
     const base = Math.max(0, cfg.base | 0);
-    const teams = cfg.leaders.map((l, i) => {
-      const start = Math.max(0, l.points == null ? base : l.points | 0);
-      return {
-        id: 't' + i,
-        name: String(l.name).trim().slice(0, 20) + ' 팀',
-        leader: String(l.name).trim().slice(0, 20),
-        leaderLine: LINES.includes(l.line) ? l.line : '',
-        grade: parseGrade(l.grade),   // 클랜티어 균형에서 팀장이 채우는 밴드
-        score: parseScore(l.score),   // 클랜점수 — 팀 총점의 시작값
-        start, points: start, players: []
-      };
-    });
+    const teams = buildTeams(cfg, base);
 
     this.auth = { hostKey: token(), viewKey: token(), teams: {} };
     const links = teams.map(t => {
@@ -660,69 +751,19 @@ export class AuctionRoom {
       return { id: t.id, name: t.name, token: tk };
     });
 
-    const pool = cfg.pool.slice(0, 200).map((p, i) => ({
-      id: 'p' + i,
-      name: String(p.name || '').trim().slice(0, 24),
-      tag: String(p.tag || '').trim().replace(/^#/, '').slice(0, 12),
-      line: LINES.includes(p.line) ? p.line : '',
-      sub: (LINES.includes(p.sub) || p.sub === 'ALL') ? p.sub : '',   // 부포지션: 5라인 또는 전체(ALL)
-      tier: String(p.tier || '').trim().slice(0, 20),
-      // 클랜티어(주최측이 매긴 실력 티어). 1이 최상위, 1~5 + 소수점 첫째자리(예 1.2·3.4). 없으면 null.
-      // 셀 전체가 1~5 숫자일 때만 인정합니다(솔랭티어 텍스트 오독 방지).
-      grade: parseGrade(p.grade),
-      // 클랜점수(0~999 정수). 지명 순서를 정하는 값. 클랜티어와 별개.
-      score: parseScore(p.score),
-      champs: (Array.isArray(p.champs) ? p.champs : [])
-        .slice(0, 3).map(c => String(c || '').trim().slice(0, 20)).filter(Boolean),
-      status: 'wait', teamId: null, price: 0
-    })).filter(p => p.name);
+    const pool = buildPool(cfg);
+    pool.forEach((p, i) => { p.id = 'p' + i; });
 
     // 매물 순서: 'draw'면 시작 전에 추첨해 확정·공개, 'random'이면 진행자가 매번 랜덤으로.
     const orderMode = cfg.order === 'draw' ? 'draw' : 'random';
-    const order = pool.map(p => p.id);
-    if (orderMode === 'draw') {
-      for (let i = order.length - 1; i > 0; i--) {           // Fisher-Yates (암호학적 난수)
-        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-        [order[i], order[j]] = [order[j], order[i]];
-      }
-    }
+    let order = pool.map(p => p.id);
+    if (orderMode === 'draw') order = shuffled(order);
 
     // ── 진행 방식: 경매(auction) 또는 드래프트(draft) ──
     const mode = cfg.mode === 'draft' ? 'draft' : 'auction';
-    let draft = null;
-    if (mode === 'draft') {
-      // 규칙은 독립 토글. 클랜티어 균형은 '무엇을' 뽑을지, 클랜점수는 '누가 언제' 뽑을지를 정한다.
-      // 둘 다 켜면 순서는 클랜점수(총점 오름차순), 제약은 클랜티어 밴드 — 서로 다른 축이라 충돌하지 않는다.
-      const rules = [];
-      if (cfg.rules ? cfg.rules.includes('tier') : cfg.draftBalance === 'tier') rules.push('tier');
-      if (cfg.rules ? cfg.rules.includes('score') : cfg.draftBalance === 'score') rules.push('score');
-      const picksPerTeam = TEAM_SIZE - 1;
-      if (pool.length < teams.length * picksPerTeam) return json({ error: `드래프트 매물이 부족합니다 (필요 ${teams.length * picksPerTeam}명, 현재 ${pool.length}명)` }, 400);
-      if (rules.includes('tier')) {
-        // 클랜티어 균형: 팀장·참가자 전원 클랜티어 필수 + 각 밴드 매물이 필요 수만큼 있어야 함.
-        const noGL = teams.filter(t => gradeBand(t.grade) < 0);
-        if (noGL.length) return json({ error: `팀장 클랜티어(1~5)를 입력해야 합니다: ${noGL.map(t => t.leader).join(', ')}` }, 400);
-        const noGP = pool.filter(p => gradeBand(p.grade) < 0).length;
-        if (noGP) return json({ error: `참가자 클랜티어(1~5)가 없는 사람이 ${noGP}명 있습니다` }, 400);
-        for (let b = 0; b < 5; b++) {
-          const need = teams.filter(t => gradeBand(t.grade) !== b).length; // 그 밴드를 지명해야 하는 팀 수
-          const have = pool.filter(p => gradeBand(p.grade) === b).length;
-          if (have < need) return json({ error: `클랜티어 ${b + 1} 매물이 부족합니다 (필요 ${need}명, 현재 ${have}명)` }, 400);
-        }
-      }
-      if (rules.includes('score')) {
-        // 클랜점수: 팀장·매물 전원에게 점수가 있어야 순서를 정할 수 있습니다.
-        const noSL = teams.filter(t => t.score == null);
-        if (noSL.length) return json({ error: `팀장 클랜점수(0~999)를 입력해야 합니다: ${noSL.map(t => t.leader).join(', ')}` }, 400);
-        const noSP = pool.filter(p => p.score == null).length;
-        if (noSP) return json({ error: `참가자 클랜점수(0~999)가 없는 사람이 ${noSP}명 있습니다` }, 400);
-      }
-      // 첫 라운드 순서는 진행자가 시작할 때 정합니다(기본값은 팀 등록 순서).
-      // seq는 this.S 배정 뒤 resetSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
-      // balance는 예전 방·관리자 목록 호환용 대표값입니다.
-      const balance = rules.includes('score') ? 'score' : rules.includes('tier') ? 'tier' : 'free';
-      draft = { balance, rules, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam };
-    }
+    const dr = buildDraft(cfg, teams, pool);
+    if (dr.error) return json({ error: dr.error }, 400);
+    const draft = dr.draft;
 
     this.S = {
       code, mode, draft,
@@ -738,6 +779,92 @@ export class AuctionRoom {
     await this.armExpiry();
 
     return json({ code, hostKey: this.auth.hostKey, viewKey: this.auth.viewKey, links });
+  }
+
+  /* 방 설정 수정 — 시작 전(ready)에만 전체 수정할 수 있습니다(초기화로 ready로 돌아온 뒤 포함).
+     방 코드는 DO 신원이라 바뀌지 않고, id가 유지되는 팀은 기존 토큰(=배포된 링크)도 그대로 유효합니다. */
+  async update(req) {
+    if (!this.S) return json({ error: '없는 방입니다' }, 404);
+    const { k, cfg } = await req.json();
+    if (!safeEqual(String(k || ''), this.auth.hostKey)) return json({ error: '진행자만 수정할 수 있습니다' }, 403);
+    if (this.S.phase !== 'ready') return json({ error: '시작 전(대기 상태)에만 수정할 수 있습니다. 초기화한 뒤 다시 시도하세요.' }, 409);
+    const err = validate(cfg);
+    if (err) return json({ error: err }, 400);
+
+    const base = Math.max(0, cfg.base | 0);
+    const oldIds = new Set(this.S.teams.map(t => t.id));
+    const teams = buildTeams(cfg, base, oldIds);
+
+    // 풀: 닉네임#태그가 같은 참가자는 기존 id·사진(imgV)을 보존합니다.
+    const pool = buildPool(cfg);
+    const oldByKey = new Map();
+    for (const p of this.S.pool) { const key = p.name + '#' + p.tag; if (!oldByKey.has(key)) oldByKey.set(key, p); }
+    const usedP = new Set();
+    const matches = pool.map(p => {
+      const o = oldByKey.get(p.name + '#' + p.tag);
+      if (o && !usedP.has(o.id)) { usedP.add(o.id); return o; }
+      return null;
+    });
+    let pn = 0;
+    const nextPid = () => { while (usedP.has('p' + pn)) pn++; const id = 'p' + pn; usedP.add(id); return id; };
+    pool.forEach((p, i) => {
+      const o = matches[i];
+      if (o) { p.id = o.id; if (o.imgV) p.imgV = o.imgV; }
+      else p.id = nextPid();
+    });
+
+    // 드래프트 재검증 — 실패하면 기존 방 상태를 전혀 건드리지 않고 거부합니다.
+    const dr = buildDraft(cfg, teams, pool);
+    if (dr.error) return json({ error: dr.error }, 400);
+
+    // 여기서부터는 상태를 실제로 바꿉니다.
+    // 명단에서 빠진 참가자의 저장 사진 정리 — 빈 id가 새 참가자에게 재사용돼도 옛 사진이 보이지 않게,
+    // '매칭으로 살아남은 옛 id' 기준으로 지웁니다(새 pool의 id 집합 기준이 아님).
+    const matchedOld = new Set(matches.filter(Boolean).map(o => o.id));
+    for (const p of this.S.pool) if (p.imgV && !matchedOld.has(p.id)) await this.ctx.storage.delete('img:' + p.id);
+
+    // 팀 토큰: 생존 팀은 기존 토큰 유지, 신규 팀은 새로 발급, 사라진 팀 토큰은 폐기.
+    const tokenOf = {};
+    for (const [tk, id] of Object.entries(this.auth.teams)) tokenOf[id] = tk;
+    const keptT = new Set(teams.map(t => t.id));
+    this.auth.teams = {};
+    const links = teams.map(t => {
+      const tk = tokenOf[t.id] || token();
+      this.auth.teams[tk] = t.id;
+      return { id: t.id, name: t.name, token: tk };
+    });
+    // 삭제된 팀 링크로 접속 중인 소켓은 끊습니다(code 1000 → 클라는 종료 화면).
+    for (const s of this.ctx.getWebSockets()) {
+      const tid = (this.ctx.getTags(s).find(x => x.startsWith('t:')) || '').slice(2);
+      if (tid && tid !== '-' && !keptT.has(tid)) {
+        try { s.close(1000, '팀 구성이 변경되어 이 링크는 더 이상 유효하지 않습니다'); } catch { /* 이미 닫힘 */ }
+      }
+    }
+
+    const orderMode = cfg.order === 'draw' ? 'draw' : 'random';
+    let order = pool.map(p => p.id);
+    if (orderMode === 'draw') order = shuffled(order);
+
+    this.S = {
+      ...this.S,   // code·createdAt(보관 기한) 유지
+      mode: cfg.mode === 'draft' ? 'draft' : 'auction',
+      draft: dr.draft,
+      title: String(cfg.title || '경매').slice(0, 40),
+      base, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
+      teams, pool, orderMode, order,
+      current: null, bid: null, deadline: null, pausedLeft: null,
+      log: [], bracket: null, phase: 'ready'
+    };
+    if (this.S.draft) this.resetSeq();
+
+    // 수정 전 스냅샷은 옛 팀·풀 구조를 가리켜 복원 시 정합성이 깨지므로 되돌리기 기록을 비웁니다.
+    for (let i = 0; i < UNDO_MAX; i++) await this.ctx.storage.delete('u:' + i);
+    this.um = { top: 0, count: 0 };
+
+    await this.ctx.storage.put({ S: this.S, auth: this.auth, um: this.um });
+    await this.armExpiry();
+    this.broadcast({ event: { kind: 'update' } });
+    return json({ code: this.S.code, hostKey: this.auth.hostKey, viewKey: this.auth.viewKey, links });
   }
 
   /* ── 파생 계산 ── */
@@ -1000,6 +1127,7 @@ export class AuctionRoom {
         this.S.current = null; this.S.bid = null;
         this.S.deadline = null; this.S.pausedLeft = null;
         this.S.log = [];
+        this.S.bracket = null;
         this.S.phase = 'ready';
         // 드래프트면 순서를 다시 만들고 포인터를 처음으로.
         // 우선순위(baseOrder)는 유지합니다 — 준비 화면에서 진행자가 다시 정할 수 있습니다.
@@ -1111,6 +1239,18 @@ export class AuctionRoom {
         await this.armExpiry();
         await this.save();
         return this.broadcast({ event: { kind: 'tiebreak', rolled, roll: result } });
+      }
+      case 'bracket': {
+        // 대진 추첨: 팀 구성이 끝난 뒤 진행자가 무작위 1:1 대진을 만듭니다. 홀수 팀이면 마지막 팀 부전승.
+        if (hostOnly()) return;
+        if (this.S.phase !== 'done') return deny('팀 구성이 끝난 뒤에만 대진을 추첨할 수 있습니다');
+        await this.snapshot();   // 재추첨을 '되돌리기'로 복구할 수 있게
+        const ids = shuffled(this.S.teams.map(t => t.id));
+        const pairs = [];
+        for (let i = 0; i + 1 < ids.length; i += 2) pairs.push([ids[i], ids[i + 1]]);
+        this.S.bracket = { pairs, bye: ids.length % 2 ? ids[ids.length - 1] : null, at: Date.now() };
+        await this.save();
+        return this.broadcast({ event: { kind: 'bracket' } });
       }
     }
   }
@@ -1265,6 +1405,15 @@ export class Registry {
       const rooms = (await this.ctx.storage.get('rooms')) || [];
       const { code } = await req.json();
       await this.ctx.storage.put('rooms', rooms.filter(x => x.code !== code));
+      return json({ ok: true });
+    }
+
+    // 방 설정 수정 시 목록의 제목만 갱신합니다(createdAt·via는 유지).
+    if (path === '/retitle') {
+      const rooms = (await this.ctx.storage.get('rooms')) || [];
+      const { code, title } = await req.json();
+      const rec = rooms.find(x => x.code === code);
+      if (rec && title) { rec.title = title; await this.ctx.storage.put('rooms', rooms); }
       return json({ ok: true });
     }
 

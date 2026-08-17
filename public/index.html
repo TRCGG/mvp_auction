@@ -14,6 +14,12 @@
   --text:#E6ECF2; --muted:#93A6B8; --body2:#A9B8C6; --danger:#E06A64; --danger-bg:#3A1F1E; --danger-bd:#7A3531; --danger-solid:#B23B36; --ok:#5FA86B;
   --top:#E07A5F; --jgl:#7BB661; --mid:#6FA8DC; --adc:#E0B04A; --sup:#B58ADB; --none:#7E90A2;
   --sans:'IBM Plex Sans KR',system-ui,sans-serif; --num:'Bebas Neue','IBM Plex Sans KR',sans-serif;
+  /* 스케일 토큰 — 간격은 4px 배수, 라운드 4단계, 글자 8단계. 새 스타일은 이 토큰만 쓴다. */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  --fs-2xs:11px; --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:15px; --fs-lg:17px; --fs-xl:22px; --fs-2xl:28px;
+  /* 클랜티어 구간색(1~5 → 챌·그마·마스터·다이아·에메) — JS GRADE_COLORS와 단일 소스 */
+  --grade0:#e6c14a; --grade1:#e0554f; --grade2:#b06fe0; --grade3:#4aa3e0; --grade4:#2fae5f;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans)}
@@ -24,15 +30,15 @@ button{cursor:pointer;background:none;border:none}
 .wrap{max-width:1440px;margin:0 auto}
 .num{font-family:var(--num);letter-spacing:.02em;font-variant-numeric:tabular-nums}
 /* 한국어 안내문은 어절 단위로 끊는다. keep-all이 없으면 '지명합니다'가 '지/명합니다'로 갈린다. */
-.hint{font-size:12.5px;color:var(--body2);line-height:1.65;word-break:keep-all}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
-.lbl{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
+.hint{font-size:var(--fs-xs);color:var(--body2);line-height:1.65;word-break:keep-all}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px}
+.lbl{font-size:var(--fs-2xs);font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
 input[type=text],input[type=number],input[type=password],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);
-  border-radius:7px;padding:9px 11px;font-size:14px;outline:none}
+  border-radius:var(--r-sm);padding:9px 11px;font-size:var(--fs-base);outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--gold)}
-textarea{resize:vertical;line-height:1.65;font-size:13.5px}
-.btn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 15px;
-  font-size:13.5px;font-weight:500;transition:.13s}
+textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 15px;
+  font-size:var(--fs-sm);font-weight:500;transition:.13s}
 .btn:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#0A1017;font-weight:700}
 .btn.gold:hover:not(:disabled){filter:brightness(1.12);color:#0A1017}
@@ -41,24 +47,28 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 .btn.danger:hover:not(:disabled){filter:brightness(1.12);color:#fff;border-color:var(--danger-solid)}
 .btn.danger-soft{background:var(--danger-bg);border-color:var(--danger-bd);color:#E88A85;font-weight:600}
 .btn.danger-soft:hover:not(:disabled){border-color:var(--danger);color:#E88A85}
-.skl{display:block;border-radius:5px;background:linear-gradient(90deg,#1B2733 25%,#243240 50%,#1B2733 75%);background-size:200% 100%;animation:skl 1.4s infinite}
+.skl{display:block;border-radius:var(--r-sm);background:linear-gradient(90deg,#1B2733 25%,#243240 50%,#1B2733 75%);background-size:200% 100%;animation:skl 1.4s infinite}
 @keyframes skl{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .btn:disabled{opacity:.32;cursor:not-allowed}
 .row{display:flex;gap:10px;flex-wrap:wrap}
+/* 반복 인라인 스타일 흡수용 유틸 — 치수는 토큰만 사용 */
+.btn.sm{font-size:var(--fs-xs);padding:6px 12px}
+.mt-2{margin-top:var(--sp-2)}.mt-3{margin-top:var(--sp-3)}
+.row.end{justify-content:flex-end}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 7px;border-radius:4px;border:1px solid currentColor}
+.tag{display:inline-block;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.1em;padding:3px 7px;border-radius:4px;border:1px solid currentColor}
 .t-TOP{color:var(--top)}.t-JGL{color:var(--jgl)}.t-MID{color:var(--mid)}
 .t-ADC{color:var(--adc)}.t-SUP{color:var(--sup)}.t-{color:var(--none)}
 
 /* 상단바 */
 .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);
   padding-bottom:14px;margin-bottom:18px}
-.brand{font-weight:700;font-size:17px;letter-spacing:-.02em}
+.brand{font-weight:700;font-size:var(--fs-lg);letter-spacing:-.02em}
 .brand span{color:var(--gold)}
-.brand .live{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:1px 6px;vertical-align:2px;margin-left:4px}
-.code{font-family:var(--num);font-size:22px;color:var(--text);letter-spacing:.14em}
-.who{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:4px 11px}
-.conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.brand .live{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.08em;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:1px 6px;vertical-align:2px;margin-left:4px}
+.code{font-family:var(--num);font-size:var(--fs-xl);color:var(--text);letter-spacing:.14em}
+.who{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:4px 11px}
+.conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--muted)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--danger)}
 .dot.on{background:var(--ok)}
 
@@ -79,42 +89,42 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
    체크칸을 따로 두지 않는다(자유 ☑ + 클랜티어 ☑ 같은 불가능한 조합이 생긴다).
    네이티브 체크박스라 선택 상태·키보드 조작은 브라우저가 맡는다. */
 .rulechk{display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;transition:.13s;
-  background:var(--bg);border:1px solid var(--line);border-radius:8px;
-  font-size:13px;color:var(--body2);word-break:keep-all}
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);
+  font-size:var(--fs-sm);color:var(--body2);word-break:keep-all}
 .rulechk:hover{border-color:var(--line2)}
 .rulechk.on{border-color:var(--gold);background:var(--gold-soft);color:var(--text)}
 .rulechk input{width:16px;height:16px;margin:0;flex:none;accent-color:var(--gold)}
-.rulechk i{font-style:normal;margin-left:auto;font-size:11.5px;color:var(--muted)}
+.rulechk i{font-style:normal;margin-left:auto;font-size:var(--fs-2xs);color:var(--muted)}
 .rulechk.on i{color:var(--gold)}
 .rulegrp{display:flex;flex-direction:column;gap:6px}
 /* 결과 줄 — 체크 조합이 어떤 드래프트인지 이름과 순서·제약·필요로 확인해 준다.
    앱이 진행 중 방에 쓰는 왼쪽 골드 띠(.room.st-live)를 그대로 쓴다. */
 .ruleout{margin-top:9px;padding:10px 12px;background:var(--bg);border:1px solid var(--gold);
-  border-radius:8px;box-shadow:inset 3px 0 0 var(--gold);word-break:keep-all}
-.ruleout>b{display:block;font-size:13.5px;color:var(--gold);margin-bottom:5px}
+  border-radius:var(--r-md);box-shadow:inset 3px 0 0 var(--gold);word-break:keep-all}
+.ruleout>b{display:block;font-size:var(--fs-sm);color:var(--gold);margin-bottom:5px}
 /* 요약 배지 — 조합이 뭘 하는지 한 줄로 먼저 말해 준다 */
 .rule-sum{margin:0 0 9px;padding:8px 10px;background:rgba(212,169,78,.10);
-  border-radius:6px;font-size:12.5px;line-height:1.55;color:var(--text);word-break:keep-all}
+  border-radius:var(--r-sm);font-size:var(--fs-xs);line-height:1.55;color:var(--text);word-break:keep-all}
 .rule-sum b{color:var(--gold);font-weight:600}
 /* .hint와 같은 크기·행간 */
-.ruleout>span{display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:12.5px;line-height:1.6;color:var(--body2)}
+.ruleout>span{display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:var(--fs-xs);line-height:1.6;color:var(--body2)}
 .ruleout>span+span{margin-top:3px}
-.ruleout>span>i{font-style:normal;font-size:11px;color:var(--muted)}
+.ruleout>span>i{font-style:normal;font-size:var(--fs-2xs);color:var(--muted)}
 .ruleout>span b{font-weight:600;color:var(--text)}
 /* 방을 만들 수 없는 이유 목록 */
 .blockbox{margin-top:12px;padding:10px 13px;background:var(--danger-bg);border:1px solid var(--danger-bd);
-  border-radius:8px;font-size:12.5px;color:#E88A85;line-height:1.7;word-break:keep-all}
-.blockbox b{display:block;font-size:13px;margin-bottom:3px}
+  border-radius:var(--r-md);font-size:var(--fs-xs);color:#E88A85;line-height:1.7;word-break:keep-all}
+.blockbox b{display:block;font-size:var(--fs-sm);margin-bottom:3px}
 .blockbox ul{margin:0;padding-left:17px}
 /* 고정값 표시(수정 불가) — input과 같은 높이로 맞춰 나란히 놓인다. */
-.fixedval{background:var(--bg);border:1px dashed var(--line);border-radius:7px;padding:9px 11px;
-  font-size:14px;color:var(--body2)}
-.fixedval i{font-style:normal;font-size:11.5px;color:var(--muted);margin-left:4px}
+.fixedval{background:var(--bg);border:1px dashed var(--line);border-radius:var(--r-sm);padding:9px 11px;
+  font-size:var(--fs-base);color:var(--body2)}
+.fixedval i{font-style:normal;font-size:var(--fs-2xs);color:var(--muted);margin-left:4px}
 /* 값 칸 수에 따라 세 가지: 없음(자유) 1개(기본) 2개(클랜티어+클랜점수) */
 .leader-row{display:grid;grid-template-columns:1fr 76px 76px 34px;gap:8px;margin-bottom:8px}
 .leader-row.none{grid-template-columns:1fr 76px 34px}
 .leader-row.two{grid-template-columns:1fr 66px 66px 66px 34px}
-@media(max-width:560px){
+@media(max-width:640px){
   /* 폭이 좁으면 닉네임+삭제만 한 줄에 두고 나머지는 아래로 쌓는다.
      삭제 버튼은 (1,2)로 못박아야 자동배치가 그것을 맨 아래 행으로 밀지 않는다. */
   .leader-row,.leader-row.none,.leader-row.two{grid-template-columns:1fr 34px;gap:6px}
@@ -124,52 +134,52 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
   #leaderList>.leader-row:first-child{display:none}
 }
 .leader-row input[type=number]{font-family:var(--num);font-size:16px;text-align:center;padding:6px}
-.leader-row input[type=number]::placeholder{font-family:var(--sans);font-size:12px}
-.leader-row button{color:var(--muted);font-size:18px;border:1px solid var(--line);border-radius:7px}
+.leader-row input[type=number]::placeholder{font-family:var(--sans);font-size:var(--fs-xs)}
+.leader-row button{color:var(--muted);font-size:18px;border:1px solid var(--line);border-radius:var(--r-sm)}
 .leader-row button:hover{color:var(--danger);border-color:var(--danger)}
 
 /* 관리자 */
 .rooms{display:flex;flex-direction:column;gap:9px}
 .room{display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;
-  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px}
 .room .rc{font-family:var(--num);font-size:26px;color:var(--text);letter-spacing:.12em}
-.room .rt{font-weight:600;font-size:14.5px;margin-bottom:3px}
-.room .rs{font-size:12px;color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
-.pill{font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.room .rt{font-weight:600;font-size:var(--fs-base);margin-bottom:3px}
+.room .rs{font-size:var(--fs-xs);color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
+.pill{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:var(--r-pill);border:1px solid currentColor}
 .p-ready{color:var(--muted)} .p-live{color:var(--gold)} .p-done{color:var(--ok)} .p-gone{color:var(--danger)}
 .mode-auction{color:var(--gold)} .mode-draft{color:#6fa8dc}
 /* 관리자: 경매방 요약 바 · 코드별 그룹 · 카드 상태 강조 */
 .room-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.room-sum .s{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted)}
-.room-sum .s b{font-family:var(--num);font-size:17px;margin-left:4px;color:var(--text)}
+.room-sum .s{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 12px;font-size:var(--fs-xs);color:var(--muted)}
+.room-sum .s b{font-family:var(--num);font-size:var(--fs-lg);margin-left:4px;color:var(--text)}
 .room-sum .s.live b{color:var(--gold)} .room-sum .s.done b{color:var(--ok)} .room-sum .s.warn{color:var(--danger)} .room-sum .s.warn b{color:var(--danger)}
 .room-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0 9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
 .room-group .gc{font-family:var(--num);font-size:18px;color:var(--text);letter-spacing:.1em}
-.room-group .gk{font-size:11px;font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:99px;border:1px solid currentColor}
+.room-group .gk{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:var(--r-pill);border:1px solid currentColor}
 .room-group .gk.mgr{color:var(--gold)} .room-group .gk.direct,.room-group .gk.gone{color:var(--muted)}
-.room-group .gm{font-size:12px;color:var(--muted)}
-.room-group .gn{margin-left:auto;font-size:12px;color:var(--muted)}
+.room-group .gm{font-size:var(--fs-xs);color:var(--muted)}
+.room-group .gn{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
 .room.st-live{box-shadow:inset 4px 0 0 var(--gold)} .room.st-done{box-shadow:inset 4px 0 0 var(--ok)}
 .room.st-ready{box-shadow:inset 4px 0 0 var(--muted)} .room.st-gone{box-shadow:inset 4px 0 0 var(--danger);opacity:.6}
 .room .rbar{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-top:7px;max-width:200px}
 .room .rbar i{display:block;height:100%;background:var(--ok)}
 .room .rs .warn{color:var(--danger)}
-.empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:13.5px;line-height:1.9}
+.empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:var(--fs-sm);line-height:1.9}
 
 /* 참가자 목록 */
-.drop{border:1.5px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;
+.drop{border:1.5px dashed var(--line);border-radius:var(--r-lg);padding:22px 16px;text-align:center;
   transition:.15s;cursor:pointer}
 .drop:hover,.drop.over{border-color:var(--gold);background:var(--gold-soft)}
 /* 자식 선택자여야 한다. 후손 선택자면 아래 안내문의 인라인 <b>까지 블록이 되어
    "위 / 양식 다운로드 / 로 받아 채운 뒤…"로 문장이 갈라진다. */
-.drop>b{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
+.drop>b{display:block;font-size:var(--fs-base);font-weight:600;margin-bottom:5px}
 .plist{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;margin-top:12px}
 .prow{display:grid;grid-template-columns:1fr 62px 84px 1fr 40px;gap:9px;align-items:center;
-  background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px}
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 10px;font-size:var(--fs-xs)}
 .prow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.prow .nm i{font-style:normal;color:var(--muted);font-weight:400;font-size:11px}
-.prow .tr{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.prow .ch{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .nm i{font-style:normal;color:var(--muted);font-weight:400;font-size:var(--fs-2xs)}
+.prow .tr{font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .ch{color:var(--muted);font-size:var(--fs-2xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow button{color:var(--muted);font-size:16px;line-height:1;min-width:40px;min-height:36px}
 .prow button:hover{color:var(--danger)}
 .prow.dup{border-color:var(--danger)}
@@ -178,43 +188,51 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 
 /* 링크 배포 */
 .link-row{display:grid;grid-template-columns:130px 1fr auto;gap:9px;align-items:center;margin-bottom:8px}
-.link-row code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;
-  font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace}
-.link-row b{font-size:13px;font-weight:600}
+.link-row code{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;
+  font-size:var(--fs-2xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace}
+.link-row b{font-size:var(--fs-sm);font-weight:600}
 
-/* 경매장 */
+/* 경매장
+   면 위계 규칙(2계층+영웅): elev-0 = 배경면(진행 기록·풀 등 조연, 배경 없음/얇은 테두리),
+   elev-1 = 기본 패널(.panel), hero = 지금 이 순간의 주인공(타이머·현재 입찰·지명 차례).
+   hero만 --panel2 배경과 큰 숫자를 가질 수 있습니다 — 골드는 '중요'의 뜻을 지키기 위해 아껴 씁니다. */
 .stage{display:grid;grid-template-columns:minmax(320px,410px) 1fr;gap:16px;align-items:start}
-.lot{position:relative;overflow:hidden}
-.lot-empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:14px;line-height:1.85}
-.lot-no{font-family:var(--num);font-size:13px;color:var(--muted);letter-spacing:.2em}
+/* overflow:hidden이면 모바일 sticky 타이머가 동작하지 않습니다. 플래시 모서리는 radius 상속으로 해결. */
+.lot{position:relative}
+.lot-empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:var(--fs-base);line-height:1.85}
+.lot-no{font-family:var(--num);font-size:var(--fs-sm);color:var(--muted);letter-spacing:.2em}
 .lot-img{display:block;width:100%;height:240px;object-fit:cover;object-position:center 22%;
-  border-radius:10px;border:1px solid var(--line);margin-bottom:14px;background:var(--panel2)}
-@media(max-width:520px){.lot-img{height:180px}}
+  border-radius:var(--r-lg);border:1px solid var(--line);margin-bottom:14px;background:var(--panel2)}
 .lot-name{font-size:clamp(30px,4.6vw,50px);font-weight:700;letter-spacing:-.035em;line-height:1.05;
   margin:10px 0 12px;word-break:keep-all}
 .lot-meta{display:flex;align-items:center;gap:10px;margin-bottom:18px}
 
-.tier{font-size:12px;font-weight:600;color:var(--gold);border:1px solid var(--gold);
+.tier{font-size:var(--fs-xs);font-weight:600;color:var(--gold);border:1px solid var(--gold);
   border-radius:4px;padding:2px 8px}
 .champs{display:flex;gap:5px;flex-wrap:wrap;margin:-4px 0 12px}
-.champs span{font-size:11.5px;color:var(--muted);background:var(--panel2);
-  border-radius:5px;padding:4px 9px}
-.high{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:15px;margin-bottom:12px}
+.champs span{font-size:var(--fs-2xs);color:var(--muted);background:var(--panel2);
+  border-radius:var(--r-sm);padding:4px 9px}
+/* hero: 현재 최고 입찰 — 화면에서 가장 무거운 면. 패널보다 밝은 배경 + 큰 숫자. */
+.high{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--r-lg);padding:15px;margin-bottom:12px}
 .high.mine{border-color:var(--gold);background:var(--gold-soft)}
-.high .who-bid{font-size:13px;font-weight:600;margin-bottom:3px}
-.high .amt{font-family:var(--num);font-size:40px;line-height:1;color:var(--gold)}
-.high .none{font-size:14px;color:var(--muted);padding:6px 0}
+.high .who-bid{font-size:var(--fs-sm);font-weight:600;margin-bottom:3px}
+.high .amt{font-family:var(--num);font-size:clamp(36px,5vw,52px);line-height:1;color:var(--gold)}
+.high .none{font-size:var(--fs-base);color:var(--muted);padding:6px 0}
+/* 입찰 수신 직후 한 번만 얹는 펄스(재렌더마다 반복되지 않게 이벤트에서 클래스를 붙입니다) */
+.high.pulse{animation:highPulse .45s ease-out}
+@keyframes highPulse{0%{border-color:var(--gold);box-shadow:0 0 20px -4px var(--gold)}100%{box-shadow:0 0 0 0 transparent}}
 
+/* hero: 타이머 */
 .clock{display:flex;align-items:center;gap:11px;margin-bottom:14px}
-.clock b{font-family:var(--num);font-size:58px;line-height:1;min-width:80px}
+.clock b{font-family:var(--num);font-size:clamp(48px,6vw,64px);line-height:1;min-width:80px}
 .clock.hot b{color:var(--danger)}
 .bar{flex:1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--gold);transition:width .25s linear}
 .clock.hot .bar i{background:var(--danger)}
 
 .bidpad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
-.bidpad button{padding:13px 0;font-size:14px;font-weight:700;background:var(--panel2);
-  border:1px solid var(--line);border-radius:8px}
+.bidpad button{padding:13px 0;font-size:var(--fs-base);font-weight:700;background:var(--panel2);
+  border:1px solid var(--line);border-radius:var(--r-md)}
 .bidpad button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
 .bidpad button:disabled{opacity:.3;cursor:not-allowed}
 .custom{display:grid;grid-template-columns:1fr auto;gap:6px}
@@ -222,72 +240,75 @@ textarea{resize:vertical;line-height:1.65;font-size:13.5px}
 
 /* 팀 보드 */
 .teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:12px}
-.team{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px;
+.team{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;
   display:flex;flex-direction:column;gap:11px;transition:.15s}
 .team.me{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
-.my-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:11px;font-weight:800;letter-spacing:.06em;padding:1px 7px;border-radius:999px;vertical-align:middle;box-shadow:0 0 6px -1px var(--gold)}
+.my-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;padding:1px 7px;border-radius:var(--r-pill);vertical-align:middle;box-shadow:0 0 6px -1px var(--gold)}
 .team.top{border-color:var(--ok);background:linear-gradient(rgba(95,168,107,.10),var(--panel))}
 .team.turn{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
-.turn-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;vertical-align:middle}
+/* 입찰/턴 변경 순간의 카드 연출 — onEvent가 paint 직후 rAF로 클래스를 얹습니다 */
+.team.pulse{animation:cardPulse .5s ease-out}
+@keyframes cardPulse{0%{box-shadow:0 0 0 0 rgba(95,168,107,.45)}100%{box-shadow:0 0 0 12px rgba(95,168,107,0)}}
+.team.turn.anim-turn{animation:turnGlow .6s ease-out}
+@keyframes turnGlow{0%{box-shadow:0 0 0 7px rgba(212,169,78,.4),0 0 28px -2px var(--gold)}
+  100%{box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}}
+.turn-badge{display:inline-block;margin-left:6px;background:var(--gold);color:#0A1017;font-size:var(--fs-2xs);font-weight:800;padding:1px 6px;border-radius:var(--r-pill);vertical-align:middle}
 .tierrow{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0}
-.tchip{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.tchip{font-size:var(--fs-2xs);font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:var(--r-sm);padding:2px 6px}
 .tchip.on{color:#0A1017;background:var(--gold);border-color:var(--gold)}
-.tchip i{font-style:normal;font-size:11px;opacity:.75}
-.ttag{display:inline-block;min-width:17px;text-align:center;font-size:11px;font-weight:800;color:#000;border-radius:3px;padding:1px 4px;margin-right:5px;vertical-align:middle}
+.tchip i{font-style:normal;font-size:var(--fs-2xs);opacity:.75}
+.ttag{display:inline-block;min-width:17px;text-align:center;font-size:var(--fs-2xs);font-weight:800;color:#000;border-radius:3px;padding:1px 4px;margin-right:5px;vertical-align:middle}
 .posic{width:17px;height:17px;vertical-align:middle;margin-left:3px}
 .treqrow{display:flex;gap:6px;flex-wrap:wrap}
-.treq{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 9px}
+.treq{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 9px}
 .treq b{font-family:var(--num);color:var(--text)}
 .treq.bad{color:var(--danger);border-color:var(--danger)}
 .treq.bad b{color:var(--danger)}
 /* 순서 칩(점수 드래프트 첫 라운드) — 번호는 흐리게, 팀장은 밝고 굵게, 총점은 골드로 세 층을 나눕니다. */
-.ordchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--text);
-  border:1px solid var(--line);border-radius:6px;padding:4px 9px}
-.ordchip i{font-style:normal;font-family:var(--num);font-size:13px;font-weight:400;color:var(--muted)}
-.ordchip b{font-family:var(--num);font-size:13px;font-weight:400;color:var(--gold)}
+.ordchip{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:700;color:var(--text);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 9px}
+.ordchip i{font-style:normal;font-family:var(--num);font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
+.ordchip b{font-family:var(--num);font-size:var(--fs-sm);font-weight:400;color:var(--gold)}
 .ord-list{display:flex;flex-direction:column;gap:6px}
-.ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.ord-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px}
 /* 동점 정리 목록에서 내 팀 행 강조 */
 .ord-row.me{border-color:var(--gold);background:var(--gold-soft)}
+/* 점수 모드 준비 화면: 동점 그룹 행(왼쪽 골드 브래킷) + 총점 표시 */
+.ord-row.tied{box-shadow:inset 3px 0 0 var(--gold)}
+.ord-pt{font-family:var(--num);font-size:var(--fs-lg);color:var(--gold);min-width:34px;text-align:right}
+.tie-badge{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:1px 5px;white-space:nowrap}
 /* 동점 정리 결과 띠 — 굴린 값과 순서를 한 줄로 */
 .rollbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 11px;
-  background:var(--bg);border:1px solid var(--line);border-radius:9px;font-size:12.5px}
-.roll-lb{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs)}
+.roll-lb{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.06em;color:var(--muted)}
 .roll-item{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--body2)}
-.roll-item b{font-family:var(--num);font-size:15px;font-weight:400;color:var(--text)}
+.roll-item b{font-family:var(--num);font-size:var(--fs-md);font-weight:400;color:var(--text)}
 .roll-item.win{color:var(--text)} .roll-item.win b{color:var(--gold)}
 .roll-item.mine{color:var(--gold)}
-.roll-gt{font-style:normal;color:var(--muted);font-size:11px}
-.roll-first{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.06em;color:#0A1017;
-  background:var(--gold);border-radius:99px;padding:2px 9px;white-space:nowrap}
+.roll-gt{font-style:normal;color:var(--muted);font-size:var(--fs-2xs)}
+.roll-first{margin-left:auto;font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;color:#0A1017;
+  background:var(--gold);border-radius:var(--r-pill);padding:2px 9px;white-space:nowrap}
 /* 번호는 흐리고 크게(색인), 이름은 밝고 굵게(주인공) — 둘이 같은 층으로 읽히지 않게 위계를 벌립니다. */
 .ord-n{font-family:var(--num);font-size:19px;color:var(--muted);min-width:22px;text-align:center}
 .ord-nm{flex:1;font-weight:700;letter-spacing:-.02em;color:var(--text)}
 .ord-btns{display:flex;gap:4px}
-.ord-btns button{padding:10px 14px;font-size:14px;min-width:44px}
-/* 진행 중 다음 지명 차례 띠 — 스네이크 순서대로 앞으로 나올 팀들 */
-/* 주의: 항목 클래스는 .turn-item 입니다. .turn 은 팀 카드(.team.turn)가 이미 쓰고 있어 충돌합니다. */
-.turnbar{display:flex;align-items:center;gap:6px;margin-top:12px;padding:9px 11px;
-  background:var(--bg);border:1px solid var(--line);border-radius:9px;
-  overflow-x:auto;white-space:nowrap;
-  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);
-  mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}
-.turnbar::-webkit-scrollbar{height:4px}
-.turnbar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
-.turn-lb{font-size:11px;color:var(--muted);letter-spacing:.12em;flex-shrink:0;margin-right:2px}
-.turn-item{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;
-  background:var(--panel2);border:1px solid var(--line);border-radius:99px;
-  padding:5px 11px 5px 7px;font-size:12.5px;font-weight:600}
-.turn-item b{font-family:var(--num);font-size:11px;font-weight:400;color:var(--muted);
-  min-width:9px;text-align:center}
-.turn-item.mine{background:var(--gold);color:#0A1017;font-weight:800;
-  padding:5px 12px 5px 8px;box-shadow:0 0 12px -3px var(--gold)}
-.turn-item.mine b{display:none}
-.turn-item.mine::before{content:'▶';font-size:11px}
-.turn-sep{width:1px;height:18px;background:var(--line);flex-shrink:0;margin:0 3px}
-.turn-r{font-style:normal;font-family:var(--num);font-size:11px;color:var(--muted);
-  border:1px solid var(--line);border-radius:4px;padding:1px 5px;flex-shrink:0}
-.turn-more{font-size:11px;color:var(--muted);flex-shrink:0}
+.ord-btns button{padding:10px 14px;font-size:var(--fs-base);min-width:44px}
+/* 진행 중 지명 차례 띠 — 현재 픽부터 다음 라운드까지 전부 보여주고, 좁으면 줄바꿈합니다.
+   (숨김·페이드·가로 스크롤 없음: 몇 팀이 남았는지가 항상 눈에 보여야 합니다)
+   주의: 항목 클래스는 .turn-item 입니다. .turn 은 팀 카드(.team.turn)가 이미 쓰고 있어 충돌합니다. */
+.turnbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;padding:9px 11px;
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md)}
+.turn-lb{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.12em;flex-shrink:0;margin-right:2px}
+.turn-item{display:inline-flex;align-items:center;gap:6px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-pill);
+  padding:5px 11px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap}
+/* 지금 지명 중인 팀: 골드 솔리드. 내 팀: 골드 테두리 + '나' 뱃지. */
+.turn-item.now{background:var(--gold);border-color:var(--gold);color:#0A1017;font-weight:800}
+.turn-item.mine{border-color:var(--gold);box-shadow:0 0 10px -4px var(--gold)}
+.turn-me{font-style:normal;font-size:10px;font-weight:800;color:#0A1017;background:var(--gold);
+  border-radius:var(--r-pill);padding:1px 6px}
+.turn-item.now .turn-me{background:#0A1017;color:var(--gold)}
+.turn-more{font-size:var(--fs-2xs);color:var(--muted);flex-shrink:0}
 .pcard.pick{cursor:pointer}
 .pcard.pick:hover{border-color:var(--gold);background:var(--gold-soft)}
 .team.full{opacity:.55}
@@ -297,56 +318,58 @@ button.pcard[draggable]:active{cursor:grabbing}
 body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offset:2px}
 .team.drop-ok{outline:2px solid var(--gold)!important;outline-offset:2px;background:var(--gold-soft)}
 .team-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.team-nm{font-weight:700;font-size:15.5px;letter-spacing:-.02em;line-height:1.3}
-.team-lead{font-size:11.5px;color:var(--muted);margin-top:2px}
+.team-nm{font-weight:700;font-size:var(--fs-md);letter-spacing:-.02em;line-height:1.3}
+.team-lead{font-size:var(--fs-2xs);color:var(--muted);margin-top:2px}
 .team-pt{text-align:right;flex-shrink:0}
 .team-pt b{font-family:var(--num);font-size:29px;color:var(--gold);line-height:1}
-.team-pt i{display:block;font-style:normal;font-size:11px;color:var(--muted);letter-spacing:.1em;margin-top:1px}
+.team-pt i{display:block;font-style:normal;font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.1em;margin-top:1px}
 .gauge{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
 .gauge i{display:block;height:100%;background:var(--gold);transition:width .35s ease}
 .slots{display:flex;gap:4px}
-.slot{flex:1;height:26px;border-radius:5px;border:1px dashed var(--line);display:grid;place-items:center;
-  font-size:11px;color:var(--muted);letter-spacing:.06em}
+.slot{flex:1;height:26px;border-radius:var(--r-sm);border:1px dashed var(--line);display:grid;place-items:center;
+  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
 .slot.on{border:1px solid transparent;background:var(--panel2);color:var(--text)}
-.roster{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.roster{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-xs)}
 .roster div{display:flex;justify-content:space-between;gap:8px;color:var(--muted)}
 .roster div b{font-weight:500;color:var(--text)}
-.roster div span{font-family:var(--num);font-size:14px;color:var(--body2)}
+.roster div span{font-family:var(--num);font-size:var(--fs-base);color:var(--body2)}
 .roster .lead b{color:var(--gold)}
 /* 팀장 표시 ★ — 결과 이미지(canvas)와 같은 표기를 씁니다. */
 .lead-star{font-style:normal;margin-right:4px}
 
-.log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:12.5px}
+/* 조연 패널(elev-0): 진행 기록처럼 참고용 정보 — 배경 없이 테두리만 둬 시각적 무게를 낮춥니다 */
+.panel.sub{background:transparent}
+.log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:var(--fs-xs)}
 .log-list div{color:var(--muted);display:flex;gap:9px}
 .log-list div b{font-weight:500;color:var(--text)}
-.log-list em{font-family:var(--num);font-size:14px;color:var(--body2);font-style:normal}
+.log-list em{font-family:var(--num);font-size:var(--fs-base);color:var(--body2);font-style:normal}
 
 .pool{display:flex;gap:7px;flex-wrap:wrap}
 /* 남은 매물 칩 — 2줄 카드. 테두리 색 = 등급 구간(롤 티어색). 라인 색은 없음. */
 .pcard{display:flex;flex-direction:column;gap:4px;min-width:132px;background:var(--bg);
-  border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;line-height:1.2;color:var(--text);text-align:left}
+  border:1.5px solid var(--line);border-radius:var(--r-md);padding:7px 10px;line-height:1.2;color:var(--text);text-align:left}
 button.pcard{cursor:pointer;transition:.12s}
 button.pcard:hover:not(:disabled){background:var(--panel2)}
 button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .pc-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
-.pc-nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pc-gr{font-family:var(--num);font-weight:700;font-size:15px;flex:none}
-.pc-pass{font-size:11px;font-weight:700;color:#E88A85;background:#2C1817;border-radius:4px;padding:1px 6px;flex:none}
-.pc-bot{display:flex;justify-content:space-between;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:5px;font-size:12px;color:var(--muted)}
+.pc-nm{font-weight:600;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-gr{font-family:var(--num);font-weight:700;font-size:var(--fs-md);flex:none}
+.pc-pass{font-size:var(--fs-2xs);font-weight:700;color:#E88A85;background:#2C1817;border-radius:4px;padding:1px 6px;flex:none}
+.pc-bot{display:flex;justify-content:space-between;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:5px;font-size:var(--fs-xs);color:var(--muted)}
 .pc-line{font-weight:700;letter-spacing:.03em}
-.pc-sub{font-weight:400;color:var(--muted);font-size:11px}
+.pc-sub{font-weight:400;color:var(--muted);font-size:var(--fs-2xs)}
 .pc-tier{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
 /* 정렬/그룹 토글 */
-.psort{display:inline-flex;gap:2px;margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:2px}
-.psort button{font-size:12.5px;padding:9px 13px;border-radius:5px;color:var(--muted);letter-spacing:0}
+.psort{display:inline-flex;gap:2px;margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:2px}
+.psort button{font-size:var(--fs-xs);padding:9px 13px;border-radius:var(--r-sm);color:var(--muted);letter-spacing:0}
 .psort button.on{background:var(--panel2);color:var(--text);font-weight:600;box-shadow:inset 0 0 0 1px var(--line)}
-.pgroup{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:10px 0 5px}
+.pgroup{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.08em;color:var(--muted);margin:10px 0 5px}
 /* 실력 등급 뱃지 (등급 1~5 → 색인덱스 gr0~gr4) — 롤 티어색(챌·그마·마스터·다이아·에메) */
-.gr{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.02em;padding:2px 6px;border-radius:4px;color:#0A1017;white-space:nowrap}
-.gr0{background:#e6c14a}.gr1{background:#e0554f}.gr2{background:#b06fe0}.gr3{background:#4aa3e0}.gr4{background:#2fae5f}
+.gr{display:inline-block;font-size:var(--fs-2xs);font-weight:800;letter-spacing:.02em;padding:2px 6px;border-radius:4px;color:#0A1017;white-space:nowrap}
+.gr0{background:var(--grade0)}.gr1{background:var(--grade1)}.gr2{background:var(--grade2)}.gr3{background:var(--grade3)}.gr4{background:var(--grade4)}
 
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:99;background:var(--gold);
-  color:#0A1017;font-weight:600;font-size:13.5px;padding:11px 20px;border-radius:8px;opacity:0;
+  color:#0A1017;font-weight:600;font-size:var(--fs-sm);padding:11px 20px;border-radius:var(--r-md);opacity:0;
   pointer-events:none;transition:.25s;max-width:90vw;text-align:center}
 .toast.on{opacity:1;bottom:34px}
 /* 토스트 자체는 클릭을 통과시키고(입찰 탭을 가로채지 않도록) 떠 있는 동안의 되돌리기 버튼만 받습니다. */
@@ -354,18 +377,41 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .toast.bad{background:var(--danger);color:#fff}
 
 .flash{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
-  background:rgba(10,16,23,.92);opacity:0}
+  background:rgba(10,16,23,.92);opacity:0;border-radius:inherit}
 .flash b{font-family:var(--num);font-size:56px;color:var(--gold);border:4px solid var(--gold);
   padding:6px 24px;transform:rotate(-8deg);letter-spacing:.06em;text-align:center}
 .flash.go{animation:st 1.2s ease-out forwards}
 @keyframes st{0%{opacity:0;transform:scale(1.4)}16%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0}}
-.sfx-btn{background:none;border:1px solid var(--line);border-radius:7px;padding:2px 8px;font-size:14px;line-height:1.4;cursor:pointer}
+.sfx-btn{background:none;border:1px solid var(--line);border-radius:var(--r-sm);padding:2px 8px;font-size:var(--fs-base);line-height:1.4;cursor:pointer}
 .sfx-btn.off{opacity:.45}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;z-index:200;padding:20px}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.modal-hd b{font-size:15px}
+.modal-hd b{font-size:var(--fs-md)}
 
+/* 대진표 — 종료 후 무작위 1:1 매칭. 등장 연출(.anim)은 추첨 이벤트 직후에만 붙습니다. */
+.match-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:10px 14px;margin-bottom:6px}
+.match-row.anim{animation:matchIn .4s both;animation-delay:calc(var(--i,0)*.12s)}
+.match-no{font-family:var(--num);font-size:var(--fs-lg);color:var(--muted);min-width:20px;text-align:center}
+.match-t{flex:1;font-weight:700;letter-spacing:-.02em;text-align:right}
+.match-t.r{text-align:left}
+.match-t.me{color:var(--gold)}
+.match-vs{font-family:var(--num);font-size:var(--fs-sm);color:var(--gold);border:1px solid var(--gold);
+  border-radius:var(--r-sm);padding:2px 8px;letter-spacing:.08em}
+.match-row.bye .match-t{text-align:left}
+.match-row.bye .match-vs{color:var(--muted);border-color:var(--line2)}
+@keyframes matchIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* 모바일 라이브 화면 — 팀장이 폰으로 입찰하는 상황이 기본값입니다.
+   타이머는 스크롤해도 보이게 상단 고정, 입찰 패드는 엄지 크기, 사진은 줄여 패드가 첫 화면에 들어오게. */
+@media(max-width:640px){
+  .lot-img{height:150px}
+  .clock{position:sticky;top:0;z-index:5;background:var(--panel);padding:8px 0;margin-bottom:10px}
+  .bidpad button{min-height:52px}
+  .custom input{min-height:48px}
+  .custom .btn{min-height:48px}
+}
 @media(max-width:900px){.stage{grid-template-columns:1fr}body{padding:12px}}
 /* 설정 화면은 1100px 아래에서 1열로 둔다. 900px에서 2열로 갈리면 왼쪽 열이 417px로 좁아져
    규칙 카드의 줄 수가 늘고, 창을 넓혔는데 입력칸이 오히려 화면 밖으로 나간다. */
@@ -381,6 +427,8 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 const LINES=['TOP','JGL','MID','ADC','SUP'];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// CSS 변수 → JS. 색·치수의 단일 소스는 :root 토큰이다(캔버스 결과 이미지 포함).
+const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 /* 티어 색·순위, 등급 뱃지 — 목록에서 실력대를 한눈에 보게 합니다.
    각 티어는 한글·영문·흔한 약어/오탈자 키워드로 인식하고, 숫자는:
@@ -419,7 +467,7 @@ function tierRank(t){
 }
 // 등급 구간 색 — 롤 티어색(1~1.9 챌린저 … 5~5.9 에메랄드). 없으면 빈값.
 // 색 인덱스는 정수부-1 (등급 1→색0=챌린저 … 5→색4=에메).
-const GRADE_COLORS=['#e6c14a','#e0554f','#b06fe0','#4aa3e0','#2fae5f'];
+const GRADE_COLORS=[0,1,2,3,4].map(i=>cssVar('--grade'+i));
 const gradeBand=g=>{ const n=Number(g); return (g==null||g===''||!Number.isFinite(n)||n<1)?-1:Math.min(4,Math.floor(n)-1); };
 const gradeColor=g=>{ const b=gradeBand(g); return b<0?'':GRADE_COLORS[b]; };
 // 등급: 1~5 정수 + 소수점 첫째자리(예 1.2, 3.4). 색은 정수부 구간, 숫자는 소수까지 표시.
@@ -469,6 +517,9 @@ let managerMode=false;                 // 매니저 코드로 들어왔는지(�
 let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·솔랭('tier')·클랜티어('grade')·클랜점수('score')
 let draftOrder=null;                   // 드래프트 첫 라운드 지명 순서(팀 id 배열). 진행자가 준비 화면에서 정함.
 let tiePick=[];                        // 동점 정리 중 진행자가 '먼저'로 지정한 팀 (묶음별 id 배열)
+let editCtx=null;                      // 방 설정 수정 컨텍스트 {code, hostKey}. 수정 화면이 떠 있는 동안만.
+let editing=false;                     // 수정 화면 표시 중 — 브로드캐스트 paint()가 폼을 덮어쓰지 않게 막습니다.
+let pendingEdit=false;                 // 대시보드 '수정' 버튼 경유 입장 — hello 수신 후 자동으로 수정 화면.
 let sfxMuted=(()=>{ try{ return localStorage.getItem('sfxMuted')==='1'; }catch{ return false; } })();  // 소리 음소거(클라이언트별)
 const sfxOn=()=>me&&me.role==='host'&&!sfxMuted;   // 연출 사운드는 진행자 화면 위주로 재생
 const fmtInv=c=>c.length===8?c.slice(0,4)+'-'+c.slice(4):c;
@@ -583,7 +634,16 @@ function connect(code,auth){
   ws.onerror=()=>{};
   ws.onmessage=e=>{
     const m=JSON.parse(e.data);
-    if(m.t==='hello'){ me=m.you; S=m.S; skew=Date.now()-m.S.now; paint(); }
+    if(m.t==='hello'){
+      me=m.you; S=m.S; skew=Date.now()-m.S.now;
+      // 대시보드의 '수정' 버튼으로 들어왔으면 방 화면을 거치지 않고 바로 수정 폼을 엽니다.
+      if(pendingEdit){
+        pendingEdit=false;
+        if(me.role==='host'&&S.phase==='ready'){ openRoomEdit(); return; }
+        toast('시작 전(대기 상태)에만 수정할 수 있습니다',true);
+      }
+      paint();
+    }
     else if(m.t==='state'){ S=m.S; skew=Date.now()-m.S.now; paint(); if(m.event) onEvent(m.event); }
     else if(m.t==='error'){ toast(m.msg,true); }
     // pong은 하이버네이션 자동응답이 처리하며 별도 동작이 필요 없습니다.
@@ -606,11 +666,21 @@ function onEvent(ev){
   if(ev.kind==='sold'){ flash(`${esc(ev.team)}<br><span style="font-size:.55em">${esc(ev.player)} · ${esc(ev.price)}P</span>`); if(sfxOn()) soldChime(); }
   else if(ev.kind==='pass') flash('유찰');
   else if(ev.kind==='assign') flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} · 배정</span>`);
-  else if(ev.kind==='bid' && me.role!=='host') beep();
+  else if(ev.kind==='bid'){
+    if(me.role!=='host') beep();
+    // paint()가 방금 새 DOM을 그렸으므로, 새 입찰 금액과 선두 팀 카드에 펄스를 한 번 얹습니다.
+    requestAnimationFrame(()=>{
+      const h=document.querySelector('.high'); if(h) h.classList.add('pulse');
+      const tp=document.querySelector('.team.top'); if(tp) tp.classList.add('pulse');
+    });
+  }
   else if(ev.kind==='clock' && me.role!=='host') toast(`제한시간이 ${ev.clock}초로 바뀌었습니다`);
   else if(ev.kind==='reset') toast('처음 상태로 초기화되었습니다');
+  else if(ev.kind==='update'){ if(me.role!=='host') toast('진행자가 방 설정을 변경했습니다'); }
   else if(ev.kind==='pick'){
     flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} 지명</span>`); if(sfxOn()) soldChime();
+    // 차례가 넘어간 팀 카드에 글로우를 한 번 얹어 '턴이 바뀌었다'가 눈에 들어오게 합니다.
+    requestAnimationFrame(()=>{ const t=document.querySelector('.team.turn'); if(t) t.classList.add('anim-turn'); });
     // 이 지명으로 라운드가 끝나며 총점 동점이 생겼으면 곧바로 알립니다.
     if(S.draft&&S.draft.tie) toast('총점 동점 — 다음 라운드 순서를 정해야 합니다',true);
   }
@@ -618,6 +688,12 @@ function onEvent(ev){
     toast(S.draft&&S.draft.tie?'총점 동점 — 첫 라운드 순서를 정해야 합니다':'드래프트가 시작되었습니다',!!(S.draft&&S.draft.tie));
   }
   else if(ev.kind==='draworder'){ if(S.draft&&S.draft.baseOrder) draftOrder=S.draft.baseOrder.slice(); paint(); if(me.role==='host') toast('지명 순서를 추첨했습니다'); }
+  else if(ev.kind==='bracket'){
+    flash('🎲 대진 추첨');
+    if(sfxOn()) soldChime();
+    // paint()가 먼저 끝난 상태라, 그려진 행에 등장 연출 클래스만 얹습니다(재렌더 때는 안 붙음).
+    requestAnimationFrame(()=>document.querySelectorAll('.match-row').forEach(el=>el.classList.add('anim')));
+  }
   else if(ev.kind==='tiebreak'){
     tiePick=[];
     // 굴린 값과 1순위 팀을 큰 연출로 알립니다.
@@ -715,6 +791,7 @@ const leftMs=()=>{
 /* ═══ 화면 ═══ */
 function paint(){
   if(!S){ return; }
+  if(editing) return;   // 방 설정 수정 중 — 브로드캐스트가 폼을 날리지 않게 렌더를 미룹니다.
   totalsCache=null;   // 이번 렌더에서 다시 계산 (상태가 바뀌었으므로)
   // 드래그 도중 재렌더되면 소스 노드가 사라져 dragend가 안 뜨므로, 드래그 시각효과를 여기서 정리.
   document.body.classList.remove('dragging');
@@ -739,7 +816,7 @@ function topbar(){
     <div class="brand">${esc(S.title)} <span class="live">LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
-    <div class="conn">${me.role==='host'?`<button class="btn ghost" id="bLinks" style="padding:4px 9px;font-size:12px">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+    <div class="conn">${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
   </div>`;
 }
 
@@ -766,7 +843,7 @@ async function openLinksModal(){
   if(!m){ m=document.createElement('div'); m.id='linkmodal'; document.body.appendChild(m); }
   m.className='modal-bg';
   m.innerHTML=`<div class="modal">
-    <div class="modal-hd"><b>접속 링크</b><button class="btn ghost" id="lmClose" style="padding:5px 12px;font-size:12px">닫기</button></div>
+    <div class="modal-hd"><b>접속 링크</b><button class="btn ghost sm" id="lmClose">닫기</button></div>
     <p class="hint" style="margin-bottom:12px">각 팀장에게 <b>자기 링크만</b> 개인적으로 보내세요. 링크가 곧 신분입니다.</p>
     ${rows.map((r,i)=>`<div class="link-row"><b style="${r.gold?'color:var(--gold)':''}">${esc(r.label)}</b><code>${esc(r.url)}</code><button class="btn" data-lcopy="${i}">복사</button></div>`).join('')}
     <div class="row" style="margin-top:12px"><button class="btn" id="lmAll" style="flex:1">전체 목록 복사</button></div>
@@ -782,7 +859,7 @@ function stage(){
   return `<div class="stage">
     <div>
       <div class="panel lot" id="lotPanel">${S.mode==='draft'?draftBody():lotBody()}<div class="flash" id="flash"><b></b></div></div>
-      <div class="panel" style="margin-top:12px">
+      <div class="panel sub mt-3">
         <span class="lbl">진행 기록</span>
         <div class="log-list">${S.log.length?S.log.map(l=>l.kind==='sold'
           ?`<div><em>${l.price}P</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
@@ -809,13 +886,17 @@ function lotBody(){
       ? '경매가 끝났습니다<br>아래 팀 구성을 확인하세요'
       : `대기 매물 <b class="num" style="color:var(--gold);font-size:20px">${remaining().length}</b>명<br>${
           me.role==='host'?'다음 매물을 올려주세요':'진행자가 다음 매물을 올리는 중입니다'}`}</div>
-      ${(done||S.log.length)?`<div class="row"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장${done?'':' (현재까지)'}</button></div>`:''}
-      ${me.role==='host'?`<div class="row" style="margin-top:8px">
+      ${done?bracketPanel():''}
+      ${(done||S.log.length)?`<div class="row${done?' mt-2':''}"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장${done?'':' (현재까지)'}</button></div>`:''}
+      ${me.role==='host'?`<div class="row mt-2">
         <button class="btn gold" style="flex:1" id="bNext" ${done?'disabled':''}>다음 매물 올리기</button>
         <button class="btn" id="bUndo">되돌리기</button>
       </div>${hostClockCtl()}
-      ${S.log.length?`<div class="row" style="margin-top:10px;justify-content:flex-end">
-        <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">경매 초기화</button>
+      ${S.phase==='ready'?`<div class="row mt-2">
+        <button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button>
+      </div>`:''}
+      ${S.log.length?`<div class="row end" style="margin-top:10px">
+        <button class="btn danger-soft sm" id="bReset">경매 초기화</button>
       </div>`:''}`:''}`;
   }
 
@@ -825,7 +906,7 @@ function lotBody(){
   const ms=leftMs(), pct=Math.min(100,ms/(S.clock*1000)*100);
 
   return `${p.imgV?`<img class="lot-img" src="/api/room/${S.code}/img/${p.id}?v=${p.imgV}" alt="${esc(p.name)} 사진">`:''}
-    <div class="lot-no">LOT ${String(S.pool.filter(x=>x.status==='sold').length+1).padStart(2,'0')}${p.status==='pass'?' <span style="font-size:11px;font-weight:800;color:#E88A85;background:#2C1817;border-radius:4px;padding:2px 7px;letter-spacing:0;vertical-align:2px">재상정 · 유찰</span>':''}</div>
+    <div class="lot-no">LOT ${String(S.pool.filter(x=>x.status==='sold').length+1).padStart(2,'0')}${p.status==='pass'?' <span style="font-size:var(--fs-2xs);font-weight:800;color:#E88A85;background:#2C1817;border-radius:4px;padding:2px 7px;letter-spacing:0;vertical-align:2px">재상정 · 유찰</span>':''}</div>
     <div class="lot-name">${esc(p.name)}${p.tag?`<span style="font-size:.34em;color:var(--muted);font-weight:400"> #${esc(p.tag)}</span>`:''}</div>
     <div class="lot-meta">
       <span class="tag t-${p.line}">${LINES.includes(p.line)?`<img src="/pos/${p.line.toLowerCase()}.png" alt="" style="width:12px;height:12px;vertical-align:-2px;margin-right:3px">`:''}${esc(p.line)||'라인 미지정'}</span>
@@ -856,9 +937,9 @@ function lotBody(){
       <button class="btn" id="bPause">${S.pausedLeft!=null?'재개':'일시정지'}</button>
     </div>
     ${hostClockCtl()}
-    <div class="row" style="margin-top:8px">
-      <button class="btn ghost" id="bImg" style="font-size:12px;padding:6px 12px">${p.imgV?'사진 변경':'선수 사진 올리기'}</button>
-      ${p.imgV?'<button class="btn ghost" id="bImgDel" style="font-size:12px;padding:6px 12px">사진 삭제</button>':''}
+    <div class="row mt-2">
+      <button class="btn ghost sm" id="bImg">${p.imgV?'사진 변경':'선수 사진 올리기'}</button>
+      ${p.imgV?'<button class="btn ghost sm" id="bImgDel">사진 삭제</button>':''}
       <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" hidden>
     </div>`:''}`;
 }
@@ -874,12 +955,12 @@ function bidControls(t,mine){
     :cap<base?`한도 ${cap}P — 더 부를 수 없습니다`
     :`내 한도 ${cap}P · ${t.open}자리 남음`;
   return `<div class="bidpad">${steps.map(v=>`
-      <button data-bid="${v}" ${blocked||v>cap?'disabled':''}>${cur!=null&&v>cur?`+${v-cur}<span style="display:block;font-size:11px;color:var(--muted);font-weight:400">${v}</span>`:v}</button>`).join('')}</div>
+      <button data-bid="${v}" ${blocked||v>cap?'disabled':''}>${cur!=null&&v>cur?`+${v-cur}<span style="display:block;font-size:var(--fs-2xs);color:var(--muted);font-weight:400">${v}</span>`:v}</button>`).join('')}</div>
     <div class="custom">
       <input type="number" id="custom" class="num" placeholder="직접 입력" min="${base}" max="${cap}" onwheel="this.blur()">
       <button class="btn gold" id="bCustom" ${blocked?'disabled':''}>입찰</button>
     </div>
-    ${mine?`<div style="margin-top:10px;background:var(--gold-soft);border:1px solid var(--gold);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--gold);text-align:center">✓ ${why}</div>`:`<div class="hint" style="margin-top:9px">${why}</div>`}`;
+    ${mine?`<div style="margin-top:10px;background:var(--gold-soft);border:1px solid var(--gold);border-radius:var(--r-md);padding:8px 12px;font-size:var(--fs-sm);font-weight:600;color:var(--gold);text-align:center">✓ ${why}</div>`:`<div class="hint" style="margin-top:9px">${why}</div>`}`;
 }
 
 function teamCard(t){
@@ -935,7 +1016,7 @@ function teamCard(t){
     <div class="roster">
       <div class="lead"><b><i class="lead-star">★</i>${esc(t.leader)}</b><span>${rosterVal(t,t.leaderLine)}</span></div>
       ${roster.map(p=>`<div><b>${esc(p.name)}</b><span>${rosterVal(p,p.line,p.price)}</span></div>`).join('')}
-      ${(!draft&&t.open>0)?`<div style="font-size:11.5px">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
+      ${(!draft&&t.open>0)?`<div style="font-size:var(--fs-2xs)">한도 ${t.cap}P · ${t.open}자리 남음</div>`:''}
     </div>
   </div>`;
 }
@@ -950,31 +1031,25 @@ function ensureDraftOrder(){
   }
 }
 
-// 진행 중 '다음 지명 차례' 띠. 현재 픽 이후 최대 5팀을 순서대로, 라운드가 바뀌는 자리엔 R표시.
-// 점수 드래프트는 seq에 현재 라운드까지만 들어 있습니다(다음 순서는 라운드 시작 때 총점으로 결정).
-// 그래서 라운드 끝에서 '마지막 지명'으로 오해하지 않게 따로 안내합니다.
+// 진행 중 '지명 차례' 띠. 현재 지명 중인 팀 + 바로 다음 순서 몇 팀만 간단히 보여줍니다.
+// 순번·라운드 같은 부가 정보는 싣지 않습니다 — 칩의 나열 순서가 곧 지명 순서이고,
+// 전체 진행도는 위의 ROUND/PICK이, '내 차례까지 몇 픽'은 아래 안내문이 담당합니다.
 function nextTurnBar(d){
-  const n=S.teams.length||1;
   const all=totalPicks(d);
-  const undecided=d.balance==='score'&&d.seq.length<all;   // 아직 안 정해진 라운드가 남았나
+  const SHOW=8;   // 현재 포함 최대 8칩 — 그 뒤는 +N픽으로 줄입니다
+  const end=Math.min(d.seq.length,d.ptr+SHOW);
   const items=[];
-  for(let i=d.ptr+1;i<d.seq.length&&items.length<5;i++){
+  for(let i=d.ptr;i<end;i++){
     const t=S.teams.find(x=>x.id===d.seq[i]);
     if(!t) continue;
     const mine=me.teamId===t.id;
-    const k=items.length;
-    // 라운드가 바뀌는 자리엔 구분선 + R뱃지를 항목 앞에 따로 넣습니다.
-    const head=(i%n===0)?`<span class="turn-sep"></span><i class="turn-r">R${Math.floor(i/n)+1}</i>`:'';
-    const op=mine?1:Math.max(.5,Math.round((1-k*.18)*100)/100);   // 뒤로 갈수록 옅게
-    items.push(`${head}<span class="turn-item${mine?' mine':''}" style="opacity:${op}"><b>${i+1}</b>${mine?'내 차례':esc(t.leader)}</span>`);
+    items.push(`<span class="turn-item${i===d.ptr?' now':''}${mine?' mine':''}">${esc(t.leader)}${mine?'<i class="turn-me">나</i>':''}</span>`);
   }
-  if(!items.length) return `<div class="turnbar"><span class="turn-lb">다음</span><span class="turn-more">${
-    undecided?'라운드 종료 · 다음 순서는 총점으로 정해집니다':'마지막 지명입니다'}</span></div>`;
+  if(!items.length) return `<div class="turnbar"><span class="turn-lb">순서</span><span class="turn-more">마지막 지명입니다</span></div>`;
   // 남은 픽 수는 전체 기준으로 셉니다. seq.length로 세면 점수 모드에서 다음 라운드가 빠집니다.
-  const more=all-(d.ptr+1)-items.length;
-  return `<div class="turnbar"><span class="turn-lb">다음</span>${
-    items.join('')}${more>0?`<span class="turn-more">+${more}</span>`:''}${
-    undecided?'<span class="turn-more">이후 총점순</span>':''}</div>`;
+  const more=all-end;
+  return `<div class="turnbar"><span class="turn-lb">순서</span>${
+    items.join('')}${more>0?`<span class="turn-more">+${more}픽</span>`:''}</div>`;
 }
 
 // 서버 scoreOrder와 동일 규칙 — 총점 오름차순, 동점은 주어진 우선순위(baseOrder) 순.
@@ -989,6 +1064,32 @@ function picksUntilMyTurn(d){
   if(!me.teamId) return 0;
   for(let i=d.ptr+1;i<d.seq.length;i++) if(d.seq[i]===me.teamId) return i-d.ptr;
   return 0;
+}
+
+// 대진 패널 — 팀 구성이 끝난 뒤(done) 무작위 1:1 대진을 보여줍니다. 추첨·재추첨은 진행자만.
+function bracketPanel(){
+  const host=me.role==='host';
+  const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.name:id; };
+  if(!S.bracket){
+    if(!host||S.teams.length<2) return '';
+    return `<div class="row mt-2"><button class="btn gold" id="bBracket" style="flex:1">🎲 대진 추첨</button></div>`;
+  }
+  const rows=S.bracket.pairs.map(([a,b],i)=>`<div class="match-row" style="--i:${i}">
+      <i class="match-no">${i+1}</i>
+      <span class="match-t${me.teamId===a?' me':''}">${esc(nm(a))}</span>
+      <b class="match-vs">VS</b>
+      <span class="match-t r${me.teamId===b?' me':''}">${esc(nm(b))}</span>
+    </div>`).join('');
+  const bye=S.bracket.bye?`<div class="match-row bye" style="--i:${S.bracket.pairs.length}">
+      <i class="match-no">·</i>
+      <span class="match-t${me.teamId===S.bracket.bye?' me':''}">${esc(nm(S.bracket.bye))}</span>
+      <b class="match-vs">부전승</b>
+    </div>`:'';
+  return `<div class="mt-3">
+    <div class="lbl" style="margin-bottom:6px">대진표</div>
+    ${rows}${bye}
+    ${host?`<div class="row end"><button class="btn ghost sm" id="bBracket">🎲 다시 추첨</button></div>`:''}
+  </div>`;
 }
 
 // 동점 정리 결과 띠 — '주사위 87 > 42' 처럼 굴린 값과 그래서 누가 먼저인지 보여줍니다.
@@ -1029,7 +1130,7 @@ function tieBody(d){
     return `<div style="margin-bottom:12px">
       <div class="lbl" style="margin-bottom:6px">총점 <b class="num" style="color:var(--gold)">${g.total}</b> 동점 ${g.ids.length}팀</div>
       <div class="ord-list">${rows}</div>
-      ${host&&chosen.length?`<div class="row" style="margin-top:6px"><button class="btn ghost" data-tieclear="${gi}" style="padding:4px 12px;font-size:12px">지정 취소</button></div>`:''}
+      ${host&&chosen.length?`<div class="row" style="margin-top:6px"><button class="btn ghost" data-tieclear="${gi}" style="padding:4px 12px;font-size:var(--fs-xs)">지정 취소</button></div>`:''}
     </div>`;
   }).join('');
   const anyPick=tiePick.some(a=>a&&a.length);
@@ -1051,43 +1152,54 @@ function draftBody(){
     ensureDraftOrder();
     const host=me.role==='host';
     const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.leader:id; };
-    const list=draftOrder.map((id,i)=>`<div class="ord-row">
+    const sc=scoreMode();
+    let list;
+    if(sc){
+      // 점수 모드: 실제 첫 라운드 순서(총점 낮은 순)를 리스트 하나로 보여줍니다.
+      // 동점 팀만 골드 브래킷으로 묶고, ▲▼는 동점 그룹 안에서만(=동점 우선순위 조정) 노출합니다.
+      const sorted=scoreOrderClient(draftOrder);
+      const totals=new Map(S.teams.map(t=>[t.id,teamTotal(t)]));
+      const cnt={}; sorted.forEach(id=>{ const v=totals.get(id); cnt[v]=(cnt[v]||0)+1; });
+      list=sorted.map((id,i)=>{
+        const v=totals.get(id);
+        const tied=cnt[v]>1;
+        // 표시상 이웃이 같은 총점일 때만 그 이웃과 자리를 바꿀 수 있습니다.
+        const up=(i>0&&totals.get(sorted[i-1])===v)?sorted[i-1]:null;
+        const dn=(i<sorted.length-1&&totals.get(sorted[i+1])===v)?sorted[i+1]:null;
+        return `<div class="ord-row${tied?' tied':''}">
+          <span class="ord-n">${i+1}</span>
+          <span class="ord-nm">${esc(nm(id))} 팀${me.teamId===id?' <b style="color:var(--gold)">(나)</b>':''}</span>
+          ${tied?'<span class="tie-badge">동점</span>':''}
+          <span class="ord-pt">${v}</span>
+          ${host&&tied?`<span class="ord-btns"><button class="btn ghost" data-ordswap="${id}:${up||''}" ${up?'':'disabled'}>▲</button><button class="btn ghost" data-ordswap="${id}:${dn||''}" ${dn?'':'disabled'}>▼</button></span>`:''}
+        </div>`;
+      }).join('');
+    }else{
+      list=draftOrder.map((id,i)=>`<div class="ord-row">
         <span class="ord-n">${i+1}</span>
-        <span class="ord-nm">${esc(nm(id))} 팀</span>
+        <span class="ord-nm">${esc(nm(id))} 팀${me.teamId===id?' <b style="color:var(--gold)">(나)</b>':''}</span>
         ${host?`<span class="ord-btns"><button class="btn ghost" data-ordup="${i}" ${i===0?'disabled':''}>▲</button><button class="btn ghost" data-orddn="${i}" ${i===draftOrder.length-1?'disabled':''}>▼</button></span>`:''}
       </div>`).join('');
-    const sc=scoreMode();
-    // 점수 모드에선 진행자가 정하는 순서가 '첫 지명 순서'가 아니라 동점 정리의 출발 우선순위입니다.
-    // 실제 첫 라운드 순서는 팀장 점수로 결정되므로 따로 계산해 보여줍니다.
-    const firstOrder=sc?scoreOrderClient(draftOrder).map((id,i)=>{
-      const t=S.teams.find(x=>x.id===id);
-      return `<span class="ordchip"><i>${i+1}</i>${esc(t?t.leader:id)}<b>${t?teamTotal(t):0}</b></span>`;
-    }).join(''):'';
-    // 팀장 점수가 겹치면 시작하자마자 동점 화면으로 멈춥니다. 미리보기가 확정처럼 보이지 않게 알립니다.
-    const tieWarn=sc?(()=>{
-      const seen={}, dup=new Set();
-      S.teams.forEach(t=>{ const v=teamTotal(t); if(seen[v]) dup.add(v); seen[v]=1; });
-      if(!dup.size) return '';
-      return `<p class="hint" style="color:var(--gold);margin:0 0 12px">총점이 같은 팀이 있어(${[...dup].join('·')}점)
-        <b>시작하면 바로 동점 정리 화면</b>이 뜹니다. 주사위나 '먼저' 지정으로 순서를 정한 뒤 진행됩니다.</p>`;
-    })():'';
+    }
+    const anyTie=sc&&(()=>{ const seen={}; return S.teams.some(t=>{ const v=teamTotal(t); if(seen[v]) return true; seen[v]=1; return false; }); })();
     return `<div class="lot-empty" style="padding:16px 20px">${rulesLabel(d)} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명</div>
-      ${sc?`<div class="lbl" style="margin-bottom:6px">첫 라운드 지명 순서 (총점 낮은 순)</div>
-      <div class="treqrow" style="margin-bottom:${tieWarn?'8':'12'}px">${firstOrder}</div>${tieWarn}`:''}
-      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">${sc?'동점 시 우선순위':'첫 지명 순서'}</span>${host?`<button class="btn ghost" id="bDraw" style="margin-left:auto;padding:4px 12px;font-size:12px">🎲 추첨</button>`:''}</div>
+      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">${sc?'첫 라운드 지명 순서 (총점 낮은 순)':'첫 지명 순서'}</span>${host?`<button class="btn ghost sm" id="bDraw" style="margin-left:auto">🎲 추첨</button>`:''}</div>
       <div class="ord-list">${list}</div>
       ${host
         ? `<p class="hint" style="margin:9px 0 12px">${sc
-            ? '<b>클랜점수</b> 규칙은 매 라운드 <b>총점이 낮은 팀부터</b> 지명합니다. 여기서 정하는 순서는 지명 순서가 아니라 <b>동점 정리의 출발 우선순위</b>입니다. 실제로 총점이 같아지면 <b>진행이 멈추고</b> 그 자리에서 🎲 주사위나 <b>먼저</b> 지정으로 순서를 정합니다.'
+            ? `매 라운드 <b>총점이 낮은 팀부터</b> 지명합니다.${anyTie?' 동점 그룹의 순서는 <b>▲▼로 지금 정하거나</b>, 그대로 시작하면 <b>동점 정리 화면</b>에서 🎲 주사위나 지정으로 정합니다.':' 총점이 같아지면 진행이 멈추고 그 자리에서 🎲 주사위나 지정으로 순서를 정합니다.'} 🎲 추첨은 동점 시 우선순위를 무작위로 섞습니다.`
             : '추첨을 누르면 모두가 보는 앞에서 순서가 정해집니다. ▲▼로 직접 조정도 가능하고, 이후는 스네이크(다음 라운드부터 역순)로 진행됩니다.'}</p>
-           <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">${sc?'드래프트 시작':'이 순서로 드래프트 시작'}</button></div>`
+           <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">${sc?'드래프트 시작':'이 순서로 드래프트 시작'}</button></div>
+           <div class="row mt-2"><button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button></div>`
         : `<p class="hint" style="margin:9px 0">진행자가 순서를 정하고 곧 시작합니다.</p>`}`;
   }
   if(S.phase==='done'){
     return `<div class="lot-empty">드래프트 완료<br>아래 팀 구성을 확인하세요</div>
-      <div class="row"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장</button></div>
-      ${me.role==='host'?`<div class="row" style="margin-top:8px;justify-content:flex-end">
-        <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">드래프트 초기화</button>
+      ${bracketPanel()}
+      <div class="row mt-2"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장</button></div>
+      ${me.role==='host'?`<div class="row end" style="margin-top:8px">
+        <button class="btn" id="bUndo">되돌리기</button>
+        <button class="btn danger-soft sm" id="bReset">드래프트 초기화</button>
       </div>`:''}`;
   }
   // 총점 동점 정리 대기 — 순서가 아직 정해지지 않아 지명을 받지 않습니다.
@@ -1119,10 +1231,10 @@ function draftBody(){
       :me.role==='host'?'현재 팀장이 고르는 중입니다. 오른쪽 매물을 클릭하면 진행자가 대신 지명합니다.'
       :wait>0?`다른 팀 차례입니다. <b style="color:var(--gold)">내 차례까지 ${wait}픽</b> 남았습니다.`
       :'다른 팀 차례입니다. 남은 매물을 살펴보세요.'}</div>
-    ${me.role==='host'?`<div class="row" style="margin-top:12px;justify-content:flex-end">
-      <button class="btn" id="bPause" style="font-size:12px;padding:6px 12px">${S.pausedLeft!=null?'재개':'일시정지'}</button>
-      <button class="btn" id="bUndo" style="font-size:12px;padding:6px 12px">되돌리기</button>
-      <button class="btn danger-soft" id="bReset" style="font-size:12px;padding:6px 12px">초기화</button>
+    ${me.role==='host'?`<div class="row end mt-3">
+      <button class="btn sm" id="bPause">${S.pausedLeft!=null?'재개':'일시정지'}</button>
+      <button class="btn sm" id="bUndo">되돌리기</button>
+      <button class="btn danger-soft sm" id="bReset">초기화</button>
     </div>${hostClockCtl()}`:''}`;
 }
 
@@ -1219,7 +1331,7 @@ function poolPanel(){
   }
   return `<div class="panel" style="margin-top:12px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span class="lbl" style="margin:0">${draw&&poolView==='order'?'매물 순서':'남은 매물'} <b class="num" style="color:var(--gold);font-size:15px">${rem.length}</b></span>
+      <span class="lbl" style="margin:0">${draw&&poolView==='order'?'매물 순서':'남은 매물'} <b class="num" style="color:var(--gold);font-size:var(--fs-md)">${rem.length}</b></span>
       <div class="psort" role="group" aria-label="매물 정렬">
         <button id="pv-order" data-pv="order" aria-pressed="${poolView==='order'}" class="${poolView==='order'?'on':''}">${draw?'순서':'등록순'}</button>
         <button id="pv-pos" data-pv="pos" aria-pressed="${poolView==='pos'}" class="${poolView==='pos'?'on':''}">포지션</button>
@@ -1228,7 +1340,7 @@ function poolPanel(){
         ${sc?`<button id="pv-score" data-pv="score" aria-pressed="${poolView==='score'}" class="${poolView==='score'?'on':''}">클랜점수</button>`:''}
       </div>
     </div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);margin:8px 0 2px"><b style="letter-spacing:.06em">클랜티어색</b>${GRADE_COLORS.map((c,i)=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${c};vertical-align:-1px"></i> ${i+1}</span>`).join('')}<span style="color:#5A6B7C">·</span><span>낮을수록 상위</span></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:var(--fs-2xs);color:var(--muted);margin:8px 0 2px"><b style="letter-spacing:.06em">클랜티어색</b>${GRADE_COLORS.map((c,i)=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${c};vertical-align:-1px"></i> ${i+1}</span>`).join('')}<span style="color:#5A6B7C">·</span><span>낮을수록 상위</span></div>
     <div class="hint" style="margin:4px 0 8px">${posline}${noline?` · 미지정 ${noline}`:''}${host&&live?' · <span style="color:var(--gold)">현재 매물 마무리 후 선택 가능</span>':(host&&!draft)?' · <span style="color:var(--gold)">카드를 팀으로 끌어다 놓으면 0P로 배정됩니다</span>':''}</div>
     ${body}
   </div>`;
@@ -1256,22 +1368,29 @@ function saveResultImage(){
   const cols=Math.min(teams.length,4), rowsN=Math.ceil(teams.length/cols);
   const maxP=Math.max(0,...teams.map(t=>rosterOf(t).length));
   const cardH=64+(1+maxP)*rowH+16;
-  const W=pad*2+cols*colW+(cols-1)*gap, H=headH+rowsN*cardH+(rowsN-1)*gap+pad;
+  // 대진표가 있으면 팀 카드 아래에 한 구역을 더 그립니다.
+  const br=S.bracket;
+  const brRows=br?br.pairs.length+(br.bye?1:0):0;
+  const brH=br?(14+22+brRows*26):0;
+  const W=pad*2+cols*colW+(cols-1)*gap, H=headH+rowsN*cardH+(rowsN-1)*gap+brH+pad;
   const cv=document.createElement('canvas'); cv.width=W*dpr; cv.height=H*dpr;
   const x=cv.getContext('2d'); x.scale(dpr,dpr); x.textBaseline='top';
   const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();};
-  x.fillStyle='#0A1017'; x.fillRect(0,0,W,H);
-  x.fillStyle='#E6ECF2'; x.font='700 26px sans-serif'; x.fillText(S.title,pad,26,W-pad*2);
-  x.fillStyle='#D4A94E'; x.font='700 13px sans-serif';
+  // 색은 전부 :root 토큰에서 읽습니다 — CSS 팔레트를 바꾸면 결과 이미지도 함께 바뀝니다.
+  const C={bg:cssVar('--bg'),panel:cssVar('--panel'),line:cssVar('--line'),
+    text:cssVar('--text'),muted:cssVar('--none'),gold:cssVar('--gold')};
+  x.fillStyle=C.bg; x.fillRect(0,0,W,H);
+  x.fillStyle=C.text; x.font='700 26px sans-serif'; x.fillText(S.title,pad,26,W-pad*2);
+  x.fillStyle=C.gold; x.font='700 13px sans-serif';
   x.fillText((draft?'드래프트 결과 · ':'경매 결과 · ')+new Date().toLocaleString('ko-KR',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),pad,62);
-  const POS={TOP:'#E07A5F',JGL:'#7BB661',MID:'#6FA8DC',ADC:'#E0B04A',SUP:'#B58ADB'};
+  const POS=Object.fromEntries(LINES.map(l=>[l,cssVar('--'+l.toLowerCase())]));
   teams.forEach((t,i)=>{
     const cx=pad+(i%cols)*(colW+gap), cy=headH+Math.floor(i/cols)*(cardH+gap);
-    x.fillStyle='#141C26'; rr(cx,cy,colW,cardH,10); x.fill();
-    x.strokeStyle='#26343F'; x.lineWidth=1; x.stroke();
-    x.fillStyle='#E6ECF2'; x.font='700 17px sans-serif'; x.fillText(t.name,cx+16,cy+13,colW-32);
-    x.fillStyle='#7E90A2'; x.font='12px sans-serif'; x.fillText('팀장 '+t.leader,cx+16,cy+38,colW-120);
-    x.fillStyle='#D4A94E'; x.textAlign='right';
+    x.fillStyle=C.panel; rr(cx,cy,colW,cardH,10); x.fill();
+    x.strokeStyle=C.line; x.lineWidth=1; x.stroke();
+    x.fillStyle=C.text; x.font='700 17px sans-serif'; x.fillText(t.name,cx+16,cy+13,colW-32);
+    x.fillStyle=C.muted; x.font='12px sans-serif'; x.fillText('팀장 '+t.leader,cx+16,cy+38,colW-120);
+    x.fillStyle=C.gold; x.textAlign='right';
     x.fillText(sc?('총점 '+teamTotal(t))
       :draft?(rosterOf(t).length+(perTeam?'/'+perTeam:'')+' 지명')
       :('잔여 '+t.points+'P'),cx+colW-16,cy+38,90); x.textAlign='left';
@@ -1281,22 +1400,32 @@ function saveResultImage(){
     // 팀 카드의 rosterVal과 같은 선택 규칙입니다(엔티티에서 직접 읽습니다).
     const rightVal=(o,ry2)=>{
       x.font='600 13px sans-serif'; x.textAlign='right';
-      if(!draft){ x.fillStyle='#D4A94E'; x.fillText(o.price+'P',cx+colW-16,ry2,80); x.textAlign='left'; return; }
+      if(!draft){ x.fillStyle=C.gold; x.fillText(o.price+'P',cx+colW-16,ry2,80); x.textAlign='left'; return; }
       let right=cx+colW-16;
-      if(sc){ x.fillStyle='#D4A94E'; x.fillText((o.score??0)+'점',right,ry2,60); right-=46; }
+      if(sc){ x.fillStyle=C.gold; x.fillText((o.score??0)+'점',right,ry2,60); right-=46; }
       if(tier){ const b=gradeBand(o.grade); if(b>=0){ x.fillStyle=GRADE_COLORS[b]; x.fillText('T'+(b+1),right,ry2,34); } }
       x.textAlign='left';
     };
-    x.fillStyle='#D4A94E'; x.font='600 13px sans-serif'; x.fillText('★ '+t.leader,cx+16,ry,colW-70);
+    x.fillStyle=C.gold; x.font='600 13px sans-serif'; x.fillText('★ '+t.leader,cx+16,ry,colW-70);
     if(draft) rightVal(t,ry);
     ry+=rowH;
     rosterOf(t).forEach(pl=>{
-      x.fillStyle=POS[pl.line]||'#7E90A2'; x.fillRect(cx+16,ry+3,3,13);
-      x.fillStyle='#E6ECF2'; x.font='13px sans-serif'; x.fillText(pl.name,cx+26,ry,colW-130);
+      x.fillStyle=POS[pl.line]||C.muted; x.fillRect(cx+16,ry+3,3,13);
+      x.fillStyle=C.text; x.font='13px sans-serif'; x.fillText(pl.name,cx+26,ry,colW-130);
       rightVal(pl,ry);
       ry+=rowH;
     });
   });
+  if(br){
+    const nm=id=>{ const t=S.teams.find(v=>v.id===id); return t?t.name:id; };
+    let by=headH+rowsN*cardH+(rowsN-1)*gap+14;
+    x.fillStyle=C.gold; x.font='700 13px sans-serif'; x.fillText('대진표',pad,by); by+=22;
+    br.pairs.forEach(([a,b],i)=>{
+      x.fillStyle=C.text; x.font='13px sans-serif';
+      x.fillText(`${i+1}.  ${nm(a)}   VS   ${nm(b)}`,pad,by,W-pad*2); by+=26;
+    });
+    if(br.bye){ x.fillStyle=C.muted; x.font='13px sans-serif'; x.fillText(`·  ${nm(br.bye)} — 부전승`,pad,by,W-pad*2); }
+  }
   cv.toBlob(b=>{
     if(!b) return toast('이미지를 만들지 못했습니다',true);
     const url=URL.createObjectURL(b), a=document.createElement('a');
@@ -1323,10 +1452,25 @@ function wire(){
       : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
     askConfirm({title:(S&&S.mode==='draft')?'드래프트를 초기화할까요?':'경매를 초기화할까요?',msg,confirmLabel:'초기화'}).then(ok=>{ if(ok) send('reset'); }); });
   on('bStartDraft',()=>send('startdraft',{order:draftOrder}));
+  on('bEdit',openRoomEdit);
+  on('bBracket',()=>{
+    if(S.bracket){
+      askConfirm({title:'대진을 다시 추첨할까요?',msg:'현재 대진표가 지워지고 새로 추첨됩니다.\n(직후 되돌리기로 이전 대진을 복구할 수 있습니다.)',confirmLabel:'다시 추첨'})
+        .then(ok=>{ if(ok) send('bracket'); });
+    } else send('bracket');
+  });
   on('bDraw',()=>send('draworder'));
   on('bLinks',openLinksModal);
   document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
   document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
+  // 점수 모드 동점 그룹: 두 팀의 draftOrder상 자리를 맞바꿔 동점 우선순위를 조정합니다.
+  // (표시 순서는 총점 정렬이라 인덱스 스왑이 아니라 id 스왑이어야 합니다)
+  document.querySelectorAll('[data-ordswap]').forEach(b=>b.onclick=()=>{
+    const [a,c]=b.dataset.ordswap.split(':');
+    if(!draftOrder||!a||!c) return;
+    const i=draftOrder.indexOf(a), j=draftOrder.indexOf(c);
+    if(i>=0&&j>=0){ [draftOrder[i],draftOrder[j]]=[draftOrder[j],draftOrder[i]]; paint(); }
+  });
   // 동점 정리: '먼저'로 지정한 순서를 모아두고, 주사위나 지정 적용으로 서버에 보냅니다.
   document.querySelectorAll('[data-tiefirst]').forEach(b=>b.onclick=()=>{
     const [gi,id]=b.dataset.tiefirst.split(':');
@@ -1474,10 +1618,10 @@ function renderLogin(msg){
     <p class="hint">${msg?esc(msg):'경매방을 만들고 관리하려면 로그인하세요.'}</p>
     <div class="panel" style="text-align:left;margin-top:20px">
       <label class="lbl" for="pw">비밀번호</label>
-      <input type="password" id="pw" autocomplete="current-password" style="padding:12px 13px;font-size:15px">
-      <button class="btn gold" id="bLogin" style="width:100%;margin-top:10px;padding:12px 13px;font-size:15px">로그인</button>
+      <input type="password" id="pw" autocomplete="current-password" style="padding:12px 13px;font-size:var(--fs-md)">
+      <button class="btn gold" id="bLogin" style="width:100%;margin-top:10px;padding:12px 13px;font-size:var(--fs-md)">로그인</button>
     </div>
-    <button class="btn ghost" id="bBack" style="margin-top:14px;font-size:13px">돌아가기</button>
+    <button class="btn ghost" id="bBack" style="margin-top:14px;font-size:var(--fs-sm)">돌아가기</button>
   </div>`;
   const go=async()=>{
     const pw=$('pw').value;
@@ -1501,7 +1645,7 @@ async function renderRooms(){
   $('app').innerHTML=`
   <div class="topbar">
     <div class="brand">관리자 <span>경매방</span></div>
-    <div class="conn"><button class="btn ghost" id="bOut" style="padding:5px 12px;font-size:12px">로그아웃</button></div>
+    <div class="conn"><button class="btn ghost sm" id="bOut">로그아웃</button></div>
   </div>
   <div class="panel" style="margin-bottom:16px">
     <span class="lbl">방 생성 코드</span>
@@ -1518,10 +1662,10 @@ async function renderRooms(){
   </div>
   <div class="row" style="margin-bottom:16px;align-items:center">
     <span class="lbl" style="margin:0">경매방 목록</span>
-    <button class="btn ghost" id="bNew" style="margin-left:auto;padding:6px 12px;font-size:12px">직접 만들기</button>
-    <button class="btn ghost" id="bRe" style="padding:6px 12px;font-size:12px">새로고침</button>
+    <button class="btn ghost" id="bNew" style="margin-left:auto;padding:6px 12px;font-size:var(--fs-xs)">직접 만들기</button>
+    <button class="btn ghost sm" id="bRe">새로고침</button>
   </div>
-  <div id="rooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div></div>`;
+  <div id="rooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:var(--r-sm)"></span><span class="skl" style="height:36px;width:100px;border-radius:var(--r-sm)"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:var(--r-sm)"></span><span class="skl" style="height:36px;width:100px;border-radius:var(--r-sm)"></span></span></div></div>`;
   $('bOut').onclick=()=>{ store.clear(); renderLogin('로그아웃했습니다.'); };
   $('bNew').onclick=()=>renderSetup('admin');
   $('bRe').onclick=renderRooms;
@@ -1550,7 +1694,7 @@ async function renderRooms(){
     const expiry=(mgr||v.used)?'':' · 만료 '+new Date(v.createdAt+30*86400e3).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'});
     const copyable=mgr||!v.used;
     return `<div class="link-row">
-      <b class="num" style="font-size:17px;letter-spacing:.1em;color:${(mgr||!v.used)?'var(--gold)':'var(--muted)'}">${fmtInv(v.code)}</b>
+      <b class="num" style="font-size:var(--fs-lg);letter-spacing:.1em;color:${(mgr||!v.used)?'var(--gold)':'var(--muted)'}">${fmtInv(v.code)}</b>
       <code>${state}${v.note?' · '+esc(v.note):''} · ${date}${expiry}</code>
       <span class="row" style="gap:6px">
         ${copyable?`<button class="btn" data-invcopy="${v.code}" data-invkind="${mgr?'manager':'once'}">복사</button>`:''}
@@ -1621,6 +1765,7 @@ async function renderRooms(){
         </div>
         <div class="row" style="gap:6px">
           ${r.missing?'':`<button class="btn" data-links="${idx}">링크</button>
+          ${r.phase==='ready'?`<button class="btn" data-redit="${idx}">수정</button>`:''}
           <button class="btn gold" data-enter="${idx}">진행자로 입장</button>`}
           <button class="btn danger-soft" data-del="${r.code}">삭제</button>
         </div>
@@ -1649,6 +1794,14 @@ async function renderRooms(){
     const r=rooms[+b.dataset.enter];
     history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
     $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
+    connect(r.code,'k='+r.hostKey);
+  });
+  // '수정': 진행자로 입장하되 hello 수신 후 곧장 수정 폼을 엽니다(pendingEdit).
+  document.querySelectorAll('[data-redit]').forEach(b=>b.onclick=()=>{
+    const r=rooms[+b.dataset.redit];
+    pendingEdit=true;
+    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
+    $('app').innerHTML='<div class="landing"><p class="hint">수정 화면을 여는 중입니다…</p></div>';
     connect(r.code,'k='+r.hostKey);
   });
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
@@ -1727,14 +1880,14 @@ async function renderManager(){
   $('app').innerHTML=`
   <div class="topbar"><div class="brand">매니저 <span>경매방</span></div>
     <div class="who">코드 ${fmtInv(opCode)}</div>
-    <div class="conn"><button class="btn ghost" id="bHome" style="padding:5px 12px;font-size:12px">처음으로</button></div>
+    <div class="conn"><button class="btn ghost sm" id="bHome">처음으로</button></div>
   </div>
   <div class="row" style="margin-bottom:14px;align-items:center">
     <span class="lbl" style="margin:0">내 경매방 <b id="mCount" class="num" style="color:var(--gold);font-size:16px">–</b><span class="hint" style="text-transform:none;letter-spacing:0"> / <span id="mMax">10</span></span></span>
     <button class="btn gold" id="mNew" style="margin-left:auto;padding:9px 18px">＋ 새 경매방 만들기</button>
-    <button class="btn ghost" id="mRe" style="padding:6px 12px;font-size:12px">새로고침</button>
+    <button class="btn ghost sm" id="mRe">새로고침</button>
   </div>
-  <div id="mRooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:7px"></span><span class="skl" style="height:36px;width:100px;border-radius:7px"></span></span></div></div>`;
+  <div id="mRooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:var(--r-sm)"></span><span class="skl" style="height:36px;width:100px;border-radius:var(--r-sm)"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:var(--r-sm)"></span><span class="skl" style="height:36px;width:100px;border-radius:var(--r-sm)"></span></span></div></div>`;
   $('bHome').onclick=()=>{ managerMode=false; go(''); renderLanding(); };
   $('mRe').onclick=renderManager;
   $('mNew').onclick=()=>renderSetup('op');   // 매니저도 op 흐름으로 생성(코드=opCode, 서버가 소모 안 함)
@@ -1772,6 +1925,7 @@ async function renderManager(){
         </div>
         <div class="row" style="gap:6px">
           ${r.missing?'':`<button class="btn" data-mlinks="${i}">링크</button>
+          ${r.phase==='ready'?`<button class="btn" data-medit="${i}">수정</button>`:''}
           <button class="btn gold" data-menter="${i}">진행자 입장</button>`}
           <button class="btn danger-soft" data-mdel="${r.code}">삭제</button>
         </div>
@@ -1789,6 +1943,13 @@ async function renderManager(){
     $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
     connect(r.code,'k='+r.hostKey);
   });
+  document.querySelectorAll('[data-medit]').forEach(b=>b.onclick=()=>{
+    const r=rooms[+b.dataset.medit];
+    pendingEdit=true;
+    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
+    $('app').innerHTML='<div class="landing"><p class="hint">수정 화면을 여는 중입니다…</p></div>';
+    connect(r.code,'k='+r.hostKey);
+  });
   document.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=async()=>{
     const rc=b.dataset.mdel;
     if(!await askConfirm({title:`${rc} 방을 삭제할까요?`,msg:'진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.\n확인을 위해 방 코드를 입력하세요.',confirmLabel:'삭제',danger:'solid',code:rc})) return;
@@ -1801,12 +1962,47 @@ async function renderManager(){
   });
 }
 
+/* 방 설정 수정: 현재 방 상태(S)를 생성 폼의 전역들에 역매핑합니다.
+   grade/score는 서버가 숫자로 저장하지만 폼 검증(gnum/snum)은 문자열을 기대하므로 변환합니다.
+   leaders의 id는 서버가 팀 토큰(=배포된 링크)을 보존하는 열쇠입니다 — drawLeaders는 id를 건드리지 않습니다. */
+function seedSetupFromRoom(S0){
+  gameMode=S0.mode==='draft'?'draft':'auction';
+  const rl=S0.draft
+    ? (Array.isArray(S0.draft.rules)?S0.draft.rules
+       :(S0.draft.balance&&S0.draft.balance!=='free'?[S0.draft.balance]:[]))
+    : [];
+  draftRules={tier:rl.includes('tier'),score:rl.includes('score')};
+  rules={title:S0.title,clock:S0.clock,base:S0.base,minBid:S0.minBid,order:S0.orderMode==='draw'?'draw':'random'};
+  clockTouched=true;   // 모드 토글이 기존 제한시간을 기본값으로 덮지 않게
+  leaders=S0.teams.map(t=>({id:t.id,name:t.leader,line:t.leaderLine||'',
+    points:t.start===S0.base?null:t.start,
+    grade:t.grade==null?'':String(t.grade),
+    score:t.score==null?'':String(t.score)}));
+  players=S0.pool.map(p=>({name:p.name,tag:p.tag,tier:p.tier,line:p.line,sub:p.sub,
+    grade:p.grade==null?'':String(p.grade),
+    score:p.score==null?'':String(p.score),
+    champs:(p.champs||[]).slice()}));
+  poolText='';
+}
+
+// 방 안(진행자)에서 수정 화면 열기. hostKey는 접속에 쓴 키에서 얻습니다(openLinksModal과 동일).
+function openRoomEdit(){
+  if(!S||me.role!=='host') return;
+  if(S.phase!=='ready') return toast('시작 전(대기 상태)에만 수정할 수 있습니다',true);
+  editCtx={code:S.code,hostKey:new URLSearchParams(wsAuth).get('k')||''};
+  seedSetupFromRoom(S);
+  editing=true;
+  renderSetup('edit');
+}
+
 function renderSetup(mode){
-  setupMode = mode==='op' ? 'op' : 'admin';
+  setupMode = mode==='op' ? 'op' : mode==='edit' ? 'edit' : 'admin';
+  const edit=setupMode==='edit';
   $('app').innerHTML=`
-  <div class="topbar"><div class="brand">새 경매방 <span>설정</span></div>
+  <div class="topbar"><div class="brand">${edit?'방 설정 <span>수정</span>':'새 경매방 <span>설정</span>'}</div>
+    ${edit?`<div class="code">${esc(editCtx?editCtx.code:'')}</div>`:''}
     ${setupMode==='op'?`<div class="who">${managerMode?'매니저':'생성'} 코드 ${fmtInv(opCode)}</div>`:''}
-    <div class="conn"><button class="btn ghost" id="bBackList" style="padding:5px 12px;font-size:12px">${managerMode?'매니저 홈':(setupMode==='op'?'처음으로':'목록으로')}</button></div>
+    <div class="conn"><button class="btn ghost sm" id="bBackList">${edit?'수정 취소':managerMode?'매니저 홈':(setupMode==='op'?'처음으로':'목록으로')}</button></div>
   </div>
   <div class="setup">
     <div style="display:flex;flex-direction:column;gap:16px">
@@ -1880,7 +2076,7 @@ function renderSetup(mode){
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <span class="lbl" style="margin:0">참가자 명단</span>
           <a class="btn gold" href="/participant-template.xlsx" download="참가자_명단_양식.xlsx"
-             style="margin-left:auto;font-size:12.5px;padding:6px 14px;text-decoration:none">⬇ 양식 다운로드 (.xlsx)</a>
+             style="margin-left:auto;font-size:var(--fs-xs);padding:6px 14px;text-decoration:none">⬇ 양식 다운로드 (.xlsx)</a>
         </div>
         <div class="drop" id="drop">
           <b>엑셀 파일을 여기에 놓거나 클릭해서 선택</b>
@@ -1905,12 +2101,16 @@ function renderSetup(mode){
         </details>
       </div>
       <div class="panel">
-        <button class="btn gold" id="bCreate" style="width:100%;padding:13px">${gameMode==='draft'?'드래프트 방 만들기':'경매방 만들기'}</button>
-        <p class="hint" style="margin-top:10px" id="createNote">만들고 나면 팀장별 접속 링크가 나옵니다. 설정은 이후 바꿀 수 없으니 확인하고 눌러주세요.</p>
+        <button class="btn gold" id="bCreate" style="width:100%;padding:13px">${edit?'변경 사항 저장':gameMode==='draft'?'드래프트 방 만들기':'경매방 만들기'}</button>
+        <p class="hint" style="margin-top:10px" id="createNote">${edit
+          ?'저장하면 대기 화면으로 돌아갑니다. 명단이 유지된 팀의 링크는 그대로 유효하고, 팀장을 삭제하면 그 팀 링크는 무효화됩니다. 되돌리기 기록은 초기화됩니다.'
+          :'만들고 나면 팀장별 접속 링크가 나옵니다. 설정은 이후 방 안의 <b>방 설정 수정</b>으로 시작 전에 바꿀 수 있습니다.'}</p>
       </div>
     </div>
   </div>`;
-  $('bBackList').onclick=setupMode==='op'
+  $('bBackList').onclick=edit
+    ? ()=>{ editing=false; editCtx=null; paint(); }
+    : setupMode==='op'
     ? (managerMode ? renderManager : ()=>{ go(''); renderLanding(); })
     : renderRooms;
   drawLeaders(); drawPlayers();
@@ -1951,9 +2151,9 @@ function drawLeaders(){
   const ARIA={grade:'클랜티어(1~5)',score:'클랜점수(0~999)',points:'시작 포인트'};
   // 값 칸이 0개면 .none, 2개면 .two — 셀 수와 열 수를 맞춥니다.
   const two=cols.length>1?' two':cols.length?'':' none';
-  const hcell=t=>`<span style="font-size:11px;color:var(--muted);font-weight:600">${t}</span>`;
+  const hcell=t=>`<span style="font-size:var(--fs-2xs);color:var(--muted);font-weight:600">${t}</span>`;
   $('leaderList').innerHTML=`<div class="leader-row${two}" style="margin-bottom:4px">`
-    +`<span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em">닉네임</span>`
+    +`<span style="font-size:var(--fs-2xs);color:var(--muted);font-weight:600;letter-spacing:.06em">닉네임</span>`
     +hcell('라인')+cols.map(c=>hcell(HEAD[c])).join('')+'<span></span></div>'
     +leaders.map((l,i)=>`
     <div class="leader-row${two}">
@@ -2164,7 +2364,7 @@ function drawPlayers(){
   $('psum').innerHTML=players.length
     ? `<b>${players.length}</b><span class="hint">명 · ${byLine}${noLine?` · 미지정 ${noLine}`:''}</span>
        ${dup.size?`<span class="hint" style="color:var(--danger)">중복 ${dup.size}건</span>`:''}
-       <button class="btn ghost" id="bWipe" style="margin-left:auto;padding:5px 11px;font-size:12px">전체 비우기</button>`
+       <button class="btn ghost" id="bWipe" style="margin-left:auto;padding:5px 11px;font-size:var(--fs-xs)">전체 비우기</button>`
     : '<span class="hint">아직 참가자가 없습니다</span>';
 
   $('plist').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
@@ -2217,7 +2417,7 @@ function scoreReqHtml(){
 function blockerHtml(){
   const b=blockers();
   if(!b.length) return '';
-  return `<div class="blockbox"><b>방을 만들 수 없습니다</b>
+  return `<div class="blockbox"><b>${setupMode==='edit'?'저장할 수 없습니다':'방을 만들 수 없습니다'}</b>
     <ul>${b.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
 }
 
@@ -2230,7 +2430,9 @@ function syncCreateBtn(){
   const note=$('createNote');
   if(note) note.innerHTML=b.length
     ? `<span style="color:var(--danger)">${b.length}가지를 먼저 해결해야 합니다</span>`
-    : '만들고 나면 팀장별 접속 링크가 나옵니다. 설정은 이후 바꿀 수 없으니 확인하고 눌러주세요.';
+    : setupMode==='edit'
+    ? '저장하면 대기 화면으로 돌아갑니다. 명단이 유지된 팀의 링크는 그대로 유효하고, 팀장을 삭제하면 그 팀 링크는 무효화됩니다. 되돌리기 기록은 초기화됩니다.'
+    : '만들고 나면 팀장별 접속 링크가 나옵니다. 설정은 이후 방 안의 <b>방 설정 수정</b>으로 시작 전에 바꿀 수 있습니다.';
 }
 
 async function createRoom(){
@@ -2270,6 +2472,30 @@ async function createRoom(){
 }
 
 async function submitRoom(cfg){
+  // 수정 모드: 새 방을 만드는 대신 기존 방에 PATCH합니다. 방 코드·유지된 팀 링크는 그대로.
+  if(setupMode==='edit'&&editCtx){
+    const kept=new Set(cfg.leaders.map(l=>l.id).filter(Boolean));
+    const removed=(S&&S.code===editCtx.code)?S.teams.filter(t=>!kept.has(t.id)):[];
+    if(removed.length&&!await askConfirm({
+      title:'팀 삭제를 포함한 저장',
+      msg:`팀장 ${removed.map(t=>t.leader).join(', ')}이(가) 명단에서 빠졌습니다.\n해당 팀의 링크는 즉시 무효화됩니다.\n같은 이름으로 다시 추가해도 새 링크가 발급됩니다.`,
+      confirmLabel:'저장'})) return;
+    $('bCreate').disabled=true;
+    try{
+      const r=await fetch(`/api/room/${editCtx.code}?k=${encodeURIComponent(editCtx.hostKey)}`,
+        {method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(cfg)});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||'저장하지 못했습니다');
+      links=d;
+      // 팀이 추가·삭제됐으면 새 링크를 바로 보여줍니다(기존 팀 링크는 변하지 않음).
+      const teamChanged=removed.length>0||cfg.leaders.some(l=>!l.id);
+      editing=false; editCtx=null;
+      toast('설정을 저장했습니다');
+      paint();   // 서버 broadcast(state)와 별개로 즉시 방 화면 복귀
+      if(teamChanged) openLinksModal();
+    }catch(e){ toast(e.message,true); const b=$('bCreate'); if(b) b.disabled=false; }
+    return;
+  }
   $('bCreate').disabled=true;
   try{
     let d;
@@ -2298,7 +2524,7 @@ function renderLinks(d,again){
   const backLabel=managerMode?'매니저 홈':(opCtx?'처음으로':'목록으로');
   $('app').innerHTML=`
   <div class="topbar"><div class="brand">경매방 <span>${again?'링크':'생성됨'}</span></div><div class="code">${d.code}</div>
-    <div class="conn"><button class="btn ghost" id="bBackList2" style="padding:5px 12px;font-size:12px">${backLabel}</button></div>
+    <div class="conn"><button class="btn ghost sm" id="bBackList2">${backLabel}</button></div>
   </div>
   <div class="panel">
     <span class="lbl">접속 링크</span>
