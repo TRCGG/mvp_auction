@@ -23,7 +23,18 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans)}
-body{padding:18px;min-height:100vh}
+/* 배경은 단색이 아니라 상단 골드 여광 + 모서리 비네트 두 겹 — 화면에 깊이가 생기고
+   '기본값 그대로'라는 인상이 사라집니다. 본문 대비에 영향 없게 아주 옅게만. */
+body{padding:18px;min-height:100vh;background:
+  radial-gradient(1100px 480px at 50% -8%, rgba(212,169,78,.055), transparent 62%),
+  radial-gradient(900px 640px at 108% 108%, rgba(20,28,38,.9), transparent 58%),
+  var(--bg);background-attachment:fixed}
+/* 다크 테마에 맞춘 스크롤바 — 기본 회색 스크롤바가 남아 있으면 손대지 않은 화면처럼 보입니다 */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--line2)}
+::-webkit-scrollbar-track{background:transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 button,input,textarea,select{font-family:inherit;color:inherit}
 button{cursor:pointer;background:none;border:none}
 ::selection{background:var(--gold);color:#0A1017}
@@ -31,7 +42,10 @@ button{cursor:pointer;background:none;border:none}
 .num{font-family:var(--num);letter-spacing:.02em;font-variant-numeric:tabular-nums}
 /* 한국어 안내문은 어절 단위로 끊는다. keep-all이 없으면 '지명합니다'가 '지/명합니다'로 갈린다. */
 .hint{font-size:var(--fs-xs);color:var(--body2);line-height:1.65;word-break:keep-all}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px}
+/* 윗변에만 1px 밝은 안쪽 하이라이트 — 면이 위에서 빛을 받는 듯한 미세한 깊이. */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;
+  box-shadow:inset 0 1px 0 rgba(230,236,242,.035)}
+.panel.sub{box-shadow:none}
 .lbl{font-size:var(--fs-2xs);font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
 input[type=text],input[type=number],input[type=password],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);
   border-radius:var(--r-sm);padding:9px 11px;font-size:var(--fs-base);outline:none}
@@ -40,6 +54,8 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 15px;
   font-size:var(--fs-sm);font-weight:500;transition:.13s}
 .btn:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+/* 누르는 감각 — 클릭 순간 1px 가라앉습니다. 전 버튼 공통의 마이크로 인터랙션. */
+.btn:active:not(:disabled){transform:translateY(1px)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#0A1017;font-weight:700}
 .btn.gold:hover:not(:disabled){filter:brightness(1.12);color:#0A1017}
 .btn.ghost{background:none}
@@ -65,7 +81,8 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
   padding-bottom:14px;margin-bottom:18px}
 .brand{font-weight:700;font-size:var(--fs-lg);letter-spacing:-.02em}
 .brand span{color:var(--gold)}
-.brand .live{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.08em;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:1px 6px;vertical-align:2px;margin-left:4px}
+.brand .live{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.08em;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:1px 6px;vertical-align:2px;margin-left:4px;animation:livePulse 2.4s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.5}}
 .code{font-family:var(--num);font-size:var(--fs-xl);color:var(--text);letter-spacing:.14em}
 .who{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:4px 11px}
 .conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--muted)}
@@ -199,6 +216,10 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 .stage{display:grid;grid-template-columns:minmax(320px,410px) 1fr;gap:16px;align-items:start}
 /* overflow:hidden이면 모바일 sticky 타이머가 동작하지 않습니다. 플래시 모서리는 radius 상속으로 해결. */
 .lot{position:relative}
+/* 무대의 서명 — 경매/드래프트가 벌어지는 패널에만 골드 헤어라인을 얹습니다.
+   이 앱 고유의 모티프이므로 다른 패널에는 쓰지 않습니다. */
+.lot::before{content:'';position:absolute;top:0;left:16px;right:16px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--gold) 30%,var(--gold) 70%,transparent);opacity:.75}
 .lot-empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:var(--fs-base);line-height:1.85}
 .lot-no{font-family:var(--num);font-size:var(--fs-sm);color:var(--muted);letter-spacing:.2em}
 .lot-img{display:block;width:100%;height:240px;object-fit:cover;object-position:center 22%;
