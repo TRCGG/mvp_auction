@@ -591,6 +591,7 @@ const RULE_DEFS=[
 ];
 // 팀 인원은 롤이 5:5라 5명(팀장 + 지명 4명) 고정. 입력받지 않습니다.
 const TEAM_SIZE=5;
+const TEAM_MAX=12;   // 서버 validate()의 팀장 상한과 같은 값이어야 합니다
 // 규칙 입력값은 모드 전환 시 재렌더돼도 유지되도록 모듈 상태로 보관합니다.
 let rules={title:'클랜 내전',clock:15,base:1000,minBid:10,order:'random'};
 /* 모드별 기본 제한 시간(초).
@@ -2071,7 +2072,7 @@ function renderSetup(mode){
           : '입찰이 들어올 때마다 제한 시간이 다시 채워집니다. 시간이 다 되면 최고 입찰자에게 자동 낙찰되고, 입찰이 없으면 유찰됩니다. 실시간 경매는 10~15초가 적당합니다. <b>미리 추첨</b>을 고르면 시작 전에 순서를 정해 모두에게 "다음 매물"이 공개됩니다.'}</p>
       </div>
       <div class="panel">
-        <span class="lbl">팀장</span>
+        <span class="lbl">팀장 (2~${TEAM_MAX}팀)</span>
         <div id="leaderList"></div>
         <div class="row" style="margin-top:4px">
           <button class="btn ghost" id="bAdd">+ 팀장 추가</button>
@@ -2139,7 +2140,10 @@ function renderSetup(mode){
     e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
   $('bText').onclick=addText;
-  $('bAdd').onclick=()=>{leaders.push({name:'',line:'',points:null});drawLeaders();};
+  $('bAdd').onclick=()=>{
+    if(leaders.length>=TEAM_MAX) return toast(`팀장은 최대 ${TEAM_MAX}명까지입니다`,true);
+    leaders.push({name:'',line:'',points:null});drawLeaders();
+  };
   const bClear=$('bClear'); if(bClear) bClear.onclick=()=>{leaders.forEach(l=>l.points=null);drawLeaders();toast('기본 포인트로 되돌렸습니다');};
   document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{
     if(gameMode===b.dataset.gm) return;   // 이미 켜진 모드면 재렌더할 이유가 없다
@@ -2347,6 +2351,7 @@ function blockers(){
   const out=[];
   const names=leaders.filter(l=>l.name.trim());
   if(names.length<2) out.push('팀장을 2명 이상 입력하세요');
+  if(names.length>TEAM_MAX) out.push(`팀장은 최대 ${TEAM_MAX}명까지입니다`);
   if(!players.length) out.push('참가자 명단을 먼저 불러오세요');
   // 드래프트는 전원이 정원을 채워야 끝나므로 매물 수가 모자라면 만들 수 없습니다.
   // 경매는 자리가 빈 채로 끝날 수 있어 이 조건을 걸지 않습니다(서버도 드래프트만 검사).
