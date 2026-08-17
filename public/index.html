@@ -45,7 +45,6 @@ button{cursor:pointer;background:none;border:none}
 /* 윗변에만 1px 밝은 안쪽 하이라이트 — 면이 위에서 빛을 받는 듯한 미세한 깊이. */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;
   box-shadow:inset 0 1px 0 rgba(230,236,242,.035)}
-.panel.sub{box-shadow:none}
 .lbl{font-size:var(--fs-2xs);font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:block}
 input[type=text],input[type=number],input[type=password],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);
   border-radius:var(--r-sm);padding:9px 11px;font-size:var(--fs-base);outline:none}
@@ -297,7 +296,7 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 /* 점수 모드 준비 화면: 동점 그룹 행(왼쪽 골드 브래킷) + 총점 표시 */
 .ord-row.tied{box-shadow:inset 3px 0 0 var(--gold)}
 .ord-pt{font-family:var(--num);font-size:var(--fs-lg);color:var(--gold);min-width:34px;text-align:right}
-.tie-badge{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.tie-badge{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:1px 5px;white-space:nowrap}
 /* 동점 정리 결과 띠 — 굴린 값과 순서를 한 줄로 */
 .rollbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 11px;
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs)}
@@ -326,7 +325,7 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 /* 지금 지명 중인 팀: 골드 솔리드. 내 팀: 골드 테두리 + '나' 뱃지. */
 .turn-item.now{background:var(--gold);border-color:var(--gold);color:#0A1017;font-weight:800}
 .turn-item.mine{border-color:var(--gold);box-shadow:0 0 10px -4px var(--gold)}
-.turn-me{font-style:normal;font-size:10px;font-weight:800;color:#0A1017;background:var(--gold);
+.turn-me{font-style:normal;font-size:var(--fs-2xs);font-weight:800;color:#0A1017;background:var(--gold);
   border-radius:var(--r-pill);padding:1px 6px}
 .turn-item.now .turn-me{background:#0A1017;color:var(--gold)}
 .turn-more{font-size:var(--fs-2xs);color:var(--muted);flex-shrink:0}
@@ -358,8 +357,8 @@ body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offse
 /* 팀장 표시 ★ — 결과 이미지(canvas)와 같은 표기를 씁니다. */
 .lead-star{font-style:normal;margin-right:4px}
 
-/* 조연 패널(elev-0): 진행 기록처럼 참고용 정보 — 배경 없이 테두리만 둬 시각적 무게를 낮춥니다 */
-.panel.sub{background:transparent}
+/* 조연 패널(elev-0): 진행 기록처럼 참고용 정보 — 배경·하이라이트 없이 테두리만 둬 무게를 낮춥니다 */
+.panel.sub{background:transparent;box-shadow:none}
 .log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:var(--fs-xs)}
 .log-list div{color:var(--muted);display:flex;gap:9px}
 .log-list div b{font-weight:500;color:var(--text)}
@@ -639,6 +638,9 @@ let closedForGood=false; // 방 삭제/만료로 서버가 정상 종료(code 10
 let reconnectMs=1500;    // 지수 백오프 (최대 20초)
 function connect(code,auth){
   wsAuth=auth; managerMode=false;   // 방에 입장하면 매니저 컨텍스트를 벗어납니다(방어)
+  // pendingEdit는 '수정' 버튼이 connect 직전에 세웁니다. 그 외 경로의 입장이면
+  // 이전 시도의 잔류값이 수정 폼을 강제로 열지 않도록 여기서 소거하는 대신,
+  // 실패 경로(renderClosed)에서 해제합니다 — 재연결 중에는 유지되어야 하기 때문.
   const proto=location.protocol==='https:'?'wss':'ws';
   const url=`${proto}://${location.host}/api/room/${code}/ws?${auth}`;
   ws=new WebSocket(url);
@@ -671,6 +673,7 @@ function connect(code,auth){
   };
 }
 function renderClosed(reason){
+  pendingEdit=false;   // 수정 진입 시도가 방 소멸로 실패한 경우 — 다음 정상 입장에 새지 않게 해제
   if(ws){ try{ ws.onclose=null; ws.close(); }catch{} }
   $('app').innerHTML=`<div class="landing"><h1>경매방이 종료되었습니다</h1>
     <p class="hint">${esc(reason||'방이 삭제되었거나 보관 기간(14일)이 지났습니다.')}</p>
@@ -765,6 +768,8 @@ function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
 
 /* ═══ 파생 ═══ */
 const myTeam=()=>me&&me.teamId?S.teams.find(t=>t.id===me.teamId):null;
+// 팀 id → 표시 이름. 대진표는 화면과 결과 이미지가 같은 표기를 쓰도록 이 한 곳만 씁니다.
+const teamName=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.name:id; };
 const remaining=()=>S?S.pool.filter(p=>p.status!=='sold'):[];
 // 종료 판정: 명시적 done, 남은 매물 없음, 또는 모든 팀 정원 마감.
 const allDone=()=>!!S&&(S.phase==='done'||!remaining().length||S.teams.every(t=>t.open<=0));
@@ -1090,20 +1095,19 @@ function picksUntilMyTurn(d){
 // 대진 패널 — 팀 구성이 끝난 뒤(done) 무작위 1:1 대진을 보여줍니다. 추첨·재추첨은 진행자만.
 function bracketPanel(){
   const host=me.role==='host';
-  const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.name:id; };
   if(!S.bracket){
     if(!host||S.teams.length<2) return '';
     return `<div class="row mt-2"><button class="btn gold" id="bBracket" style="flex:1">🎲 대진 추첨</button></div>`;
   }
   const rows=S.bracket.pairs.map(([a,b],i)=>`<div class="match-row" style="--i:${i}">
       <i class="match-no">${i+1}</i>
-      <span class="match-t${me.teamId===a?' me':''}">${esc(nm(a))}</span>
+      <span class="match-t${me.teamId===a?' me':''}">${esc(teamName(a))}</span>
       <b class="match-vs">VS</b>
-      <span class="match-t r${me.teamId===b?' me':''}">${esc(nm(b))}</span>
+      <span class="match-t r${me.teamId===b?' me':''}">${esc(teamName(b))}</span>
     </div>`).join('');
   const bye=S.bracket.bye?`<div class="match-row bye" style="--i:${S.bracket.pairs.length}">
       <i class="match-no">·</i>
-      <span class="match-t${me.teamId===S.bracket.bye?' me':''}">${esc(nm(S.bracket.bye))}</span>
+      <span class="match-t${me.teamId===S.bracket.bye?' me':''}">${esc(teamName(S.bracket.bye))}</span>
       <b class="match-vs">부전승</b>
     </div>`:'';
   return `<div class="mt-3">
@@ -1177,22 +1181,20 @@ function draftBody(){
     let list;
     if(sc){
       // 점수 모드: 실제 첫 라운드 순서(총점 낮은 순)를 리스트 하나로 보여줍니다.
-      // 동점 팀만 골드 브래킷으로 묶고, ▲▼는 동점 그룹 안에서만(=동점 우선순위 조정) 노출합니다.
+      // 동점 팀은 골드 브래킷으로만 표시합니다 — 순서 조정 UI를 여기 두지 않는 이유:
+      // 서버는 총점이 같으면 무조건 동점 정리 화면(주사위·지정)에서 공개적으로 정하므로,
+      // 준비 화면에서 미리 정한 순서는 실제 지명에 반영되지 않습니다.
       const sorted=scoreOrderClient(draftOrder);
       const totals=new Map(S.teams.map(t=>[t.id,teamTotal(t)]));
       const cnt={}; sorted.forEach(id=>{ const v=totals.get(id); cnt[v]=(cnt[v]||0)+1; });
       list=sorted.map((id,i)=>{
         const v=totals.get(id);
         const tied=cnt[v]>1;
-        // 표시상 이웃이 같은 총점일 때만 그 이웃과 자리를 바꿀 수 있습니다.
-        const up=(i>0&&totals.get(sorted[i-1])===v)?sorted[i-1]:null;
-        const dn=(i<sorted.length-1&&totals.get(sorted[i+1])===v)?sorted[i+1]:null;
         return `<div class="ord-row${tied?' tied':''}">
           <span class="ord-n">${i+1}</span>
           <span class="ord-nm">${esc(nm(id))} 팀${me.teamId===id?' <b style="color:var(--gold)">(나)</b>':''}</span>
           ${tied?'<span class="tie-badge">동점</span>':''}
           <span class="ord-pt">${v}</span>
-          ${host&&tied?`<span class="ord-btns"><button class="btn ghost" data-ordswap="${id}:${up||''}" ${up?'':'disabled'}>▲</button><button class="btn ghost" data-ordswap="${id}:${dn||''}" ${dn?'':'disabled'}>▼</button></span>`:''}
         </div>`;
       }).join('');
     }else{
@@ -1204,11 +1206,11 @@ function draftBody(){
     }
     const anyTie=sc&&(()=>{ const seen={}; return S.teams.some(t=>{ const v=teamTotal(t); if(seen[v]) return true; seen[v]=1; return false; }); })();
     return `<div class="lot-empty" style="padding:16px 20px">${rulesLabel(d)} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명</div>
-      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">${sc?'첫 라운드 지명 순서 (총점 낮은 순)':'첫 지명 순서'}</span>${host?`<button class="btn ghost sm" id="bDraw" style="margin-left:auto">🎲 추첨</button>`:''}</div>
+      <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">${sc?'첫 라운드 지명 순서 (총점 낮은 순)':'첫 지명 순서'}</span>${host&&!sc?`<button class="btn ghost sm" id="bDraw" style="margin-left:auto">🎲 추첨</button>`:''}</div>
       <div class="ord-list">${list}</div>
       ${host
         ? `<p class="hint" style="margin:9px 0 12px">${sc
-            ? `매 라운드 <b>총점이 낮은 팀부터</b> 지명합니다.${anyTie?' 동점 그룹의 순서는 <b>▲▼로 지금 정하거나</b>, 그대로 시작하면 <b>동점 정리 화면</b>에서 🎲 주사위나 지정으로 정합니다.':' 총점이 같아지면 진행이 멈추고 그 자리에서 🎲 주사위나 지정으로 순서를 정합니다.'} 🎲 추첨은 동점 시 우선순위를 무작위로 섞습니다.`
+            ? `매 라운드 <b>총점이 낮은 팀부터</b> 지명합니다.${anyTie?' 총점이 같은 팀이 있어 <b>시작하면 동점 정리 화면</b>이 뜹니다 — 🎲 주사위나 <b>먼저</b> 지정으로 모두가 보는 앞에서 순서를 정합니다.':' 총점이 같아지면 진행이 멈추고 그 자리에서 🎲 주사위나 지정으로 순서를 정합니다.'}`
             : '추첨을 누르면 모두가 보는 앞에서 순서가 정해집니다. ▲▼로 직접 조정도 가능하고, 이후는 스네이크(다음 라운드부터 역순)로 진행됩니다.'}</p>
            <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">${sc?'드래프트 시작':'이 순서로 드래프트 시작'}</button></div>
            <div class="row mt-2"><button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button></div>`
@@ -1438,14 +1440,13 @@ function saveResultImage(){
     });
   });
   if(br){
-    const nm=id=>{ const t=S.teams.find(v=>v.id===id); return t?t.name:id; };
     let by=headH+rowsN*cardH+(rowsN-1)*gap+14;
     x.fillStyle=C.gold; x.font='700 13px sans-serif'; x.fillText('대진표',pad,by); by+=22;
     br.pairs.forEach(([a,b],i)=>{
       x.fillStyle=C.text; x.font='13px sans-serif';
-      x.fillText(`${i+1}.  ${nm(a)}   VS   ${nm(b)}`,pad,by,W-pad*2); by+=26;
+      x.fillText(`${i+1}.  ${teamName(a)}   VS   ${teamName(b)}`,pad,by,W-pad*2); by+=26;
     });
-    if(br.bye){ x.fillStyle=C.muted; x.font='13px sans-serif'; x.fillText(`·  ${nm(br.bye)} — 부전승`,pad,by,W-pad*2); }
+    if(br.bye){ x.fillStyle=C.muted; x.font='13px sans-serif'; x.fillText(`·  ${teamName(br.bye)} — 부전승`,pad,by,W-pad*2); }
   }
   cv.toBlob(b=>{
     if(!b) return toast('이미지를 만들지 못했습니다',true);
@@ -1484,14 +1485,6 @@ function wire(){
   on('bLinks',openLinksModal);
   document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
   document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
-  // 점수 모드 동점 그룹: 두 팀의 draftOrder상 자리를 맞바꿔 동점 우선순위를 조정합니다.
-  // (표시 순서는 총점 정렬이라 인덱스 스왑이 아니라 id 스왑이어야 합니다)
-  document.querySelectorAll('[data-ordswap]').forEach(b=>b.onclick=()=>{
-    const [a,c]=b.dataset.ordswap.split(':');
-    if(!draftOrder||!a||!c) return;
-    const i=draftOrder.indexOf(a), j=draftOrder.indexOf(c);
-    if(i>=0&&j>=0){ [draftOrder[i],draftOrder[j]]=[draftOrder[j],draftOrder[i]]; paint(); }
-  });
   // 동점 정리: '먼저'로 지정한 순서를 모아두고, 주사위나 지정 적용으로 서버에 보냅니다.
   document.querySelectorAll('[data-tiefirst]').forEach(b=>b.onclick=()=>{
     const [gi,id]=b.dataset.tiefirst.split(':');
@@ -1813,6 +1806,7 @@ async function renderRooms(){
   });
   document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>{
     const r=rooms[+b.dataset.enter];
+    pendingEdit=false;   // 일반 입장 — 이전 '수정' 시도의 잔류값이 폼을 열지 않게
     history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
     $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
     connect(r.code,'k='+r.hostKey);
@@ -1960,6 +1954,7 @@ async function renderManager(){
   });
   document.querySelectorAll('[data-menter]').forEach(b=>b.onclick=()=>{
     const r=rooms[+b.dataset.menter];
+    pendingEdit=false;   // 일반 입장 — 이전 '수정' 시도의 잔류값이 폼을 열지 않게
     history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
     $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
     connect(r.code,'k='+r.hostKey);
@@ -2574,6 +2569,7 @@ function renderLinks(d,again){
   document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(rows[+b.dataset.copy].url));
   $('bCopyAll').onclick=()=>copyText(rows.map(r=>`${r.label}\n${r.url}`).join('\n\n'));
   $('bGo').onclick=()=>{
+    pendingEdit=false;   // 일반 입장 — 이전 '수정' 시도의 잔류값이 폼을 열지 않게
     history.replaceState(null,'',`/#/r/${d.code}?k=${d.hostKey}`);
     $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
     connect(d.code,'k='+d.hostKey);

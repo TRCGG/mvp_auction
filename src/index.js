@@ -819,9 +819,10 @@ export class AuctionRoom {
 
     // 여기서부터는 상태를 실제로 바꿉니다.
     // 명단에서 빠진 참가자의 저장 사진 정리 — 빈 id가 새 참가자에게 재사용돼도 옛 사진이 보이지 않게,
-    // '매칭으로 살아남은 옛 id' 기준으로 지웁니다(새 pool의 id 집합 기준이 아님).
+    // '매칭으로 살아남은 옛 id' 기준으로 지웁니다(새 pool의 id 집합 기준이 아님). 삭제는 한 번에.
     const matchedOld = new Set(matches.filter(Boolean).map(o => o.id));
-    for (const p of this.S.pool) if (p.imgV && !matchedOld.has(p.id)) await this.ctx.storage.delete('img:' + p.id);
+    const goneImgs = this.S.pool.filter(p => p.imgV && !matchedOld.has(p.id)).map(p => 'img:' + p.id);
+    if (goneImgs.length) await this.ctx.storage.delete(goneImgs);
 
     // 팀 토큰: 생존 팀은 기존 토큰 유지, 신규 팀은 새로 발급, 사라진 팀 토큰은 폐기.
     const tokenOf = {};
@@ -842,8 +843,18 @@ export class AuctionRoom {
     }
 
     const orderMode = cfg.order === 'draw' ? 'draw' : 'random';
+    // 추첨(draw) 순서는 이미 전원에게 공개된 확정 순서입니다. 수정 저장이 순서를 몰래
+    // 다시 섞으면 안 되므로, 살아남은 매물의 순서는 유지하고 새 매물만 섞어 뒤에 붙입니다.
+    // (직전이 draw가 아니었으면 확정된 순서가 없던 것이므로 전체를 새로 추첨합니다)
     let order = pool.map(p => p.id);
-    if (orderMode === 'draw') order = shuffled(order);
+    if (orderMode === 'draw') {
+      if (this.S.orderMode === 'draw' && Array.isArray(this.S.order)) {
+        const ids = new Set(order);
+        const kept = this.S.order.filter(id => ids.has(id));
+        const keptSet = new Set(kept);
+        order = kept.concat(shuffled(order.filter(id => !keptSet.has(id))));
+      } else order = shuffled(order);
+    }
 
     this.S = {
       ...this.S,   // code·createdAt(보관 기한) 유지
@@ -858,7 +869,7 @@ export class AuctionRoom {
     if (this.S.draft) this.resetSeq();
 
     // 수정 전 스냅샷은 옛 팀·풀 구조를 가리켜 복원 시 정합성이 깨지므로 되돌리기 기록을 비웁니다.
-    for (let i = 0; i < UNDO_MAX; i++) await this.ctx.storage.delete('u:' + i);
+    await this.ctx.storage.delete(Array.from({ length: UNDO_MAX }, (_, i) => 'u:' + i));
     this.um = { top: 0, count: 0 };
 
     await this.ctx.storage.put({ S: this.S, auth: this.auth, um: this.um });
