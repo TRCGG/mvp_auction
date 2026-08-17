@@ -297,17 +297,6 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 .ord-row.tied{box-shadow:inset 3px 0 0 var(--gold)}
 .ord-pt{font-family:var(--num);font-size:var(--fs-lg);color:var(--gold);min-width:34px;text-align:right}
 .tie-badge{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:1px 5px;white-space:nowrap}
-/* 동점 정리 결과 띠 — 굴린 값과 순서를 한 줄로 */
-.rollbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:8px 11px;
-  background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs)}
-.roll-lb{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.06em;color:var(--muted)}
-.roll-item{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--body2)}
-.roll-item b{font-family:var(--num);font-size:var(--fs-md);font-weight:400;color:var(--text)}
-.roll-item.win{color:var(--text)} .roll-item.win b{color:var(--gold)}
-.roll-item.mine{color:var(--gold)}
-.roll-gt{font-style:normal;color:var(--muted);font-size:var(--fs-2xs)}
-.roll-first{margin-left:auto;font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;color:#0A1017;
-  background:var(--gold);border-radius:var(--r-pill);padding:2px 9px;white-space:nowrap}
 /* 번호는 흐리고 크게(색인), 이름은 밝고 굵게(주인공) — 둘이 같은 층으로 읽히지 않게 위계를 벌립니다. */
 .ord-n{font-family:var(--num);font-size:19px;color:var(--muted);min-width:22px;text-align:center}
 .ord-nm{flex:1;font-weight:700;letter-spacing:-.02em;color:var(--text)}
@@ -360,7 +349,7 @@ body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offse
 /* 조연 패널(elev-0): 진행 기록처럼 참고용 정보 — 배경·하이라이트 없이 테두리만 둬 무게를 낮춥니다 */
 .panel.sub{background:transparent;box-shadow:none}
 .log-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;font-size:var(--fs-xs)}
-.log-list div{color:var(--muted);display:flex;gap:9px}
+.log-list div{color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
 .log-list div b{font-weight:500;color:var(--text)}
 .log-list em{font-family:var(--num);font-size:var(--fs-base);color:var(--body2);font-style:normal}
 
@@ -894,6 +883,10 @@ function stage(){
           ?`<div><em style="color:var(--ok)">배정</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
           :l.kind==='pick'
           ?`<div><em style="color:var(--gold)">지명</em><b>${esc(l.player)}</b> → ${esc(l.team)}</div>`
+          :l.kind==='roll'
+          ?`<div><em style="color:var(--gold)">${l.order.some(o=>o.by==='dice')?'🎲':'지정'}</em>총점 ${l.total} 동점 · ${
+              l.order.map(o=>`${esc(o.n)} <b class="num">${o.by==='host'?'지정':o.v==null?'단독':o.v}</b>`).join(' &gt; ')
+            } · <b>${esc(l.order[0].n)} 먼저</b></div>`
           :`<div><em style="color:var(--danger)">유찰</em><b>${esc(l.player)}</b></div>`).join('')
           :'<span class="hint">아직 기록이 없습니다</span>'}</div>
       </div>
@@ -1118,25 +1111,6 @@ function bracketPanel(){
   </div>`;
 }
 
-// 동점 정리 결과 띠 — '주사위 87 > 42' 처럼 굴린 값과 그래서 누가 먼저인지 보여줍니다.
-// 진행자가 직접 지정한 팀은 값 대신 '지정'으로 표시합니다.
-function rollBar(roll){
-  const nm=id=>{ const t=S.teams.find(x=>x.id===id); return t?t.leader:id; };
-  return roll.groups.map(g=>{
-    const chain=g.order.map((o,i)=>{
-      const mine=me.teamId===o.id;
-      const val=o.by==='host'?'지정':o.v==null?'단독':o.v;
-      return `${i?'<i class="roll-gt">&gt;</i>':''}<span class="roll-item${mine?' mine':''}${i===0?' win':''}">${esc(nm(o.id))}<b>${val}</b></span>`;
-    }).join('');
-    // 진행자가 전부 지정한 묶음은 주사위를 굴리지 않았으므로 🎲를 붙이지 않습니다.
-    const diced=g.order.some(o=>o.by==='dice');
-    return `<div class="rollbar">
-      <span class="roll-lb">${diced?'🎲 ':''}총점 ${g.total} 동점</span>${chain}
-      <span class="roll-first">${esc(nm(g.order[0].id))} 먼저</span>
-    </div>`;
-  }).join('');
-}
-
 // 총점 동점 정리 화면. 진행자는 주사위를 굴리거나 특정 팀장을 먼저 뽑게 지정할 수 있고,
 // 팀장·관전자는 누가 동점인지와 대기 중임을 봅니다. 정리 전에는 지명이 막힙니다.
 function tieBody(d){
@@ -1243,7 +1217,6 @@ function draftBody(){
   return `<div class="lot-no">ROUND ${round}/${d.picksPerTeam} · PICK ${d.ptr+1}/${totalPicks(d)}</div>
     <div class="lot-name" style="font-size:clamp(26px,4vw,42px)">${esc(t?t.leader:'')} <span style="font-size:.5em;color:var(--muted)">팀 차례</span></div>
     <div class="hint" style="margin-bottom:12px">${rulesLabel(d)} 드래프트${need}</div>
-    ${(d.roll&&d.roll.round===round)?rollBar(d.roll):''}
     <div class="clock ${ms<=5000?'hot':''}">
       <b class="num" id="clockVal">${Math.max(0,Math.ceil(ms/1000))}</b>
       <div class="bar"><i id="clockBar" style="width:${pct}%"></i></div>

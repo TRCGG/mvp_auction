@@ -1245,6 +1245,14 @@ export class AuctionRoom {
         d.baseOrder = base;
         d.roll = result;
         d.tie = null;
+        // 굴린 값·정한 순서는 상시 UI가 아니라 진행 기록에 남깁니다(나중에 온 사람도 확인 가능).
+        for (const g of result.groups.slice().reverse()) {
+          this.S.log.unshift({
+            kind: 'roll', total: g.total,
+            order: g.order.map(o => ({ n: (this.team(o.id) || {}).leader || o.id, v: o.v, by: o.by }))
+          });
+        }
+        this.S.log = this.S.log.slice(0, 60);
         d.seq.push(...this.nextRoundOrder());
         this.S.deadline = Date.now() + this.S.clock * 1000;
         await this.armExpiry();
