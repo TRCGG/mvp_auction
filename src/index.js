@@ -930,7 +930,8 @@ export class AuctionRoom {
    *  스네이크는 전량, 점수 모드는 1라운드만 — 첫 라운드부터 동점이면 d.tie를 세우고 멈춥니다. */
   resetSeq() {
     const d = this.S.draft;
-    d.ptr = 0; d.tie = null; d.roll = null; d.seq = [];
+    // delete: 예전 방에 저장돼 있을 수 있는 d.roll 잔재도 함께 청소합니다(지금은 아무도 안 읽음).
+    d.ptr = 0; d.tie = null; delete d.roll; d.seq = [];
     if (draftHas(d, 'score')) { this.openScoreRound(); return; }
     for (let r = 0; r < d.picksPerTeam; r++) {
       d.seq.push(...(r % 2 === 0 ? d.baseOrder : d.baseOrder.slice().reverse()));
@@ -1243,7 +1244,8 @@ export class AuctionRoom {
           base = reprioritize(base, g.ids, order.map(o => o.id));
         }
         d.baseOrder = base;
-        d.roll = result;
+        // 결과는 상태에 저장하지 않습니다 — 이벤트(플래시)와 진행 기록(S.log)이 이미 전달하며,
+        // 상태에 남기면 이후 모든 브로드캐스트·저장에 죽은 데이터가 실려 다닙니다.
         d.tie = null;
         // 굴린 값·정한 순서는 상시 UI가 아니라 진행 기록에 남깁니다(나중에 온 사람도 확인 가능).
         for (const g of result.groups.slice().reverse()) {
