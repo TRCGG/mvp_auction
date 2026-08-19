@@ -84,7 +84,8 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.5}}
 .code{font-family:var(--num);font-size:var(--fs-xl);color:var(--text);letter-spacing:.14em}
 .who{font-size:var(--fs-xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--r-pill);padding:4px 11px}
-.conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--muted)}
+.conn{margin-left:auto;display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end;
+  font-size:var(--fs-xs);color:var(--muted)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--danger)}
 .dot.on{background:var(--ok)}
 /* 접속 현황 — 미접속은 위험이 아니라 '아직'이므로 danger 빨강을 쓰지 않습니다.
@@ -412,6 +413,18 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 @keyframes st{0%{opacity:0;transform:scale(1.4)}16%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0}}
 .sfx-btn{background:none;border:1px solid var(--line);border-radius:var(--r-sm);padding:2px 8px;font-size:var(--fs-base);line-height:1.4;cursor:pointer}
 .sfx-btn.off{opacity:.45}
+/* 음량 슬라이더. 🔊 버튼 옆이라 '전체 소리'로 읽히기 쉬워서 🎵·🔔 라벨을 앞에 둡니다.
+   좁은 화면에서는 이들을 담은 .conn의 flex-wrap이 아래 줄로 접습니다
+   (.topbar의 flex-wrap은 .conn 덩어리 자체만 옮길 뿐 그 안을 쪼개지 못합니다). */
+.vollb{font-size:var(--fs-xs);opacity:.7;margin-left:2px}
+.vollb.off{opacity:.3}
+.volsl{-webkit-appearance:none;appearance:none;width:72px;height:4px;padding:0;border:none;
+  border-radius:var(--r-pill);background:var(--line2);cursor:pointer;vertical-align:middle}
+.volsl.off{opacity:.45}
+.volsl::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;
+  border-radius:50%;background:var(--gold);border:none;cursor:pointer}
+.volsl::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--gold);border:none;cursor:pointer}
+.volsl:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;z-index:200;padding:20px}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -569,20 +582,35 @@ function applyPresence(P){
   }
 }
 let presDirty=false;   // 드래그 때문에 미룬 접속 표시 갱신이 있는지
+let volDrag=false;     // 음량 슬라이더를 끄는 중인지
+let paintPending=false;// 드래그 때문에 미룬 화면 갱신이 있는지
+/* 놓는 이벤트는 슬라이더가 아니라 window에서 받습니다.
+   재렌더로 슬라이더 노드가 교체되면 그 노드의 pointerup은 영영 오지 않아
+   volDrag가 켜진 채로 굳고, 그 뒤로는 화면이 전혀 갱신되지 않습니다.
+   등록은 여기서 한 번만 합니다 — wire()는 렌더마다 도니 거기 두면 리스너가 쌓입니다. */
+function volDragEnd(){
+  if(!volDrag) return;
+  volDrag=false;
+  if(paintPending){ paintPending=false; paint(); }
+  if(presDirty){ presDirty=false; repaintPresence(); }
+}
+window.addEventListener('pointerup',volDragEnd);
+window.addEventListener('pointercancel',volDragEnd);
+window.addEventListener('blur',volDragEnd);
 // 접속 표시가 걸린 화면들. 링크 모달은 app 바깥이라 paint()가 닿지 않으므로 따로 다시 그립니다.
 function repaintPresence(){
   // 방이 종료된 뒤 남은 유예 타이머가 종료 안내 화면을 옛 경매 화면으로 덮어쓰지 않게 합니다.
   if(closedForGood) return;
   // 드래그 중에는 그리지 않습니다 — 소스 노드가 사라지면 dragend가 안 떠서
   // 팀으로 끌어다 놓는 0P 배정이 조용히 실패합니다. 드래그가 끝나면 밀린 갱신을 처리합니다.
-  if(document.body.classList.contains('dragging')){ presDirty=true; return; }
+  if(document.body.classList.contains('dragging')||volDrag){ presDirty=true; return; }
   if(S) paint();
   if($('linkmodal')) openLinksModal();
 }
 // 방을 떠날 때 접속 표시 상태를 완전히 비웁니다(남은 유예 타이머 포함).
 function presReset(){
   for(const id of Object.keys(presOffT)){ clearTimeout(presOffT[id]); delete presOffT[id]; }
-  presOn.clear(); presence=null; presDirty=false; linkOrder=null;
+  presOn.clear(); presence=null; presDirty=false; paintPending=false; volDrag=false; linkOrder=null;
 }
 const teamOn=id=>presOn.has(id);
 let linkOrder=null;   // 링크 모달이 열려 있는 동안 고정할 팀 줄 순서
@@ -714,6 +742,9 @@ function connect(code,auth){
     const m=JSON.parse(e.data);
     if(m.t==='hello'){
       me=m.you; S=m.S; skew=Date.now()-m.S.now; applyPresence(m.P);
+      // 새로고침으로 다시 들어온 진행자 — 진행 중이면 이어 틀고, 그 사이 초기화됐으면 끕니다.
+      // (자동재생이 막히면 bgmSync가 다음 클릭 한 번에 다시 시도합니다)
+      bgmFollowPhase();
       // 대시보드의 '수정' 버튼으로 들어왔으면 방 화면을 거치지 않고 바로 수정 폼을 엽니다.
       if(pendingEdit){
         pendingEdit=false;
@@ -722,13 +753,18 @@ function connect(code,auth){
       }
       paint();
     }
-    else if(m.t==='state'){ S=m.S; skew=Date.now()-m.S.now; paint(); if(m.event) onEvent(m.event); }
+    else if(m.t==='state'){
+      S=m.S; skew=Date.now()-m.S.now;
+      bgmFollowPhase();   // 초기화·되돌리기(대기)·완료에서 정지. 다시 시작하면 처음부터 나옵니다.
+      paint(); if(m.event) onEvent(m.event);
+    }
     else if(m.t==='pres'){ applyPresence(m.P); repaintPresence(); }
     else if(m.t==='error'){ toast(m.msg,true); }
     // pong은 하이버네이션 자동응답이 처리하며 별도 동작이 필요 없습니다.
   };
 }
 function renderClosed(reason){
+  bgmStop();
   presReset();
   pendingEdit=false;   // 수정 진입 시도가 방 소멸로 실패한 경우 — 다음 정상 입장에 새지 않게 해제
   if(ws){ try{ ws.onclose=null; ws.close(); }catch{} }
@@ -745,8 +781,8 @@ const send=(t,extra={})=>{
 
 function onEvent(ev){
   if(ev.kind==='sold'){ flash(`${esc(ev.team)}<br><span style="font-size:.55em">${esc(ev.player)} · ${esc(ev.price)}P</span>`); if(sfxOn()) soldChime(); }
-  else if(ev.kind==='pass') flash('유찰');
-  else if(ev.kind==='assign') flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} · 배정</span>`);
+  else if(ev.kind==='pass'){ flash('유찰'); if(sfxOn()) passSound(); }
+  else if(ev.kind==='assign'){ flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} · 배정</span>`); if(sfxOn()) soldChime(); }
   else if(ev.kind==='bid'){
     if(me.role!=='host') beep();
     // paint()가 방금 새 DOM을 그렸으므로, 새 입찰 금액과 선두 팀 카드에 펄스를 한 번 얹습니다.
@@ -795,12 +831,52 @@ function flash(html){
   f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
 }
 let actx;
+const SFX_MAX=2.5;   // 연출음 음량 상한(슬라이더 100%). 리미터가 있어 이 위로는 커져도 의미가 없습니다.
+/* 연출음(낙찰·입찰·초읽기) 음량. 1.0이 원래 크기입니다.
+   개별 소리마다 곱하지 않고 믹서 노드 하나를 거칩니다 — 그래야 슬라이더를 움직인 순간
+   이미 예약된 소리까지 같이 바뀌고, 값을 흩뿌리지 않아도 됩니다. */
+let sfxVol=(()=>{ try{ const v=parseFloat(localStorage.getItem('sfxVol')); return v>=0&&v<=SFX_MAX?v:1.4; }catch{ return 1.4; } })();
+let sfxBusNode=null, sfxLimiter=null;
+/* 연출음이 모두 지나가는 지점. 낙찰음은 네 음이 겹쳐서 나기 때문에 음량을 올리면
+   합이 1을 넘어 찢어집니다. 리미터를 뒤에 달아 그 지점을 눌러줍니다. */
+function sfxBus(){
+  if(!sfxBusNode){
+    sfxBusNode=actx.createGain();
+    sfxBusNode.gain.value=sfxVol;
+    sfxLimiter=actx.createDynamicsCompressor();
+    sfxLimiter.threshold.value=-3; sfxLimiter.knee.value=0; sfxLimiter.ratio.value=20;
+    sfxLimiter.attack.value=.002; sfxLimiter.release.value=.12;
+    sfxBusNode.connect(sfxLimiter); sfxLimiter.connect(actx.destination);
+  }
+  return sfxBusNode;
+}
+function sfxSetVol(v){
+  sfxVol=Math.min(SFX_MAX,Math.max(0,v));
+  if(sfxBusNode) sfxBusNode.gain.value=sfxVol;
+  try{ localStorage.setItem('sfxVol',String(sfxVol)); }catch{}
+  sfxPreview();
+}
+let sfxPreviewT=null;
+/* 브금과 달리 연출음은 낙찰이 나야 들립니다. 맞추는 동안 들려줄 게 필요해서
+   슬라이더를 움직이면 실제 낙찰음을 그대로 들려줍니다(연타는 마지막 것만). */
+function sfxPreview(){
+  if(sfxMuted||!me||me.role!=='host') return;
+  clearTimeout(sfxPreviewT);
+  // tone()은 컨텍스트가 running이 아니면 예약을 건너뜁니다. resume()을 기다렸다가 울려야
+  // 페이지를 연 직후 슬라이더를 만졌을 때 아무 소리도 안 나는 일이 없습니다.
+  sfxPreviewT=setTimeout(()=>{
+    try{
+      actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+      actx.state==='running'?soldChime():actx.resume().then(soldChime).catch(()=>{});
+    }catch{}
+  },140);
+}
 function beep(){
   try{
     actx=actx||new (window.AudioContext||window.webkitAudioContext)();
     if(actx.state==='suspended') actx.resume();   // 사용자 제스처 전이라 멈춰 있으면 깨웁니다
     const o=actx.createOscillator(), g=actx.createGain();
-    o.connect(g); g.connect(actx.destination);
+    o.connect(g); g.connect(sfxBus());
     o.frequency.value=880; g.gain.setValueAtTime(.06,actx.currentTime);
     g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.16);
     o.start(); o.stop(actx.currentTime+.17);
@@ -813,7 +889,7 @@ function tone(freq,delay,dur,vol=.08,type='sine'){
     if(actx.state==='suspended') actx.resume();
     if(actx.state!=='running') return;   // 사용자 제스처 전이면 예약하지 않음(리로드 후 밀린 소리가 한꺼번에 터지는 것 방지)
     const o=actx.createOscillator(), g=actx.createGain();
-    o.type=type; o.frequency.value=freq; o.connect(g); g.connect(actx.destination);
+    o.type=type; o.frequency.value=freq; o.connect(g); g.connect(sfxBus());
     const t=actx.currentTime+delay;
     g.gain.setValueAtTime(vol,t);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
@@ -821,7 +897,75 @@ function tone(freq,delay,dur,vol=.08,type='sine'){
   }catch{}
 }
 function soldChime(){ try{ [523.25,659.25,783.99].forEach((f,i)=>tone(f,i*0.09,.2,.09,'triangle')); tone(1046.5,.27,.34,.07); }catch{} }
+/* 유찰음. 낙찰음(밝은 triangle 3화음이 위로 올라감)과 일부러 반대로 갑니다 —
+   낮은 음역, 부드러운 sine, 아래로 내려오는 완전5도, 그리고 더 조용하게.
+   3음(장·단조를 가르는 음)을 안 써서 브금이 어떤 조성이든 부딪히지 않습니다.
+   '실패'가 아니라 '아무 일도 없었음'으로 들려야 해서 짧고 눌러진 소리로 잡았습니다. */
+function passSound(){ try{ tone(220,0,.18,.06,'sine'); tone(146.83,.10,.34,.055,'sine'); }catch{} }
 
+/* ═══ 배경음악 ═══
+   진행자 화면에서만 틉니다 — 팀장마다 각자 재생하면 서로 어긋난 소리가 여러 개 겹칩니다.
+   진행자가 화면·소리를 공유하는 구조라 한 곳에서만 나는 편이 맞습니다.
+   🔊 버튼(sfxMuted)이 연출음과 브금을 함께 관장합니다. */
+let bgm=null;
+let bgmOn=false;   // '지금 브금이 켜져 있어야 하는' 상태. 음소거와는 별개로 기억합니다.
+/* 적당한 음량은 스피커·헤드셋·방송 송출 여부에 따라 사람마다 다릅니다.
+   기본값을 잘 고르는 것으로는 해결되지 않아서 진행자가 직접 맞추게 합니다.
+   브라우저별로 기억하므로 다음 경매 때 다시 맞출 필요가 없습니다.
+
+   슬라이더는 선형이 아니라 제곱 곡선입니다. 사람 귀는 음량을 로그에 가깝게 느껴서
+   선형으로 두면 위쪽 절반이 전부 '크다'로 뭉치고, 정작 브금이 앉아야 할 낮은 음량대가
+   슬라이더 맨 왼쪽 몇 픽셀에 눌려버립니다. 제곱을 태우면 그 구간이 넓게 펴집니다.
+   BGM_MAX는 100%일 때의 실제 음량 — 브금은 말소리·연출음 아래에 깔려야 하므로
+   1.0까지 열어둘 이유가 없습니다. */
+const BGM_MAX=.6;
+const bgmSliderToVol=n=>Math.pow(Math.min(100,Math.max(0,n))/100,2)*BGM_MAX;
+const bgmVolToSlider=v=>Math.round(Math.sqrt(Math.min(BGM_MAX,Math.max(0,v))/BGM_MAX)*100);
+let bgmVol=(()=>{ try{ const v=parseFloat(localStorage.getItem('bgmVol')); return v>=0?Math.min(BGM_MAX,v):.12; }catch{ return .12; } })();
+function bgmEl(){
+  if(!bgm){
+    bgm=new Audio('/bgm.mp3');
+    bgm.loop=true;      // 끝까지 가면 처음부터 다시 — 경매·드래프트가 끝날 때까지 끊기지 않게
+    bgm.preload='auto';
+  }
+  bgm.volume=bgmVol;
+  return bgm;
+}
+let bgmPreviewT=null;
+/* 시작 전에는 브금이 안 나오니 슬라이더를 움직여도 들리는 게 없습니다.
+   안 들리는 소리는 맞출 수가 없어서, 멈춰 있을 때 움직이면 잠깐 들려줍니다. */
+function bgmPreview(){
+  if(bgmOn||sfxMuted||!me||me.role!=='host') return;   // 진행 중이면 이미 들리므로 불필요
+  const a=bgmEl();
+  a.play().catch(()=>{});
+  clearTimeout(bgmPreviewT);
+  bgmPreviewT=setTimeout(()=>{ if(!bgmOn){ a.pause(); a.currentTime=0; } },1600);
+}
+function bgmSetVol(v){
+  bgmVol=Math.min(BGM_MAX,Math.max(0,v));
+  if(bgm) bgm.volume=bgmVol;
+  try{ localStorage.setItem('bgmVol',String(bgmVol)); }catch{}
+  bgmPreview();
+}
+function bgmSync(){
+  if(bgmOn&&sfxOn()){
+    bgmEl().play().catch(()=>{
+      // 자동재생 차단(새로고침 직후 등) — 다음 클릭 한 번에 다시 시도합니다.
+      document.addEventListener('click',bgmSync,{once:true});
+    });
+  } else if(bgm) bgm.pause();
+}
+function bgmStart(){ bgmOn=true; bgmSync(); }
+function bgmStop(){ bgmOn=false; if(bgm){ bgm.pause(); bgm.currentTime=0; } }
+/* 브금은 진행 상태를 따라갑니다 — 진행 중(live)이면 켜고, 대기·완료면 끕니다.
+   시작 버튼이 클릭 흐름 안에서 이미 bgmStart를 부르므로 여기서는 없을 때만 켭니다
+   (자동재생 차단을 피하려면 첫 재생이 클릭 안에서 일어나야 합니다).
+   한 곳에 모아둬야 초기화·되돌리기·완료·재접속이 전부 같은 규칙을 따릅니다. */
+function bgmFollowPhase(){
+  if(!S||!me||me.role!=='host') return;
+  if(S.phase==='live'){ if(!bgmOn) bgmStart(); }
+  else if(bgmOn) bgmStop();
+}
 function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
 
 /* ═══ 파생 ═══ */
@@ -876,6 +1020,8 @@ const leftMs=()=>{
 function paint(){
   if(!S){ return; }
   if(editing) return;   // 방 설정 수정 중 — 브로드캐스트가 폼을 날리지 않게 렌더를 미룹니다.
+  // 음량 슬라이더를 끄는 중 — 여기서 다시 그리면 손잡이가 손에서 빠집니다. 놓을 때 밀린 것을 처리합니다.
+  if(volDrag){ paintPending=true; return; }
   totalsCache=null;   // 이번 렌더에서 다시 계산 (상태가 바뀌었으므로)
   // 드래그 도중 재렌더되면 소스 노드가 사라져 dragend가 안 뜨므로, 드래그 시각효과를 여기서 정리.
   document.body.classList.remove('dragging');
@@ -940,7 +1086,7 @@ function topbar(){
     <div class="brand">${esc(S.title)} <span class="live">LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
-    <div class="conn">${presChip()}${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+    <div class="conn">${presChip()}${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button><span class="vollb ${sfxMuted?'off':''}" title="브금 음량">🎵</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bVol" min="0" max="100" step="1" value="${bgmVolToSlider(bgmVol)}" title="브금 음량 ${bgmVolToSlider(bgmVol)}%" aria-label="브금 음량"><span class="vollb ${sfxMuted?'off':''}" title="낙찰음·입찰음·초읽기 음량">🔔</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bSVol" min="0" max="100" step="1" value="${Math.round(sfxVol/SFX_MAX*100)}" title="연출음 음량 ${Math.round(sfxVol/SFX_MAX*100)}%" aria-label="연출음 음량">`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
   </div>`;
 }
 
@@ -1559,7 +1705,12 @@ function saveResultImage(){
 function wire(){
   const on=(id,fn)=>{ const el=$(id); if(el) el.onclick=fn; };
   // 대기 상태에서 첫 매물을 올리는 순간이 사실상 '시작'입니다. 안 들어온 팀장이 있으면 한 번 물어봅니다.
-  on('bNext',async()=>{ if(await confirmStart('경매를 시작할까요?')) send('lot'); });
+  on('bNext',async()=>{
+    const first=S&&S.phase==='ready';   // 브금은 '시작'에만 — 매물마다 다시 틀지 않습니다
+    if(!await confirmStart('경매를 시작할까요?')) return;
+    if(first) bgmStart();   // 클릭 흐름 안에서 재생해야 브라우저 자동재생 차단에 걸리지 않습니다
+    send('lot');
+  });
   on('bUndo',()=>send('undo'));
   on('bSfx',()=>{
     sfxMuted=!sfxMuted;
@@ -1567,6 +1718,7 @@ function wire(){
     const b=$('bSfx'); if(b){ b.textContent=sfxMuted?'🔇':'🔊'; b.classList.toggle('off',sfxMuted); b.setAttribute('aria-label','소리 '+(sfxMuted?'꺼짐':'켜짐')); }
     // 켤 때: 사용자 제스처로 오디오 잠금을 풀고, 컨텍스트가 running이 되면 짧은 확인음.
     if(!sfxMuted){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const blip=()=>tone(880,0,.09,.05); actx.state==='running'?blip():actx.resume().then(blip).catch(()=>{}); }catch{} }
+    bgmSync();   // 음소거하면 브금도 멈추고, 다시 켜면 멈춘 자리에서 이어집니다
   });
   on('bReset',()=>{ const draft=S&&S.mode==='draft';
     const msg=draft
@@ -1574,7 +1726,9 @@ function wire(){
       : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
     askConfirm({title:(S&&S.mode==='draft')?'드래프트를 초기화할까요?':'경매를 초기화할까요?',msg,confirmLabel:'초기화'}).then(ok=>{ if(ok) send('reset'); }); });
   on('bStartDraft',async()=>{
-    if(await confirmStart('드래프트를 시작할까요?')) send('startdraft',{order:draftOrder});
+    if(!await confirmStart('드래프트를 시작할까요?')) return;
+    bgmStart();
+    send('startdraft',{order:draftOrder});
   });
   on('bEdit',openRoomEdit);
   on('bBracket',()=>{
@@ -1585,6 +1739,15 @@ function wire(){
   });
   on('bDraw',()=>send('draworder'));
   on('bLinks',openLinksModal);
+  // 음량은 onclick이 아니라 oninput으로 받습니다 — 끌면서 바로 귀로 확인해야 맞출 수 있습니다.
+  // 놓는 처리는 window 리스너(volDragEnd)가 맡습니다.
+  const wireVol=(id,label,apply)=>{
+    const v=$(id); if(!v) return;
+    v.oninput=()=>{ apply(+v.value); v.title=`${label} ${v.value}%`; };
+    v.onpointerdown=()=>{ volDrag=true; };
+  };
+  wireVol('bVol','브금 음량',n=>bgmSetVol(bgmSliderToVol(n)));
+  wireVol('bSVol','연출음 음량',n=>sfxSetVol(n/100*SFX_MAX));
   on('bPres',openLinksModal);   // 접속 현황 칩 → 미접속 팀 링크를 바로 다시 보낼 수 있게
   document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
   document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
