@@ -87,6 +87,17 @@ textarea{resize:vertical;line-height:1.65;font-size:var(--fs-sm)}
 .conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--muted)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--danger)}
 .dot.on{background:var(--ok)}
+/* 접속 현황 — 미접속은 위험이 아니라 '아직'이므로 danger 빨강을 쓰지 않습니다.
+   전원 접속(full)일 때만 초록으로 바뀌어, 시작해도 되는 순간이 한눈에 보입니다. */
+.pres{display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:var(--fs-xs);line-height:1;
+  padding:4px 9px;border-radius:var(--r-pill);border:1px solid var(--line);background:none;color:var(--muted);white-space:nowrap}
+.pres.full{color:var(--ok);border-color:rgba(95,168,107,.45)}
+.pres.warn{color:var(--gold);border-color:rgba(212,169,78,.45)}
+button.pres{cursor:pointer}
+button.pres:hover{background:rgba(255,255,255,.05)}
+.pdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#46545F;margin-right:5px;vertical-align:middle}
+.pdot.on{background:var(--ok);box-shadow:0 0 5px rgba(95,168,107,.8)}
+.poff{margin-left:6px;font-size:var(--fs-2xs);color:var(--gold);opacity:.85}
 
 /* 랜딩 */
 .landing{max-width:560px;margin:8vh auto;text-align:center}
@@ -539,6 +550,52 @@ let editing=false;                     // 수정 화면 표시 중 — 브로드
 let pendingEdit=false;                 // 대시보드 '수정' 버튼 경유 입장 — hello 수신 후 자동으로 수정 화면.
 let sfxMuted=(()=>{ try{ return localStorage.getItem('sfxMuted')==='1'; }catch{ return false; } })();  // 소리 음소거(클라이언트별)
 const sfxOn=()=>me&&me.role==='host'&&!sfxMuted;   // 연출 사운드는 진행자 화면 위주로 재생
+/* 접속 현황 — 서버가 소켓 태그로 계산해 {teams:[팀id], host:bool, view:n} 형태로 보내줍니다.
+   화면에는 presOn을 그립니다: '들어옴'은 즉시, '나감'만 유예를 두고 반영합니다.
+   새로고침 한 번이 '미접속'으로 보이면 진행자가 헛되이 링크를 다시 보내게 됩니다. */
+let presence=null, presOn=new Set();
+const presOffT={};                 // 오프라인 확정 대기 타이머 (팀 id → timeout)
+const PRES_GRACE=3000;
+function applyPresence(P){
+  presence=P||null;
+  const now=new Set((P&&P.teams)||[]);
+  for(const id of now){
+    if(presOffT[id]){ clearTimeout(presOffT[id]); delete presOffT[id]; }
+    presOn.add(id);
+  }
+  for(const id of [...presOn]){
+    if(now.has(id)||presOffT[id]) continue;
+    presOffT[id]=setTimeout(()=>{ delete presOffT[id]; presOn.delete(id); repaintPresence(); },PRES_GRACE);
+  }
+}
+let presDirty=false;   // 드래그 때문에 미룬 접속 표시 갱신이 있는지
+// 접속 표시가 걸린 화면들. 링크 모달은 app 바깥이라 paint()가 닿지 않으므로 따로 다시 그립니다.
+function repaintPresence(){
+  // 방이 종료된 뒤 남은 유예 타이머가 종료 안내 화면을 옛 경매 화면으로 덮어쓰지 않게 합니다.
+  if(closedForGood) return;
+  // 드래그 중에는 그리지 않습니다 — 소스 노드가 사라지면 dragend가 안 떠서
+  // 팀으로 끌어다 놓는 0P 배정이 조용히 실패합니다. 드래그가 끝나면 밀린 갱신을 처리합니다.
+  if(document.body.classList.contains('dragging')){ presDirty=true; return; }
+  if(S) paint();
+  if($('linkmodal')) openLinksModal();
+}
+// 방을 떠날 때 접속 표시 상태를 완전히 비웁니다(남은 유예 타이머 포함).
+function presReset(){
+  for(const id of Object.keys(presOffT)){ clearTimeout(presOffT[id]); delete presOffT[id]; }
+  presOn.clear(); presence=null; presDirty=false; linkOrder=null;
+}
+const teamOn=id=>presOn.has(id);
+let linkOrder=null;   // 링크 모달이 열려 있는 동안 고정할 팀 줄 순서
+/* 방 목록 한 줄 요약. 총 접속 수보다 '팀장이 몇 명 들어왔나'가 먼저 궁금한 정보라 그것을 앞에 둡니다.
+   pres가 없는 응답(옛 서버)이면 예전 표기로 돌아갑니다. */
+function connSummary(r){
+  if(!r.pres) return `접속 ${r.online}명`;
+  const on=Math.min(r.pres.teams.length,r.teams);
+  return `팀장 ${on}/${r.teams} 접속${r.pres.view?` · 관전 ${r.pres.view}`:''}`;
+}
+// 접속한 팀장 수 / 전체 팀 수. presOn에는 방 설정 수정으로 사라진 팀이 남을 수 있어 현재 팀 기준으로 셉니다.
+const leadersOn=()=>S?S.teams.filter(t=>presOn.has(t.id)).length:0;
+const leadersOff=()=>S?S.teams.filter(t=>!presOn.has(t.id)):[];
 const fmtInv=c=>c.length===8?c.slice(0,4)+'-'+c.slice(4):c;
 const copyText=txt=>navigator.clipboard.writeText(txt).then(()=>toast('복사했습니다')).catch(()=>{
   const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
@@ -656,7 +713,7 @@ function connect(code,auth){
   ws.onmessage=e=>{
     const m=JSON.parse(e.data);
     if(m.t==='hello'){
-      me=m.you; S=m.S; skew=Date.now()-m.S.now;
+      me=m.you; S=m.S; skew=Date.now()-m.S.now; applyPresence(m.P);
       // 대시보드의 '수정' 버튼으로 들어왔으면 방 화면을 거치지 않고 바로 수정 폼을 엽니다.
       if(pendingEdit){
         pendingEdit=false;
@@ -666,11 +723,13 @@ function connect(code,auth){
       paint();
     }
     else if(m.t==='state'){ S=m.S; skew=Date.now()-m.S.now; paint(); if(m.event) onEvent(m.event); }
+    else if(m.t==='pres'){ applyPresence(m.P); repaintPresence(); }
     else if(m.t==='error'){ toast(m.msg,true); }
     // pong은 하이버네이션 자동응답이 처리하며 별도 동작이 필요 없습니다.
   };
 }
 function renderClosed(reason){
+  presReset();
   pendingEdit=false;   // 수정 진입 시도가 방 소멸로 실패한 경우 — 다음 정상 입장에 새지 않게 해제
   if(ws){ try{ ws.onclose=null; ws.close(); }catch{} }
   $('app').innerHTML=`<div class="landing"><h1>경매방이 종료되었습니다</h1>
@@ -762,6 +821,7 @@ function tone(freq,delay,dur,vol=.08,type='sine'){
   }catch{}
 }
 function soldChime(){ try{ [523.25,659.25,783.99].forEach((f,i)=>tone(f,i*0.09,.2,.09,'triangle')); tone(1046.5,.27,.34,.07); }catch{} }
+
 function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
 
 /* ═══ 파생 ═══ */
@@ -834,13 +894,53 @@ function paint(){
   }
 }
 
+// 대기 화면 한 줄 요약 — 진행자가 시작 버튼을 누르기 전에 눈으로 확인할 자리.
+function presLine(){
+  if(!presence||!S||S.phase!=='ready'||me.role!=='host'||!S.teams.length) return '';
+  const off=leadersOff();
+  return `<p class="hint" style="margin:8px 0 0;color:${off.length?'var(--gold)':'var(--ok)'}">${off.length
+    ? `팀장 ${leadersOn()}/${S.teams.length} 접속 · 미접속 ${esc(off.map(t=>t.leader).join(', '))}`
+    : `팀장 ${S.teams.length}명 전원 접속`}</p>`;
+}
+
+/* 시작 전 미접속 팀장 확인. 드래프트는 안 들어온 팀 차례가 와도 시계만 돌다 넘어가고,
+   경매는 그 팀이 입찰을 통째로 놓칩니다. 되돌리기가 있긴 하지만 안 겪는 편이 낫습니다.
+   대기 상태가 아니거나 전원 접속이면 묻지 않고 그대로 진행합니다. */
+async function confirmStart(title){
+  if(!S||S.phase!=='ready'||!presence) return true;
+  const off=leadersOff();
+  if(!off.length) return true;
+  return askConfirm({
+    title,
+    msg:`아직 접속하지 않은 팀장이 ${off.length}명 있습니다.
+
+${off.map(t=>`· ${t.leader} (${t.name})`).join('\n')}
+
+그래도 시작할까요? 🔗 링크에서 미접속 팀 링크를 다시 보낼 수 있습니다.`,
+    confirmLabel:'그래도 시작'
+  });
+}
+
+/* 상단 접속 현황 칩. 팀장이 몇 명 들어와 있는지가 핵심이고 관전 인원은 뒤에 덧붙입니다.
+   진행자는 눌러서 링크 모달로 바로 갑니다 — '안 들어왔네' 다음 행동이 링크 재전송이기 때문입니다. */
+function presChip(){
+  if(!presence||!S||!S.teams.length) return '';
+  const on=leadersOn(), all=S.teams.length, off=leadersOff();
+  const v=presence.view?` · 관전 ${presence.view}`:'';
+  const tip=off.length?`미접속: ${off.map(t=>t.leader).join(', ')}`:'팀장 전원 접속';
+  const body=`👥 ${on}/${all}${v}`;
+  return me.role==='host'
+    ? `<button class="pres ${on>=all?'full':'warn'}" id="bPres" title="${esc(tip)}">${body}</button>`
+    : `<span class="pres ${on>=all?'full':'warn'}" title="${esc(tip)}">${body}</span>`;
+}
+
 function topbar(){
   const role={host:'진행자',team:myTeam()?myTeam().name:'팀장',view:'관전'}[me.role];
   return `<div class="topbar">
     <div class="brand">${esc(S.title)} <span class="live">LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
-    <div class="conn">${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+    <div class="conn">${presChip()}${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
   </div>`;
 }
 
@@ -858,21 +958,32 @@ async function openLinksModal(){
     }catch(e){ return toast(e.message||'링크를 불러오지 못했습니다',true); }
   }
   const origin=location.origin;
+  // 미접속 팀을 위로 올립니다 — 이 모달을 여는 이유가 '아직 안 들어온 사람에게 링크 다시 보내기'입니다.
+  const teamRows=d.links.map(l=>({id:l.id, label:l.name, url:`${origin}/#/r/${d.code}?t=${l.token}`, on:teamOn(l.id), team:true}));
+  // 순서는 모달을 연 순간에 한 번만 정하고 닫을 때까지 고정합니다.
+  // 접속 상태가 바뀔 때마다 다시 정렬하면, 복사 버튼을 누르는 찰나에 줄이 밀려
+  // 남의 팀 링크가 복사됩니다. 링크가 곧 신분이라 그 사고는 되돌릴 수 없습니다.
+  if(presence&&!linkOrder) linkOrder=teamRows.slice().sort((a,b)=>(a.on?1:0)-(b.on?1:0)).map(r=>r.id);
+  if(linkOrder) teamRows.sort((a,b)=>linkOrder.indexOf(a.id)-linkOrder.indexOf(b.id));
   const rows=[
     {label:'진행자 (나)', url:`${origin}/#/r/${d.code}?k=${d.hostKey}`, gold:true},
-    ...d.links.map(l=>({label:l.name, url:`${origin}/#/r/${d.code}?t=${l.token}`})),
-    {label:'관전용', url:`${origin}/#/r/${d.code}?v=${d.viewKey}`}
+    ...teamRows,
+    {label:`관전용${presence&&presence.view?` · ${presence.view}명 보는 중`:''}`, url:`${origin}/#/r/${d.code}?v=${d.viewKey}`}
   ];
+  const off=leadersOff();
   let m=$('linkmodal');
   if(!m){ m=document.createElement('div'); m.id='linkmodal'; document.body.appendChild(m); }
   m.className='modal-bg';
   m.innerHTML=`<div class="modal">
     <div class="modal-hd"><b>접속 링크</b><button class="btn ghost sm" id="lmClose">닫기</button></div>
     <p class="hint" style="margin-bottom:12px">각 팀장에게 <b>자기 링크만</b> 개인적으로 보내세요. 링크가 곧 신분입니다.</p>
-    ${rows.map((r,i)=>`<div class="link-row"><b style="${r.gold?'color:var(--gold)':''}">${esc(r.label)}</b><code>${esc(r.url)}</code><button class="btn" data-lcopy="${i}">복사</button></div>`).join('')}
+    ${presence?`<p class="hint" style="margin-bottom:12px;color:${off.length?'var(--gold)':'var(--ok)'}">${off.length
+      ? `아직 안 들어온 팀장 ${off.length}명 — ${esc(off.map(t=>t.leader).join(', '))}. 아래 위쪽 줄의 링크를 다시 보내세요.`
+      : '팀장 전원이 접속해 있습니다.'}</p>`:''}
+    ${rows.map((r,i)=>`<div class="link-row"><b style="${r.gold?'color:var(--gold)':''}">${r.team&&presence?`<i class="pdot${r.on?' on':''}"></i>`:''}${esc(r.label)}</b><code>${esc(r.url)}</code><button class="btn" data-lcopy="${i}">복사</button></div>`).join('')}
     <div class="row" style="margin-top:12px"><button class="btn" id="lmAll" style="flex:1">전체 목록 복사</button></div>
   </div>`;
-  const close=()=>m.remove();
+  const close=()=>{ linkOrder=null; m.remove(); };   // 다음에 열 때 다시 정렬되게
   $('lmClose').onclick=close;
   m.onclick=e=>{ if(e.target===m) close(); };   // 바깥 어두운 영역 클릭 시 닫기
   m.querySelectorAll('[data-lcopy]').forEach(b=>b.onclick=()=>copyText(rows[+b.dataset.lcopy].url));
@@ -916,7 +1027,7 @@ function lotBody(){
           me.role==='host'?'다음 매물을 올려주세요':'진행자가 다음 매물을 올리는 중입니다'}`}</div>
       ${done?bracketPanel():''}
       ${(done||S.log.length)?`<div class="row${done?' mt-2':''}"><button class="btn gold" id="bResultImg" style="flex:1">결과 이미지 저장${done?'':' (현재까지)'}</button></div>`:''}
-      ${me.role==='host'?`<div class="row mt-2">
+      ${me.role==='host'?`${presLine()}<div class="row mt-2">
         <button class="btn gold" style="flex:1" id="bNext" ${done?'disabled':''}>다음 매물 올리기</button>
         <button class="btn" id="bUndo">되돌리기</button>
       </div>${hostClockCtl()}
@@ -993,6 +1104,10 @@ function bidControls(t,mine){
 
 function teamCard(t){
   const draft=S.mode==='draft';
+  // 팀장 접속 여부. presence가 아직 없으면(첫 프레임) 아무것도 그리지 않습니다.
+  const tOn=teamOn(t.id);
+  const pdot=presence?`<i class="pdot${tOn?' on':''}" aria-hidden="true"></i>`:'';
+  const poff=(presence&&!tOn)?'<span class="poff">미접속</span>':'';
   const mineT=me.teamId===t.id, top=!draft&&S.bid&&S.bid.teamId===t.id;
   const curId=(draft&&S.phase==='live'&&S.draft)?S.draft.seq[S.draft.ptr]:null;
   const turn=curId===t.id;
@@ -1035,7 +1150,7 @@ function teamCard(t){
   return `<div class="team ${mineT?'me':''} ${top?'top':''} ${turn?'turn':''} ${t.open<=0&&!allDone()?'full':''}" ${dropAttr}>
     <div class="team-hd">
       <div><div class="team-nm"${mineT?' style="color:var(--gold)"':''}>${esc(t.name)}${mineT?'<span class="my-badge">MY</span>':''}${turn?'<span class="turn-badge">지명중</span>':''}${top?`<span class="turn-badge" style="background:var(--ok)">최고 ${S.bid.amount}P</span>`:''}</div>
-      <div class="team-lead">팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${leadMeta}</div></div>
+      <div class="team-lead">${pdot}팀장 ${esc(t.leader)}${t.leaderLine?' · '+t.leaderLine:''}${leadMeta}${poff}</div></div>
       ${ptBlock}
     </div>
     ${draft?'':`<div class="gauge"><i style="width:${pct}%"></i></div>`}
@@ -1196,6 +1311,7 @@ function draftBody(){
         ? `<p class="hint" style="margin:9px 0 12px">${sc
             ? `매 라운드 <b>총점이 낮은 팀부터</b> 지명합니다.${anyTie?' 총점이 같은 팀이 있어 <b>시작하면 동점 정리 화면</b>이 뜹니다 — 🎲 주사위나 <b>먼저</b> 지정으로 모두가 보는 앞에서 순서를 정합니다.':' 총점이 같아지면 진행이 멈추고 그 자리에서 🎲 주사위나 지정으로 순서를 정합니다.'}`
             : '추첨을 누르면 모두가 보는 앞에서 순서가 정해집니다. ▲▼로 직접 조정도 가능하고, 이후는 스네이크(다음 라운드부터 역순)로 진행됩니다.'}</p>
+           ${presLine()}
            <div class="row"><button class="btn gold" style="flex:1" id="bStartDraft">${sc?'드래프트 시작':'이 순서로 드래프트 시작'}</button></div>
            <div class="row mt-2"><button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button></div>`
         : `<p class="hint" style="margin:9px 0">진행자가 순서를 정하고 곧 시작합니다.</p>`}`;
@@ -1442,7 +1558,8 @@ function saveResultImage(){
 
 function wire(){
   const on=(id,fn)=>{ const el=$(id); if(el) el.onclick=fn; };
-  on('bNext',()=>send('lot'));
+  // 대기 상태에서 첫 매물을 올리는 순간이 사실상 '시작'입니다. 안 들어온 팀장이 있으면 한 번 물어봅니다.
+  on('bNext',async()=>{ if(await confirmStart('경매를 시작할까요?')) send('lot'); });
   on('bUndo',()=>send('undo'));
   on('bSfx',()=>{
     sfxMuted=!sfxMuted;
@@ -1456,7 +1573,9 @@ function wire(){
       ? '드래프트를 처음 상태로 초기화할까요?\n\n모든 지명 기록이 지워지고 지명 순서가 새로 추첨됩니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)'
       : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
     askConfirm({title:(S&&S.mode==='draft')?'드래프트를 초기화할까요?':'경매를 초기화할까요?',msg,confirmLabel:'초기화'}).then(ok=>{ if(ok) send('reset'); }); });
-  on('bStartDraft',()=>send('startdraft',{order:draftOrder}));
+  on('bStartDraft',async()=>{
+    if(await confirmStart('드래프트를 시작할까요?')) send('startdraft',{order:draftOrder});
+  });
   on('bEdit',openRoomEdit);
   on('bBracket',()=>{
     if(S.bracket){
@@ -1466,6 +1585,7 @@ function wire(){
   });
   on('bDraw',()=>send('draworder'));
   on('bLinks',openLinksModal);
+  on('bPres',openLinksModal);   // 접속 현황 칩 → 미접속 팀 링크를 바로 다시 보낼 수 있게
   document.querySelectorAll('[data-ordup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.ordup; if(draftOrder&&i>0){ [draftOrder[i-1],draftOrder[i]]=[draftOrder[i],draftOrder[i-1]]; paint(); } });
   document.querySelectorAll('[data-orddn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.orddn; if(draftOrder&&i<draftOrder.length-1){ [draftOrder[i],draftOrder[i+1]]=[draftOrder[i+1],draftOrder[i]]; paint(); } });
   // 동점 정리: '먼저'로 지정한 순서를 모아두고, 주사위나 지정 적용으로 서버에 보냅니다.
@@ -1498,7 +1618,8 @@ function wire(){
   const isCard=e=>e.dataTransfer.types.includes('application/x-dpid');
   document.querySelectorAll('[data-dpid]').forEach(el=>{
     el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('application/x-dpid',el.dataset.dpid); e.dataTransfer.setData('text/plain',el.dataset.dpid); e.dataTransfer.effectAllowed='move'; document.body.classList.add('dragging'); });
-    el.addEventListener('dragend',()=>{ document.body.classList.remove('dragging'); document.querySelectorAll('.drop-ok').forEach(x=>x.classList.remove('drop-ok')); });
+    el.addEventListener('dragend',()=>{ document.body.classList.remove('dragging'); document.querySelectorAll('.drop-ok').forEach(x=>x.classList.remove('drop-ok'));
+      if(presDirty){ presDirty=false; repaintPresence(); } });
   });
   document.querySelectorAll('[data-team-drop]').forEach(el=>{
     el.addEventListener('dragover',e=>{ if(!isCard(e)) return; e.preventDefault(); e.dataTransfer.dropEffect='move'; el.classList.add('drop-ok'); });
@@ -1754,7 +1875,7 @@ async function renderRooms(){
             ${r.missing?'<span>방 데이터가 없습니다</span>':`
             <span>${r.teams}팀 · 참가자 ${r.players}명</span>
             <span>낙찰 ${r.sold}/${r.players}</span>
-            <span>접속 ${r.online}명</span>`}
+            <span>${connSummary(r)}</span>`}
             <span>${new Date(r.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
             <span class="${!r.missing&&d>=0&&d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
           </div>
@@ -1917,7 +2038,7 @@ async function renderManager(){
         <div>
           <div class="rt">${esc(r.title)} <span class="pill ${st[0]}">${st[1]}</span></div>
           <div class="rs">
-            ${r.missing?'<span>방 데이터가 없습니다</span>':`<span>${r.teams}팀 · 참가자 ${r.players}명</span><span>낙찰 ${r.sold}/${r.players}</span><span>접속 ${r.online}명</span>`}
+            ${r.missing?'<span>방 데이터가 없습니다</span>':`<span>${r.teams}팀 · 참가자 ${r.players}명</span><span>낙찰 ${r.sold}/${r.players}</span><span>${connSummary(r)}</span>`}
             <span>삭제까지 ${Math.max(0,Math.ceil((r.createdAt+14*86400e3-Date.now())/86400e3))}일</span>
           </div>
         </div>

@@ -642,6 +642,8 @@ export class AuctionRoom {
         teams: this.S.teams.length, players: this.S.pool.length, sold,
         filled: this.S.teams.every(t => this.openSlots(t) <= 0),
         online: this.ctx.getWebSockets().length,
+        // 방에 들어가기 전에도 '팀장이 몇 명 들어와 있나'가 보이게 합니다(총 접속 수보다 쓸모 있음).
+        pres: this.presence(),
         hostKey: this.auth.hostKey, viewKey: this.auth.viewKey,
         links: Object.entries(this.auth.teams).map(([tk, id]) => ({
           id, name: (this.team(id) || {}).name || id, token: tk
@@ -718,7 +720,9 @@ export class AuctionRoom {
 
       const pair = new WebSocketPair();
       this.ctx.acceptWebSocket(pair[1], [`r:${who.role}`, `t:${who.teamId || '-'}`]);
-      pair[1].send(JSON.stringify({ t: 'hello', you: who, S: this.view() }));
+      pair[1].send(JSON.stringify({ t: 'hello', you: who, S: this.view(), P: this.presence() }));
+      // 새로 들어온 사람 자신은 방금 hello로 받았으므로 보내지만 않습니다(명단에는 포함).
+      this.pushPresence(null, pair[1]);
       return new Response(null, { status: 101, webSocket: pair[0] });
     }
 
@@ -951,6 +955,41 @@ export class AuctionRoom {
     // 추첨 모드가 아니면 순서 배열은 클라가 쓰지 않으므로 브로드캐스트에서 뺍니다.
     if (v.orderMode !== 'draw') delete v.order;
     return v;
+  }
+
+  /** 지금 누가 접속해 있는지. 소켓 태그에서 그대로 읽으므로 따로 저장할 상태가 없습니다.
+   *  한 사람이 탭을 여러 개 열어도 팀은 Set으로 한 번만 셉니다.
+   *  @param except webSocketClose 시점에 아직 목록에 남아 있을 수 있는 그 소켓 */
+  presence(except) {
+    const teams = new Set();
+    let host = false, view = 0;
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws === except) continue;
+      const tags = this.ctx.getTags(ws);
+      const role = (tags.find(x => x.startsWith('r:')) || '').slice(2);
+      if (role === 'team') {
+        const tid = (tags.find(x => x.startsWith('t:')) || '').slice(2);
+        if (tid && tid !== '-') teams.add(tid);
+      } else if (role === 'host') host = true;
+      else if (role === 'view') view++;
+    }
+    return { teams: [...teams], host, view };
+  }
+
+  /** 접속·끊김 알림. 상태 전체를 다시 보내면 재접속 한 번에 수십 KB가 전원에게 날아가므로
+   *  따로 보냅니다(팀 6개 기준 60바이트). storage를 건드리지 않아 하이버네이션에서 깨는 비용도 거의 없습니다.
+   *
+   *  '세지 않을 소켓'과 '보내지 않을 소켓'은 서로 다릅니다. 둘을 한 인자로 묶으면
+   *  새로 들어온 사람이 남들에게 가는 명단에서 빠져, 그 사람은 다음 접속·끊김이
+   *  일어날 때까지 모두의 화면에서 계속 '미접속'으로 남습니다.
+   *  @param gone 명단에서 뺄 소켓 (닫히는 중이라 아직 getWebSockets()에 남아 있음)
+   *  @param skip 보내지 않을 소켓 (방금 hello로 같은 내용을 받은 새 접속) */
+  pushPresence(gone, skip) {
+    const msg = JSON.stringify({ t: 'pres', P: this.presence(gone) });
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws === gone || ws === skip) continue;
+      try { ws.send(msg); } catch { /* 끊긴 소켓은 무시 */ }
+    }
   }
 
   broadcast(extra = {}) {
@@ -1363,8 +1402,14 @@ export class AuctionRoom {
 
   async webSocketClose(ws, code, reason, wasClean) {
     try { ws.close(code, reason); } catch { /* 이미 닫힘 */ }
+    // load() 없이 태그만 읽습니다 — 끊길 때마다 상태를 통째로 읽어오지 않기 위해서입니다.
+    this.pushPresence(ws);
   }
-  async webSocketError(ws) { /* Hibernation이 정리합니다 */ }
+  async webSocketError(ws) {
+    // 소켓 정리는 Hibernation이 하지만, 접속 현황은 알려주지 않으면 아무도 모릅니다.
+    // 노트북 잠자기·와이파이 끊김은 close가 아니라 이쪽으로 옵니다.
+    this.pushPresence(ws);
+  }
 }
 
 
