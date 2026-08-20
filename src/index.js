@@ -430,7 +430,7 @@ export default {
 function validate(cfg) {
   if (!cfg || typeof cfg !== 'object') return '설정이 비어 있습니다';
   if (!Array.isArray(cfg.leaders) || cfg.leaders.length < 2) return '팀장을 2명 이상 입력하세요';
-  if (cfg.leaders.length > 12) return '팀장은 최대 12명까지입니다';
+  if (cfg.leaders.length > 20) return '팀장은 최대 20명까지입니다';
   // 원소 형태까지 검증해야 init에서 null 참조로 터지지 않습니다.
   if (!cfg.leaders.every(l => l && typeof l === 'object' && String(l.name || '').trim())) {
     return '팀장 이름이 비어 있거나 형식이 올바르지 않습니다';
