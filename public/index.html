@@ -1612,24 +1612,35 @@ function poolPanel(){
   // 점수순 보기는 점수 드래프트에만 있습니다. 다른 방으로 넘어와 버튼이 없는데도 남아 있으면
   // 헤더가 잘못 표시되므로, 파생값을 고치는 대신 전역 자체를 등록순으로 되돌립니다.
   if(poolView==='score'&&!sc) poolView='order';
+  // 그룹 안 기본 정렬: 강한 순(높→낮) — 클랜티어(1이 상위, 없으면 뒤) → 클랜점수(높은 순, 없으면 뒤)
+  // → 솔랭(상위 순). 옵션 없이 모든 그룹 보기가 이 순서를 씁니다. 등록순(순서) 보기만 예외.
+  const byStrong=(a,b)=>{
+    // ''는 구데이터에 남을 수 있는 "없음" 값 — gradeBand·chip의 hasG 가드와 같게 뒤로 보냅니다.
+    const ga=a.grade==null||a.grade===''?99:Number(a.grade), gb=b.grade==null||b.grade===''?99:Number(b.grade);
+    if(ga!==gb) return ga-gb;
+    const sa=a.score==null?-1:a.score, sb=b.score==null?-1:b.score;
+    if(sa!==sb) return sb-sa;
+    return tierRank(b.tier)-tierRank(a.tier);
+  };
   let body;
   if(poolView==='pos'){
-    body=renderGroups(LINES.map(l=>[l,rem.filter(p=>p.line===l)]).concat([['미지정',rem.filter(p=>!p.line)]]));
+    body=renderGroups(LINES.map(l=>[l,rem.filter(p=>p.line===l).sort(byStrong)])
+         .concat([['미지정',rem.filter(p=>!p.line).sort(byStrong)]]));
   }else if(poolView==='tier'){
-    // 티어별 그룹(상위→하위), 그룹 내 LP·단수 정렬. 못 알아본 티어는 '미분류'.
-    const tg=TIERS.map((t,i)=>[t.k[0], rem.filter(p=>tierIdx(p.tier)===i).sort((a,b)=>tierRank(b.tier)-tierRank(a.tier))])
-             .concat([['미분류', rem.filter(p=>tierIdx(p.tier)<0)]]);
+    // 티어별 그룹(상위→하위), 그룹 내 LP·단수 정렬(동순위는 강한 순). 못 알아본 티어는 '미분류'.
+    const tg=TIERS.map((t,i)=>[t.k[0], rem.filter(p=>tierIdx(p.tier)===i).sort((a,b)=>tierRank(b.tier)-tierRank(a.tier)||byStrong(a,b))])
+             .concat([['미분류', rem.filter(p=>tierIdx(p.tier)<0).sort(byStrong)]]);
     body=renderGroups(tg);
   }else if(poolView==='grade'){
-    // 등급 구간별 그룹(1티어 상위), 그룹 내 소수 오름차순. 등급 없으면 '등급 미정'.
+    // 등급 구간별 그룹(1티어 상위), 그룹 내 강한 순(소수 오름차순 → 같으면 점수 높은 순).
     // gradeBand로 완전분할 → 범위 밖·구데이터 등 어떤 값도 누락 없이 한 그룹에만 속함(카운트=목록 일치).
-    const gg=[0,1,2,3,4].map(b=>[`클랜티어 ${b+1}`, rem.filter(p=>gradeBand(p.grade)===b).sort((x,y)=>Number(x.grade)-Number(y.grade))])
-             .concat([['클랜티어 미정', rem.filter(p=>gradeBand(p.grade)<0)]]);
+    const gg=[0,1,2,3,4].map(b=>[`클랜티어 ${b+1}`, rem.filter(p=>gradeBand(p.grade)===b).sort(byStrong)])
+             .concat([['클랜티어 미정', rem.filter(p=>gradeBand(p.grade)<0).sort(byStrong)]]);
     body=renderGroups(gg);
   }else if(poolView==='score'){
-    // 점수 내림차순(높을수록 강함). 점수 없는 매물은 뒤로 모읍니다.
-    const has=rem.filter(p=>p.score!=null).sort((a,b)=>b.score-a.score);
-    body=renderGroups([['클랜점수순',has],['클랜점수 미정',rem.filter(p=>p.score==null)]]);
+    // 점수 내림차순(높을수록 강함, 동점은 강한 순). 점수 없는 매물은 뒤로 모읍니다.
+    const has=rem.filter(p=>p.score!=null).sort((a,b)=>b.score-a.score||byStrong(a,b));
+    body=renderGroups([['클랜점수순',has],['클랜점수 미정',rem.filter(p=>p.score==null).sort(byStrong)]]);
   }else{
     body=poolDiv(draw?nextUpList():rem);
   }
