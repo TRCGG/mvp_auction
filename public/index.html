@@ -246,6 +246,11 @@ button.pres:hover{background:rgba(255,255,255,.05)}
 .champs{display:flex;gap:5px;flex-wrap:wrap;margin:-4px 0 12px}
 .champs span{font-size:var(--fs-2xs);color:var(--muted);background:var(--panel2);
   border-radius:var(--r-sm);padding:4px 9px}
+/* 한마디 — 선수 본인의 목소리. 무대의 골드 모티프를 왼쪽 헤어라인으로 이어받되,
+   입찰 정보와 헷갈리지 않게 배경은 낮추고 서체만 살짝 기울입니다. */
+.lot-msg{font-size:var(--fs-sm);font-style:italic;color:var(--body2);background:var(--panel2);
+  border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:8px 12px;
+  margin:0 0 14px;word-break:keep-all;overflow-wrap:anywhere}
 /* hero: 현재 최고 입찰 — 화면에서 가장 무거운 면. 패널보다 밝은 배경 + 큰 숫자. */
 .high{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--r-lg);padding:15px;margin-bottom:12px}
 .high.mine{border-color:var(--gold);background:var(--gold-soft)}
@@ -383,9 +388,13 @@ body.dragging .team[data-team-drop]{outline:2px dashed var(--line);outline-offse
 .log-list div b{font-weight:500;color:var(--text)}
 .log-list em{font-family:var(--num);font-size:var(--fs-base);color:var(--body2);font-style:normal}
 
-.pool{display:flex;gap:7px;flex-wrap:wrap}
-/* 남은 매물 칩 — 2줄 카드. 테두리 색 = 등급 구간(롤 티어색). 라인 색은 없음. */
-.pcard{display:flex;flex-direction:column;gap:4px;min-width:132px;background:var(--bg);
+/* 남은 매물 — 균일 그리드. 모든 칩이 같은 폭이고, 같은 줄의 칩은 같은 높이(grid stretch). */
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:7px}
+/* 빈 풀 힌트는 첫 칸(152px)에 갇히지 않게 전체 폭으로 */
+.pool>.hint{grid-column:1/-1}
+/* 남은 매물 칩. 기본 2줄(이름·값/라인·티어), 방에 챔피언·한마디 데이터가 있으면 그 줄이 전 칩에 깔림.
+   테두리 색 = 등급 구간(롤 티어색). 라인 색은 없음. */
+.pcard{display:flex;flex-direction:column;gap:4px;width:100%;height:100%;background:var(--bg);
   border:1.5px solid var(--line);border-radius:var(--r-md);padding:7px 10px;line-height:1.2;color:var(--text);text-align:left}
 button.pcard{cursor:pointer;transition:.12s}
 button.pcard:hover:not(:disabled){background:var(--panel2)}
@@ -398,6 +407,14 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .pc-line{font-weight:700;letter-spacing:.03em}
 .pc-sub{font-weight:400;color:var(--muted);font-size:var(--fs-2xs)}
 .pc-tier{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
+/* 모스트 챔피언 줄 — 가운데, 한 줄 말줄임(전문은 툴팁). 비어도 자리를 유지해 카드 크기 통일. */
+.pc-ch{border-top:1px solid var(--line);padding-top:5px;font-size:var(--fs-2xs);color:var(--muted);
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 한마디 줄 — 2줄 고정. 20자 전문이 대부분 다 보이고(최소 폭에선 끝이 …·전문은 title),
+   짧거나 비어도 2줄 높이를 유지해 카드 크기가 같음. */
+.pc-msg{border-top:1px solid var(--line);padding-top:5px;font-size:var(--fs-2xs);font-style:italic;color:var(--body2);
+  line-height:1.45;min-height:calc(2*1.45em + 5px);word-break:keep-all;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 /* 정렬/그룹 토글 */
 .psort{display:inline-flex;gap:2px;margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:2px}
 .psort button{font-size:var(--fs-xs);padding:9px 13px;border-radius:var(--r-sm);color:var(--muted);letter-spacing:0}
@@ -1211,6 +1228,7 @@ function lotBody(){
       ${p.tier?`<span class="tier">${esc(p.tier)}</span>`:''}
     </div>
     ${p.champs&&p.champs.length?`<div class="champs">${p.champs.map(c=>`<span>${esc(c)}</span>`).join('')}</div>`:''}
+    ${p.msg?`<div class="lot-msg">“${esc(p.msg)}”</div>`:''}
     <div class="hint" style="margin-bottom:16px">잔여 매물 ${remaining().length-1}명</div>
 
     <div class="clock ${ms<=5000?'hot':''}">
@@ -1543,6 +1561,9 @@ function poolPanel(){
   const posline=LINES.map(l=>`${l} ${rem.filter(p=>p.line===l).length}`).join(' · ');
   const noline=rem.filter(p=>!p.line).length;
   const sc=scoreMode(), tier=tierMode();
+  // 챔피언·한마디 줄은 방에 그 데이터가 하나라도 있을 때만 전 칩에 깔립니다(비어도 자리 유지 →
+  // 카드 크기 통일). 아무도 안 쓰는 방은 옛 2줄 칩 그대로 — 빈 줄로 세로 공간을 낭비하지 않게.
+  const anyCh=S.pool.some(p=>p.champs&&p.champs.length), anyMsg=S.pool.some(p=>p.msg);
   const chip=p=>{
     // 2줄 카드: 윗줄 닉네임·값, 아랫줄 주포/부포·솔랭티어.
     // 테두리 색 = 클랜티어색 우선, 없으면 솔랭티어색, 둘 다 없으면 무채색.
@@ -1563,7 +1584,11 @@ function poolPanel(){
       <div class="pc-bot">
         <span class="pc-line">${esc(p.line)||'-'}${p.sub?`<span class="pc-sub">/${esc(subLabel(p.sub))}</span>`:''}${topVal&&p.status==='pass'?' <span class="pc-pass">유찰</span>':''}</span>
         <span class="pc-tier">${esc(p.tier)||'-'}</span>
-      </div>`;
+      </div>${
+      // 말줄임으로 잘릴 수 있는 줄은 title로 전문을 답니다. 빈 칸은 &nbsp;로 높이만 유지.
+      anyCh?(()=>{ const chs=(p.champs||[]).join(' · ');
+        return `<div class="pc-ch"${chs?` title="${esc(chs)}"`:''}>${chs?esc(chs):'&nbsp;'}</div>`; })():''}${
+      anyMsg?`<div class="pc-msg"${p.msg?` title="${esc(p.msg)}"`:''}>${p.msg?`“${esc(p.msg)}”`:'&nbsp;'}</div>`:''}`;
     const bst=`style="border-color:${bc};border-left-width:4px"`;
     // 진행자는 매물이 없을 때 카드를 팀으로 드래그해 배정할 수 있습니다.
     const drag=(host&&!live&&!draft)?`draggable="true" data-dpid="${p.id}"`:'';
@@ -2274,7 +2299,8 @@ function seedSetupFromRoom(S0){
   players=S0.pool.map(p=>({name:p.name,tag:p.tag,tier:p.tier,line:p.line,sub:p.sub,
     grade:p.grade==null?'':String(p.grade),
     score:p.score==null?'':String(p.score),
-    champs:(p.champs||[]).slice()}));
+    champs:(p.champs||[]).slice(),
+    msg:p.msg||''}));
   poolText='';
 }
 
@@ -2382,14 +2408,15 @@ function renderSetup(mode){
         <details style="margin-top:14px"${poolText?' open':''}>
           <summary class="hint" style="cursor:pointer">엑셀 없이 직접 입력하기</summary>
           <p class="hint" style="margin:8px 0 6px">엑셀 양식과 같은 순서로, 쉼표로 구분해 한 줄에 한 명씩 적습니다.<br>
-            <b>아이디, 솔랭티어, 클랜티어, 주포지션, 부포지션, 주챔프1, 주챔프2, 주챔프3, 클랜점수</b><br>
+            <b>아이디, 솔랭티어, 클랜티어, 주포지션, 부포지션, 주챔프1, 주챔프2, 주챔프3, 클랜점수, 한마디</b><br>
             아이디는 <b>닉네임#태그</b>(예: 페이커#KR1)이며 아이디만 필수입니다.<br><br>
             <b>솔랭티어</b>는 라이엇이 정한 값, <b>클랜티어 · 클랜점수</b>는 클랜이 매기는 값입니다.<br>
             · <b>솔랭티어</b> — 라이엇 솔로랭크 티어. 축약형 권장: <b>M7</b>=마스터700 · <b>G3</b>=골드3 · <b>S4</b>=실버4 · <b>D1</b>=다이아1 (한글·영문도 인식)<br>
             · <b>클랜티어</b> — 클랜이 매긴 실력 티어. 1~5, 소수 첫째자리까지(예 1.2·3.4). 1이 최상위. <b>클랜티어 균형</b>에서 쓰입니다<br>
-            · <b>클랜점수</b> — 클랜이 매긴 점수. 0~999 정수, 높을수록 강함. <b>클랜점수</b> 규칙에서 지명 순서를 정합니다</p>
+            · <b>클랜점수</b> — 클랜이 매긴 점수. 0~999 정수, 높을수록 강함. <b>클랜점수</b> 규칙에서 지명 순서를 정합니다<br>
+            · <b>한마디</b> — 매물 카드에 함께 보여줄 한 줄(최대 20자). 마지막 칸이라 쉼표가 들어가도 됩니다</p>
           <textarea id="cPool" rows="6" spellcheck="false"
-            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스, 37&#10;홍길동#0415, G3, 3.4, TOP, , 가렌, , , 24&#10;이영희#KR1">${esc(poolText)}</textarea>
+            placeholder="페이커#KR1, M7, 1.2, MID, ADC, 아지르, 오리아나, 사일러스, 37, 모두 재밌게 해봐요&#10;홍길동#0415, G3, 3.4, TOP, , 가렌, , , 24&#10;이영희#KR1">${esc(poolText)}</textarea>
           <button class="btn ghost" id="bText" style="margin-top:8px">목록에 추가</button>
         </details>
       </div>
@@ -2520,7 +2547,8 @@ function readSheet(rows){
               클랜티어:'grade','클랜 티어':'grade',등급:'grade',티어등급:'grade','실력 등급':'grade',실력등급:'grade',
               클랜점수:'score','클랜 점수':'score',점수:'score','실력 점수':'score',실력점수:'score',스코어:'score',
               주포지션:'line',부포지션:'sub',
-              주챔프1:'c1',주챔프2:'c2',주챔프3:'c3'};
+              주챔프1:'c1',주챔프2:'c2',주챔프3:'c3',
+              한마디:'msg',하고싶은말:'msg',한줄소개:'msg',각오:'msg'};
   // 제목 칸의 공백을 모두 지우고 대조합니다. want의 띄어쓰기 있는 열쇠('솔랭 티어' 등)는 모두
   // 붙여 쓴 짝이 함께 있어서, 이러면 전각 공백('아이디　')·중간 공백 변형이 한꺼번에 걸립니다.
   const hkey=c=>String(c??'').replace(/\s+/g,'');
@@ -2552,7 +2580,8 @@ function readSheet(rows){
       name, tag,
       tier:at('tier'), grade:gnum(at('grade')), score:snum(at('score')),
       line:norm(at('line')), sub:normSub(at('sub')),
-      champs:[at('c1'),at('c2'),at('c3')].filter(Boolean)
+      champs:[at('c1'),at('c2'),at('c3')].filter(Boolean),
+      msg:at('msg').slice(0,20)
     });
   }
   return out;
@@ -2618,7 +2647,10 @@ function addText(){
       line:norm(p[3]),
       sub:normSub(p[4]),
       champs:[p[5],p[6],p[7]].map(clean).filter(Boolean),
-      score:snum(p[8])
+      score:snum(p[8]),
+      // 한마디는 마지막 칸이라, 쉼표가 들어 있어도 남은 칸을 다시 합쳐 살립니다.
+      // p는 칸마다 trim돼 쉼표 뒤 공백이 사라지므로, 원문(raw)에서 다시 잘라 씁니다.
+      msg:clean(raw.split(',').slice(9).join(',')).slice(0,20)
     };
   }).filter(p=>p.name);
   if(!add.length) return toast('추가할 내용이 없습니다',true);
@@ -2682,7 +2714,7 @@ function drawPlayers(){
       <span class="nm">${esc(p.name)}${p.tag?` <i>#${esc(p.tag)}</i>`:''}</span>
       <span><span class="tag t-${p.line}">${esc(p.line)||'-'}</span></span>
       <span class="tr">${reqMark(p)}${gradeBadge(p.grade)} ${p.sub?esc(subLabel(p.sub))+' · ':''}${esc(p.tier)||'솔랭 미상'}</span>
-      <span class="ch">${p.champs.map(esc).join(' · ')}</span>
+      <span class="ch">${p.champs.map(esc).join(' · ')}${p.msg?`${p.champs.length?' · ':''}<i style="color:var(--muted)">“${esc(p.msg)}”</i>`:''}</span>
       <button data-rm="${i}" title="삭제" aria-label="${esc(p.name)} 삭제">&times;</button>
     </div>`).join('');
 

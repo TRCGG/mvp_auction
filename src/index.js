@@ -492,6 +492,8 @@ function buildPool(cfg) {
     score: parseScore(p.score),
     champs: (Array.isArray(p.champs) ? p.champs : [])
       .slice(0, 3).map(c => String(c || '').trim().slice(0, 20)).filter(Boolean),
+    // 한마디 — 매물 카드에 얹는 본인 한 줄. 최대 20자(예: "준비해주신 운영자모두 고생많으셨습니다").
+    msg: String(p.msg || '').trim().replace(/\s+/g, ' ').slice(0, 20),
     status: 'wait', teamId: null, price: 0
   })).filter(p => p.name);
 }
