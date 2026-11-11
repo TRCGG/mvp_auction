@@ -454,6 +454,19 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .volsl::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--gold);border:none;cursor:pointer}
 .volsl:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;z-index:200;padding:20px}
+/* 소개 카드 관리 창 */
+.cm-help{margin:0;padding-left:18px;display:grid;gap:5px}
+.cm-help code,.cm-report code{font-size:var(--fs-2xs);background:var(--panel2);border:1px solid var(--line);padding:0 5px;border-radius:4px;word-break:break-all}
+.cm-report{background:var(--panel2);border-radius:var(--r-md);padding:10px 12px;font-size:var(--fs-xs);line-height:1.7;margin:0 0 10px;display:grid;gap:4px}
+.cm-report code{background:var(--panel)}
+.cm-list{display:grid;gap:6px}
+.cm-row{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px 6px 6px;border:1px solid var(--line);border-radius:var(--r-md)}
+.cm-th{display:block;width:72px;height:41px;object-fit:contain;background:var(--panel2);border-radius:4px;cursor:zoom-in}
+.cm-th.none{display:grid;place-items:center;font-size:var(--fs-2xs);color:var(--muted);cursor:default;border:1px dashed var(--line2)}
+.cm-nm{min-width:0;display:flex;flex-direction:column}
+.cm-nm>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:640px){ .cm-row{grid-template-columns:60px minmax(0,1fr)} .cm-th{width:60px;height:34px} .cm-act{grid-column:1/-1;justify-content:flex-start} }
 .img-lb{position:fixed;inset:0;background:rgba(5,9,13,.9);display:grid;place-items:center;z-index:210;padding:16px;cursor:zoom-out;outline:none}
 .img-lb img{max-width:100%;max-height:calc(100vh - 32px);border-radius:var(--r-lg);border:1px solid var(--line)}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
@@ -1062,6 +1075,7 @@ function paint(){
   const keep=a&&a.id&&('value' in a)?{id:a.id,val:a.value,s:a.selectionStart,e:a.selectionEnd}:null;
   $('app').innerHTML=topbar()+stage();
   wire();
+  renderCardModal();   // 소개 카드 관리 창이 열려 있으면 새 상태로 다시 그립니다(닫혀 있으면 아무것도 안 함)
   if(keep){
     const el=$(keep.id);
     if(el&&('value' in el)){
@@ -1210,11 +1224,10 @@ function lotBody(){
         <button class="btn gold" style="flex:1" id="bNext" ${done?'disabled':''}>다음 매물 올리기</button>
         <button class="btn" id="bUndo">되돌리기</button>
       </div>${hostClockCtl()}
-      ${nSaved&&!done?`<div class="row mt-2">
-        <button class="btn ghost sm" id="bSavedImgs" ${bulkBusy?'disabled':''}>${bulkBusy?'카드 올리는 중…':`저장된 카드 ${nSaved}장 한꺼번에 올리기`}</button>
-      </div>`:''}
-      ${S.phase==='ready'?`<div class="row mt-2">
-        <button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button>
+      ${!done?`<div class="row mt-2" style="align-items:center">
+        ${S.phase==='ready'?'<button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button>':''}
+        <button class="btn ghost sm" id="bCards">🖼 소개 카드 관리</button>
+        <span class="hint">카드 ${cardRows().filter(x=>x.imgV).length}/${cardRows().length}명${nSaved?` · <b style="color:var(--gold)">저장본 ${nSaved}장 불러오기 가능</b>`:''}</span>
       </div>`:''}
       ${S.log.length?`<div class="row end" style="margin-top:10px">
         <button class="btn danger-soft sm" id="bReset">경매 초기화</button>
@@ -1861,23 +1874,124 @@ function wire(){
   on('bImg',()=>{ const f=$('imgFile'); if(f){ f.dataset.pid=S.current||''; f.click(); } });
   const imgFile=$('imgFile');
   if(imgFile) imgFile.onchange=e=>{ const f=e.target.files[0]; const pid=e.target.dataset.pid; if(f) uploadImg(f,pid); e.target.value=''; };
-  on('bSavedImgs',()=>uploadSaved(savedTargets()));
+  on('bCards',openCardModal);
   on('bSavedImg',()=>{ const p=S.pool.find(x=>x.id===S.current); if(p) uploadSaved([p]); });
   const li=$('lotImg');
   if(li){ li.onclick=()=>openImg(li.src,li.alt); li.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openImg(li.src,li.alt); } }; }
-  on('bImgDel',async()=>{
-    const pid=S.current;
-    if(!pid) return;
-    if(!await askConfirm({title:'이 선수의 소개 카드를 지울까요?',msg:'업로드한 카드와 이 브라우저에 저장된 카드가 함께 삭제됩니다.',confirmLabel:'삭제'})) return;
-    try{
-      const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,{method:'DELETE'});
-      if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'삭제하지 못했습니다');
-      const p=S.pool.find(x=>x.id===pid);
-      // 서버 방송이 이 응답보다 먼저 와서 이미 다시 그렸을 수 있어, 보관함에서 뺀 뒤 한 번 더 그립니다.
-      if(p&&window.indexedDB){ forgetPhoto(p); paint(); }
-      toast('카드를 지웠습니다');
-    }catch(e){ toast(e.message,true); }
-  });
+  on('bImgDel',()=>{ if(S.current) deleteCard(S.current); });
+}
+
+async function deleteCard(pid){
+  const p=S.pool.find(x=>x.id===pid);
+  if(!p) return;
+  if(!await askConfirm({title:`${p.name}의 소개 카드를 지울까요?`,msg:'업로드한 카드와 이 브라우저에 저장된 카드가 함께 삭제됩니다.',confirmLabel:'삭제'})) return;
+  try{
+    const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,{method:'DELETE'});
+    if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'삭제하지 못했습니다');
+    // 서버 방송이 이 응답보다 먼저 와서 이미 다시 그렸을 수 있어, 보관함에서 뺀 뒤 한 번 더 그립니다.
+    if(window.indexedDB){ forgetPhoto(p); paint(); }
+    toast('카드를 지웠습니다');
+  }catch(e){ toast(e.message,true); }
+}
+
+/* ═══ 소개 카드 관리 (진행자) ═══
+   경매 전·매물 사이에 선수별 카드를 미리 올리는 창. #app 밖(body)에 붙어 있어 방송 재렌더에도
+   열린 채로 남고, paint()가 끝날 때 renderCardModal()로 내용만 새로 그립니다. */
+let cardReport=null, bulkMsg='';
+const cardRows=()=>S.pool.filter(p=>p.status!=='sold');   // 낙찰된 선수는 다시 화면에 나오지 않으므로 제외
+const cardNorm=s=>String(s||'').toLowerCase().replace(/\s+/g,'');   // 파일 이름 매칭용: 대소문자·띄어쓰기 무시
+function openCardModal(){
+  if(!S||me.role!=='host') return;
+  ensurePhotoKeys();
+  let m=$('cardmodal');
+  if(!m){ m=document.createElement('div'); m.id='cardmodal'; m.className='modal-bg'; m.tabIndex=-1; document.body.appendChild(m);
+    m.onclick=e=>{ if(e.target===m) closeCardModal(); };
+    // 크게 보기가 위에 떠 있으면 Esc는 그것만 닫습니다.
+    m.onkeydown=e=>{ if(e.key==='Escape'&&!document.querySelector('.img-lb')) closeCardModal(); }; }
+  renderCardModal();
+  m.focus();
+}
+function closeCardModal(){
+  if(bulkBusy) return toast('카드를 올리는 중입니다. 끝난 뒤 닫아주세요',true);
+  const m=$('cardmodal'); if(m) m.remove(); cardReport=null;
+}
+function renderCardModal(){
+  const m=$('cardmodal'); if(!m||!S) return;
+  if(me.role!=='host'||S.mode==='draft'){ m.remove(); return; }
+  const old=m.querySelector('.modal'), st=old?old.scrollTop:0;
+  const rows=cardRows(), have=rows.filter(p=>p.imgV).length, nSaved=savedTargets().length, busy=bulkBusy?'disabled':'';
+  const list=a=>a.map(x=>`<code>${esc(x)}</code>`).join(' ');
+  const rep=cardReport;
+  m.innerHTML=`<div class="modal" style="max-width:640px">
+    <div class="modal-hd"><b>소개 카드 관리 <span class="hint" style="font-weight:400">· 카드 ${have}/${rows.length}명</span></b><button class="btn ghost sm" id="cmClose">닫기</button></div>
+    <ul class="cm-help hint">
+      <li>카드는 경매 화면에서 선수 이름 위에 표시되고, 누르면 크게 보입니다. <b>가로 16:9 (예: 1200×675)</b>를 권장하며, 올리면 자동으로 줄여서 저장합니다.</li>
+      <li><b>여러 장 한꺼번에</b>: 파일 이름을 선수 닉네임으로 맞춘 뒤 여러 파일을 함께 고르면 이름이 맞는 선수에게 자동으로 붙습니다. 예) <code>Alpha.png</code> 또는 <code>Alpha#KR1.png</code>. 같은 닉네임이 두 명 이상이면 <code>#태그</code>까지 써야 합니다. 대소문자·띄어쓰기는 구분하지 않고, 이미 카드가 있는 선수는 새 파일로 바뀝니다.</li>
+      <li>올린 카드는 <b>이 브라우저에도 저장</b>됩니다. 다음에 같은 닉네임#태그로 방을 만들면 <b>저장된 카드 불러오기</b>로 한 번에 다시 올릴 수 있습니다. 다른 PC·브라우저·시크릿 창에서는 저장본이 보이지 않습니다.</li>
+    </ul>
+    <div class="row" style="margin:12px 0 10px">
+      <button class="btn gold sm" id="cmMulti" ${busy}>여러 장 한꺼번에 올리기</button>
+      <button class="btn sm" id="cmSaved" ${bulkBusy||!nSaved?'disabled':''}>저장된 카드 ${nSaved}장 불러오기</button>
+      <input type="file" id="cmFiles" accept="image/jpeg,image/png,image/webp" multiple hidden>
+      <input type="file" id="cmFile" accept="image/jpeg,image/png,image/webp" hidden>
+    </div>
+    ${bulkBusy?`<p class="cm-report" style="color:var(--gold)">${esc(bulkMsg||'카드를 올리는 중…')}</p>`:''}
+    ${rep?`<div class="cm-report">
+      <b style="color:${rep.fail.length||rep.miss.length||rep.amb.length?'var(--gold)':'var(--ok)'}">${rep.ok}장을 올렸습니다${rep.dup?` (같은 선수의 파일이 여러 개라 ${rep.dup}개는 건너뜀)`:''}</b>
+      ${rep.amb.length?`<div>닉네임이 같은 선수가 여러 명이라 <b>#태그</b>를 붙여야 합니다: ${list(rep.amb)}</div>`:''}
+      ${rep.miss.length?`<div>이름이 맞는 선수가 없습니다(낙찰된 선수 제외): ${list(rep.miss)}</div>`:''}
+      ${rep.fail.length?`<div style="color:var(--danger)">올리지 못했습니다: ${list(rep.fail)}</div>`:''}
+    </div>`:''}
+    <div class="cm-list">${rows.length?rows.map(p=>{
+      const saved=!p.imgV&&photoKeys.has(photoKey(p));
+      return `<div class="cm-row">
+        ${p.imgV?`<img class="cm-th" data-cmview="${p.id}" tabindex="0" src="/api/room/${S.code}/img/${p.id}?v=${p.imgV}" alt="${esc(p.name)} 소개 카드 (누르면 크게 보기)">`:'<span class="cm-th none">카드 없음</span>'}
+        <div class="cm-nm"><b>${esc(p.name)}${p.tag?`<span class="hint" style="font-weight:400"> #${esc(p.tag)}</span>`:''}</b><span class="hint">${esc(p.line)||'라인 미지정'}${p.id===S.current?' · <b style="color:var(--gold)">경매 중</b>':''}${p.status==='pass'?' · 유찰':''}</span></div>
+        <div class="cm-act">
+          ${saved?`<button class="btn sm" data-cmsaved="${p.id}" ${busy}>저장본 쓰기</button>`:''}
+          <button class="btn ghost sm" data-cmup="${p.id}" ${busy}>${p.imgV?'변경':'올리기'}</button>
+          ${p.imgV?`<button class="btn ghost sm" data-cmdel="${p.id}" ${busy}>삭제</button>`:''}
+        </div>
+      </div>`; }).join(''):'<span class="hint">남은 매물이 없습니다</span>'}</div>
+  </div>`;
+  $('cmClose').onclick=closeCardModal;
+  $('cmMulti').onclick=()=>$('cmFiles').click();
+  $('cmFiles').onchange=e=>{ const fs=[...e.target.files]; e.target.value=''; if(fs.length) uploadMany(fs); };
+  $('cmSaved').onclick=()=>uploadSaved(savedTargets());
+  // 대상 pid는 버튼을 누른 시점에 고정합니다(파일 탐색기를 여는 사이 목록이 다시 그려져도 안전).
+  m.querySelectorAll('[data-cmup]').forEach(b=>b.onclick=()=>{ const f=$('cmFile'); f.dataset.pid=b.dataset.cmup; f.click(); });
+  $('cmFile').onchange=e=>{ const f=e.target.files[0], pid=e.target.dataset.pid; e.target.value=''; if(f&&pid) uploadImg(f,pid); };
+  m.querySelectorAll('[data-cmsaved]').forEach(b=>b.onclick=()=>{ const p=S.pool.find(x=>x.id===b.dataset.cmsaved); if(p) uploadSaved([p]); });
+  m.querySelectorAll('[data-cmdel]').forEach(b=>b.onclick=()=>deleteCard(b.dataset.cmdel));
+  m.querySelectorAll('[data-cmview]').forEach(im=>{ const go=()=>openImg(im.src,im.alt);
+    im.onclick=go; im.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; });
+  m.querySelector('.modal').scrollTop=st;
+}
+// 파일 이름(확장자 제외)으로 선수를 찾아 차례로 올립니다. '닉네임#태그'면 정확히, '닉네임'이면 동명이인이 없을 때만.
+async function uploadMany(files){
+  if(bulkBusy) return;
+  const rows=cardRows(), byFull=new Map(), byName=new Map();
+  rows.forEach(p=>{ byFull.set(cardNorm(p.name+'#'+(p.tag||'')),p); const k=cardNorm(p.name); byName.set(k,(byName.get(k)||[]).concat(p)); });
+  const miss=[], amb=[], jobs=new Map();
+  let matched=0;
+  for(const f of files){
+    const k=cardNorm(f.name.replace(/\.[^.]+$/,''));
+    let p=null;
+    if(k.includes('#')) p=byFull.get(k)||null;
+    else{ const c=byName.get(k)||[]; if(c.length>1){ amb.push(f.name); continue; } p=c[0]||null; }
+    if(!p){ miss.push(f.name); continue; }
+    matched++; jobs.set(p.id,[f,p]);   // 같은 선수 파일이 여러 개면 마지막 것
+  }
+  bulkBusy=true; cardReport=null;
+  let ok=0, i=0; const fail=[];
+  for(const [f,p] of jobs.values()){
+    bulkMsg=`카드를 올리는 중… ${++i}/${jobs.size} · ${p.name}`; renderCardModal();
+    try{ await uploadCardFile(f,p.id); ok++; }catch(e){ fail.push(`${f.name} — ${e.message}`); }
+  }
+  bulkBusy=false; bulkMsg='';
+  cardReport={ok,miss,amb,fail,dup:matched-jobs.size};
+  paint(); renderCardModal();
+  toast(`카드 ${ok}장을 올렸습니다${miss.length+amb.length+fail.length?` · 확인 필요 ${miss.length+amb.length+fail.length}개`:''}`,ok===0);
 }
 
 /* 소개 카드 크게 보기. 아무 데나 누르거나 Esc로 닫습니다.
@@ -1940,9 +2054,10 @@ async function postImg(pid,blob){
 // 저장된 사진을 순서대로 올립니다. 한 장마다 방송이 와서 화면의 남은 장수가 줄어듭니다.
 async function uploadSaved(list){
   if(bulkBusy||!list.length) return;
-  bulkBusy=true; paint();
-  let ok=0, fail=0;
+  bulkBusy=true; cardReport=null; paint();
+  let ok=0, fail=0, i=0;
   for(const p of list){
+    bulkMsg=`저장된 카드를 올리는 중… ${++i}/${list.length} · ${p.name}`; renderCardModal();
     try{
       const rec=await photoDB.get(photoKey(p));
       if(!rec){ photoKeys.delete(photoKey(p)); fail++; continue; }
@@ -1950,21 +2065,22 @@ async function uploadSaved(list){
       ok++;
     }catch{ fail++; }
   }
-  bulkBusy=false; paint();
+  bulkBusy=false; bulkMsg=''; paint(); renderCardModal();
   toast(fail?`카드 ${ok}장을 올렸습니다 (${fail}장 실패)`:`저장된 카드 ${ok}장을 올렸습니다`,fail>0&&!ok);
 }
 
 /* 진행자 전용: 소개 카드를 브라우저에서 줄여서(최대 1200px·195KB) 올리고, 이 브라우저 보관함에도 저장합니다 */
+async function uploadCardFile(file,pid){
+  const blob=await shrinkImage(file);
+  await postImg(pid,blob);
+  const p=S.pool.find(x=>x.id===pid);
+  if(p&&window.indexedDB) savePhoto(p,blob);
+}
 async function uploadImg(file,pid){
   pid=pid||(S&&S.current);
   if(!pid) return toast('경매 중인 매물이 없습니다',true);
-  try{
-    const blob=await shrinkImage(file);
-    await postImg(pid,blob);
-    const p=S.pool.find(x=>x.id===pid);
-    if(p&&window.indexedDB) savePhoto(p,blob);
-    toast('카드를 올렸습니다');
-  }catch(e){ toast(e.message,true); }
+  try{ await uploadCardFile(file,pid); toast('카드를 올렸습니다'); }
+  catch(e){ toast(e.message,true); }
 }
 // 카드에는 글자가 있어 JPEG 저화질에서 번집니다. WebP 저장을 지원하면 WebP로, 아니면(일부 Safari) JPEG로.
 // 지원하지 않는 브라우저는 요청을 무시하고 PNG를 돌려주므로 결과 형식으로 판별합니다.
