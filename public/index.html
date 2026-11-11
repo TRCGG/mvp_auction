@@ -466,7 +466,7 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .cm-nm{min-width:0;display:flex;flex-direction:column}
 .cm-nm>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cm-act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-@media(max-width:640px){ .cm-row{grid-template-columns:60px minmax(0,1fr)} .cm-th{width:60px;height:34px} .cm-act{grid-column:1/-1;justify-content:flex-start} }
+@media(max-width:640px){ .cm-entry{display:none} }   /* 소개 카드 올리기·관리는 PC 전용 — 휴대폰은 보기만 */
 .img-lb{position:fixed;inset:0;background:rgba(5,9,13,.9);display:grid;place-items:center;z-index:210;padding:16px;cursor:zoom-out;outline:none}
 .img-lb img{max-width:100%;max-height:calc(100vh - 32px);border-radius:var(--r-lg);border:1px solid var(--line)}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
@@ -1226,8 +1226,8 @@ function lotBody(){
       </div>${hostClockCtl()}
       ${!done?`<div class="row mt-2" style="align-items:center">
         ${S.phase==='ready'?'<button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button>':''}
-        <button class="btn ghost sm" id="bCards">🖼 소개 카드 관리</button>
-        <span class="hint">카드 ${cardRows().filter(x=>x.imgV).length}/${cardRows().length}명${nSaved?` · <b style="color:var(--gold)">저장본 ${nSaved}장 불러오기 가능</b>`:''}</span>
+        <button class="btn ghost sm cm-entry" id="bCards">🖼 소개 카드 관리</button>
+        <span class="hint cm-entry">카드 ${cardRows().filter(x=>x.imgV).length}/${cardRows().length}명${nSaved?` · <b style="color:var(--gold)">저장본 ${nSaved}장 불러오기 가능</b>`:''}</span>
       </div>`:''}
       ${S.log.length?`<div class="row end" style="margin-top:10px">
         <button class="btn danger-soft sm" id="bReset">경매 초기화</button>
@@ -1272,13 +1272,13 @@ function lotBody(){
       <button class="btn" id="bPause">${S.pausedLeft!=null?'재개':'일시정지'}</button>
     </div>
     ${hostClockCtl()}
-    <div class="row mt-2">
+    <div class="row mt-2 cm-entry">
       ${!p.imgV&&photoKeys.has(photoKey(p))?`<button class="btn gold sm" id="bSavedImg" ${bulkBusy?'disabled':''}>저장된 카드 쓰기</button>`:''}
       <button class="btn ghost sm" id="bImg">${p.imgV?'카드 변경':'소개 카드 올리기'}</button>
       ${p.imgV?'<button class="btn ghost sm" id="bImgDel">카드 삭제</button>':''}
       <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" hidden>
     </div>
-    <p class="hint" style="margin:6px 0 0">권장: 가로 16:9 카드 (예: 1200×675). 휴대폰에서는 작게 보이니 큰 글자 위주로, 작은 글자는 눌러서 크게 보는 용도입니다. 올린 카드는 이 브라우저에 저장돼 다음 경매에서 다시 쓸 수 있습니다.</p>`:''}`;
+    <p class="hint cm-entry" style="margin:6px 0 0">권장: 가로 16:9 카드 (예: 1200×675). 휴대폰에서는 작게 보이니 큰 글자 위주로, 작은 글자는 눌러서 크게 보는 용도입니다. 올린 카드는 이 브라우저에 저장돼 다음 경매에서 다시 쓸 수 있습니다.</p>`:''}`;
 }
 
 function bidControls(t,mine){
