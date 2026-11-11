@@ -235,7 +235,8 @@ button.pres:hover{background:rgba(255,255,255,.05)}
   background:linear-gradient(90deg,transparent,var(--gold) 30%,var(--gold) 70%,transparent);opacity:.75}
 .lot-empty{text-align:center;padding:54px 20px;color:var(--muted);font-size:var(--fs-base);line-height:1.85}
 .lot-no{font-family:var(--num);font-size:var(--fs-sm);color:var(--muted);letter-spacing:.2em}
-.lot-img{display:block;width:100%;height:240px;object-fit:cover;object-position:center 22%;
+/* 소개 카드(글자가 든 이미지)라 자르지 않고 전체를 보여줍니다. 누르면 크게 보기. */
+.lot-img{display:block;width:100%;height:auto;max-height:340px;object-fit:contain;cursor:zoom-in;
   border-radius:var(--r-lg);border:1px solid var(--line);margin-bottom:14px;background:var(--panel2)}
 .lot-name{font-size:clamp(30px,4.6vw,50px);font-weight:700;letter-spacing:-.035em;line-height:1.05;
   margin:10px 0 12px;word-break:keep-all}
@@ -453,6 +454,8 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .volsl::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--gold);border:none;cursor:pointer}
 .volsl:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;z-index:200;padding:20px}
+.img-lb{position:fixed;inset:0;background:rgba(5,9,13,.9);display:grid;place-items:center;z-index:210;padding:16px;cursor:zoom-out;outline:none}
+.img-lb img{max-width:100%;max-height:calc(100vh - 32px);border-radius:var(--r-lg);border:1px solid var(--line)}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;max-width:660px;width:100%;max-height:85vh;overflow:auto}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .modal-hd b{font-size:var(--fs-md)}
@@ -474,7 +477,7 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 /* 모바일 라이브 화면 — 팀장이 폰으로 입찰하는 상황이 기본값입니다.
    타이머는 스크롤해도 보이게 상단 고정, 입찰 패드는 엄지 크기, 사진은 줄여 패드가 첫 화면에 들어오게. */
 @media(max-width:640px){
-  .lot-img{height:150px}
+  .lot-img{max-height:190px}   /* 16:9 카드가 폰 폭에서 약 184px — 잘리지 않으면서 입찰 패드가 첫 화면에 남게 */
   .clock{position:sticky;top:0;z-index:5;background:var(--panel);padding:8px 0;margin-bottom:10px}
   .bidpad button{min-height:52px}
   .custom input{min-height:48px}
@@ -1193,7 +1196,9 @@ function stage(){
 
 function lotBody(){
   const p=S.pool.find(x=>x.id===S.current);
+  if(me.role==='host') ensurePhotoKeys();
   if(!p){
+    const nSaved=me.role==='host'?savedTargets().length:0;
     const done=allDone();
     return `<div class="lot-empty">${done
       ? '경매가 끝났습니다<br>아래 팀 구성을 확인하세요'
@@ -1205,6 +1210,9 @@ function lotBody(){
         <button class="btn gold" style="flex:1" id="bNext" ${done?'disabled':''}>다음 매물 올리기</button>
         <button class="btn" id="bUndo">되돌리기</button>
       </div>${hostClockCtl()}
+      ${nSaved&&!done?`<div class="row mt-2">
+        <button class="btn ghost sm" id="bSavedImgs" ${bulkBusy?'disabled':''}>${bulkBusy?'카드 올리는 중…':`저장된 카드 ${nSaved}장 한꺼번에 올리기`}</button>
+      </div>`:''}
       ${S.phase==='ready'?`<div class="row mt-2">
         <button class="btn ghost sm" id="bEdit">⚙ 방 설정 수정</button>
       </div>`:''}
@@ -1218,7 +1226,7 @@ function lotBody(){
   const bidTeam=S.bid?S.teams.find(x=>x.id===S.bid.teamId):null;
   const ms=leftMs(), pct=Math.min(100,ms/(S.clock*1000)*100);
 
-  return `${p.imgV?`<img class="lot-img" src="/api/room/${S.code}/img/${p.id}?v=${p.imgV}" alt="${esc(p.name)} 사진">`:''}
+  return `${p.imgV?`<img class="lot-img" id="lotImg" tabindex="0" src="/api/room/${S.code}/img/${p.id}?v=${p.imgV}" alt="${esc(p.name)} 소개 카드 (누르면 크게 보기)">`:''}
     <div class="lot-no">LOT ${String(S.pool.filter(x=>x.status==='sold').length+1).padStart(2,'0')}${p.status==='pass'?' <span style="font-size:var(--fs-2xs);font-weight:800;color:#E88A85;background:#2C1817;border-radius:4px;padding:2px 7px;letter-spacing:0;vertical-align:2px">재상정 · 유찰</span>':''}</div>
     <div class="lot-name">${esc(p.name)}${p.tag?`<span style="font-size:.34em;color:var(--muted);font-weight:400"> #${esc(p.tag)}</span>`:''}</div>
     <div class="lot-meta">
@@ -1252,10 +1260,12 @@ function lotBody(){
     </div>
     ${hostClockCtl()}
     <div class="row mt-2">
-      <button class="btn ghost sm" id="bImg">${p.imgV?'사진 변경':'선수 사진 올리기'}</button>
-      ${p.imgV?'<button class="btn ghost sm" id="bImgDel">사진 삭제</button>':''}
+      ${!p.imgV&&photoKeys.has(photoKey(p))?`<button class="btn gold sm" id="bSavedImg" ${bulkBusy?'disabled':''}>저장된 카드 쓰기</button>`:''}
+      <button class="btn ghost sm" id="bImg">${p.imgV?'카드 변경':'소개 카드 올리기'}</button>
+      ${p.imgV?'<button class="btn ghost sm" id="bImgDel">카드 삭제</button>':''}
       <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" hidden>
-    </div>`:''}`;
+    </div>
+    <p class="hint" style="margin:6px 0 0">권장: 가로 16:9 카드 (예: 1200×675). 휴대폰에서는 작게 보이니 큰 글자 위주로, 작은 글자는 눌러서 크게 보는 용도입니다. 올린 카드는 이 브라우저에 저장돼 다음 경매에서 다시 쓸 수 있습니다.</p>`:''}`;
 }
 
 function bidControls(t,mine){
@@ -1768,8 +1778,8 @@ function wire(){
   });
   on('bReset',()=>{ const draft=S&&S.mode==='draft';
     const msg=draft
-      ? '드래프트를 처음 상태로 초기화할까요?\n\n모든 지명 기록이 지워지고 지명 순서가 새로 추첨됩니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)'
-      : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·사진·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
+      ? '드래프트를 처음 상태로 초기화할까요?\n\n모든 지명 기록이 지워지고 지명 순서가 새로 추첨됩니다.\n(매물·팀·소개 카드·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)'
+      : '경매를 처음 상태로 초기화할까요?\n\n모든 낙찰·유찰·입찰 기록이 지워지고 팀 포인트가 원래대로 돌아갑니다.\n(매물·팀·소개 카드·링크는 그대로 유지됩니다. 초기화 직후에는 되돌리기로 복구할 수 있습니다.)';
     askConfirm({title:(S&&S.mode==='draft')?'드래프트를 초기화할까요?':'경매를 초기화할까요?',msg,confirmLabel:'초기화'}).then(ok=>{ if(ok) send('reset'); }); });
   on('bStartDraft',async()=>{
     if(!await confirmStart('드래프트를 시작할까요?')) return;
@@ -1851,47 +1861,132 @@ function wire(){
   on('bImg',()=>{ const f=$('imgFile'); if(f){ f.dataset.pid=S.current||''; f.click(); } });
   const imgFile=$('imgFile');
   if(imgFile) imgFile.onchange=e=>{ const f=e.target.files[0]; const pid=e.target.dataset.pid; if(f) uploadImg(f,pid); e.target.value=''; };
+  on('bSavedImgs',()=>uploadSaved(savedTargets()));
+  on('bSavedImg',()=>{ const p=S.pool.find(x=>x.id===S.current); if(p) uploadSaved([p]); });
+  const li=$('lotImg');
+  if(li){ li.onclick=()=>openImg(li.src,li.alt); li.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openImg(li.src,li.alt); } }; }
   on('bImgDel',async()=>{
     const pid=S.current;
     if(!pid) return;
-    if(!await askConfirm({title:'이 선수의 사진을 지울까요?',msg:'업로드한 사진이 삭제됩니다.',confirmLabel:'삭제'})) return;
+    if(!await askConfirm({title:'이 선수의 소개 카드를 지울까요?',msg:'업로드한 카드와 이 브라우저에 저장된 카드가 함께 삭제됩니다.',confirmLabel:'삭제'})) return;
     try{
       const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,{method:'DELETE'});
       if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'삭제하지 못했습니다');
-      toast('사진을 지웠습니다');
+      const p=S.pool.find(x=>x.id===pid);
+      // 서버 방송이 이 응답보다 먼저 와서 이미 다시 그렸을 수 있어, 보관함에서 뺀 뒤 한 번 더 그립니다.
+      if(p&&window.indexedDB){ forgetPhoto(p); paint(); }
+      toast('카드를 지웠습니다');
     }catch(e){ toast(e.message,true); }
   });
 }
 
-/* 진행자 전용: 사진을 브라우저에서 줄여서(최대 800px·95KB) 올립니다 */
+/* 소개 카드 크게 보기. 아무 데나 누르거나 Esc로 닫습니다.
+   재렌더(입찰 방송)는 #app만 다시 그리므로 body에 붙인 이 창은 유지됩니다. */
+function openImg(src,alt){
+  if(document.querySelector('.img-lb')) return;
+  const m=document.createElement('div'); m.className='img-lb'; m.tabIndex=-1;
+  m.innerHTML='<img>'; const im=m.querySelector('img'); im.src=src; im.alt=alt||'';
+  const close=()=>{ m.remove(); document.removeEventListener('keydown',onKey); };
+  const onKey=e=>{ if(e.key==='Escape') close(); };
+  m.onclick=close; document.addEventListener('keydown',onKey);
+  document.body.appendChild(m); m.focus();
+}
+
+/* 진행자 브라우저 사진 보관함(IndexedDB). 키는 닉네임#태그라서 새 방에서도 같은 사람이면 다시 씁니다.
+   서버로 보내지 않고 이 브라우저에만 남습니다. Safari 호환을 위해 Blob 대신 {type, ArrayBuffer}로 저장합니다. */
+const photoKey=p=>(p.name+'#'+(p.tag||'')).trim().toLowerCase();
+const photoDB=(()=>{
+  let dbp=null;
+  const open=()=>dbp||(dbp=new Promise((res,rej)=>{
+    const r=indexedDB.open('lol-auction',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('photos');
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>{ dbp=null; rej(r.error); };
+  }));
+  const run=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{
+    const tx=db.transaction('photos',mode), q=fn(tx.objectStore('photos'));
+    tx.oncomplete=()=>res(q.result); tx.onerror=tx.onabort=()=>rej(tx.error);
+  }));
+  return {
+    get:k=>run('readonly',s=>s.get(k)),
+    put:(k,v)=>run('readwrite',s=>s.put(v,k)),
+    del:k=>run('readwrite',s=>s.delete(k)),
+    keys:()=>run('readonly',s=>s.getAllKeys()),
+  };
+})();
+// 렌더는 동기라서 저장된 키 목록을 메모리에 들고 있습니다. 진행자 화면에서 처음 그릴 때 한 번 읽습니다.
+let photoKeys=new Set(), photoKeysLoaded=false, bulkBusy=false;
+function ensurePhotoKeys(){
+  if(photoKeysLoaded||!window.indexedDB) return;
+  photoKeysLoaded=true;
+  photoDB.keys().then(ks=>{ photoKeys=new Set(ks); if(ks.length) paint(); }).catch(()=>{});
+}
+const savedTargets=()=>S.pool.filter(p=>!p.imgV&&p.status!=='sold'&&photoKeys.has(photoKey(p)));
+function savePhoto(p,blob){
+  const k=photoKey(p);
+  blob.arrayBuffer().then(buf=>photoDB.put(k,{type:blob.type,buf})).then(()=>photoKeys.add(k)).catch(()=>{});
+}
+function forgetPhoto(p){
+  const k=photoKey(p);
+  photoKeys.delete(k);
+  photoDB.del(k).catch(()=>{});
+}
+async function postImg(pid,blob){
+  const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,
+    {method:'POST',headers:{'content-type':blob.type},body:blob});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||'업로드에 실패했습니다');
+}
+// 저장된 사진을 순서대로 올립니다. 한 장마다 방송이 와서 화면의 남은 장수가 줄어듭니다.
+async function uploadSaved(list){
+  if(bulkBusy||!list.length) return;
+  bulkBusy=true; paint();
+  let ok=0, fail=0;
+  for(const p of list){
+    try{
+      const rec=await photoDB.get(photoKey(p));
+      if(!rec){ photoKeys.delete(photoKey(p)); fail++; continue; }
+      await postImg(p.id,new Blob([rec.buf],{type:rec.type}));
+      ok++;
+    }catch{ fail++; }
+  }
+  bulkBusy=false; paint();
+  toast(fail?`카드 ${ok}장을 올렸습니다 (${fail}장 실패)`:`저장된 카드 ${ok}장을 올렸습니다`,fail>0&&!ok);
+}
+
+/* 진행자 전용: 소개 카드를 브라우저에서 줄여서(최대 1200px·195KB) 올리고, 이 브라우저 보관함에도 저장합니다 */
 async function uploadImg(file,pid){
   pid=pid||(S&&S.current);
   if(!pid) return toast('경매 중인 매물이 없습니다',true);
   try{
     const blob=await shrinkImage(file);
-    const r=await fetch(`/api/room/${S.code}/img/${pid}?${wsAuth}`,
-      {method:'POST',headers:{'content-type':blob.type},body:blob});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(d.error||'업로드에 실패했습니다');
-    toast('사진을 올렸습니다');
+    await postImg(pid,blob);
+    const p=S.pool.find(x=>x.id===pid);
+    if(p&&window.indexedDB) savePhoto(p,blob);
+    toast('카드를 올렸습니다');
   }catch(e){ toast(e.message,true); }
 }
+// 카드에는 글자가 있어 JPEG 저화질에서 번집니다. WebP 저장을 지원하면 WebP로, 아니면(일부 Safari) JPEG로.
+// 지원하지 않는 브라우저는 요청을 무시하고 PNG를 돌려주므로 결과 형식으로 판별합니다.
+const IMG_FMT=(()=>{ try{ const c=document.createElement('canvas'); c.width=c.height=1;
+  return c.toDataURL('image/webp').startsWith('data:image/webp')?'image/webp':'image/jpeg'; }catch{ return 'image/jpeg'; } })();
+const IMG_MAX_SIDE=1200, IMG_MAX_BYTES=195*1024;   // 서버 한도 200KB보다 살짝 작게
 function shrinkImage(file){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.onload=()=>{
       URL.revokeObjectURL(img.src);
-      const sc=Math.min(1,800/Math.max(img.width,img.height));
+      const sc=Math.min(1,IMG_MAX_SIDE/Math.max(img.width,img.height));
       const cv=document.createElement('canvas');
       cv.width=Math.max(1,Math.round(img.width*sc));
       cv.height=Math.max(1,Math.round(img.height*sc));
       const ctx=cv.getContext('2d');
-      // JPEG는 투명도가 없으므로 PNG/WebP 투명 배경을 흰색으로 채웁니다(검게 나오는 것 방지).
+      // JPEG는 투명도가 없으므로 PNG/WebP 투명 배경을 흰색으로 채웁니다(검게 나오는 것 방지). WebP도 같은 결과로 맞춥니다.
       ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
       ctx.drawImage(img,0,0,cv.width,cv.height);
       const tryQ=qs=>{
-        if(!qs.length) return rej(new Error('이미지를 충분히 줄이지 못했습니다'));
-        cv.toBlob(b=>{ b&&b.size<=95*1024 ? res(b) : tryQ(qs.slice(1)); },'image/jpeg',qs[0]);
+        if(!qs.length) return rej(new Error('이미지를 충분히 줄이지 못했습니다. 더 작거나 단순한 카드로 올려주세요'));
+        cv.toBlob(b=>{ b&&b.type===IMG_FMT&&b.size<=IMG_MAX_BYTES ? res(b) : tryQ(qs.slice(1)); },IMG_FMT,qs[0]);
       };
       tryQ([.85,.7,.5,.35]);
     };
@@ -1976,7 +2071,7 @@ async function renderRooms(){
   </div>
   <div class="panel" style="margin-bottom:16px">
     <span class="lbl">방 생성 코드</span>
-    <p class="hint" style="margin-bottom:12px"><b>1회용(운영자)</b>: 코드 하나로 방 하나만 만듭니다(발급 후 30일 만료). <b>매니저</b>: 코드 하나로 방을 여러 개(최대 10개) 자유롭게 만들 수 있는 지속형 권한입니다. 경매방(사진 포함)은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
+    <p class="hint" style="margin-bottom:12px"><b>1회용(운영자)</b>: 코드 하나로 방 하나만 만듭니다(발급 후 30일 만료). <b>매니저</b>: 코드 하나로 방을 여러 개(최대 10개) 자유롭게 만들 수 있는 지속형 권한입니다. 경매방(소개 카드 포함)은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
     <div class="row">
       <select id="invKind" style="max-width:200px">
         <option value="once">1회용 · 운영자 (방 1개)</option>
@@ -2913,7 +3008,7 @@ function renderLinks(d,again){
     ?`<b>매니저 홈</b>에서 이 방의 링크를 언제든 다시 볼 수 있습니다. 각 팀장에게는 <b>자기 링크만</b> 보내세요.`
     :opCtx
     ?`받은 <b>생성 코드(${fmtInv(opCode)})를 다시 입력하면</b> 언제든 이 화면으로 돌아올 수 있습니다. 각 팀장에게는 <b>자기 링크만</b> 보내세요.`
-    :'링크는 관리자 화면의 <b>링크</b> 버튼으로 언제든 다시 볼 수 있습니다.'} 방과 사진은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`;
+    :'링크는 관리자 화면의 <b>링크</b> 버튼으로 언제든 다시 볼 수 있습니다.'} 방과 소개 카드는 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`;
   $('bBackList2').onclick=managerMode
     ? renderManager
     : opCtx

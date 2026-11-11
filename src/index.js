@@ -9,7 +9,8 @@
 
 const LINES = ['TOP', 'JGL', 'MID', 'ADC', 'SUP'];
 const UNDO_MAX = 8;   // 되돌리기 보관 개수
-const ROOM_TTL = 14 * 86400e3;    // 경매방(사진 포함) 보관 기간
+const ROOM_TTL = 14 * 86400e3;    // 경매방(소개 카드 포함) 보관 기간
+const IMG_MAX = 200 * 1024;        // 소개 카드 이미지 한 장 한도 (클라이언트는 1200px·195KB로 줄여 보냄)
 const INVITE_TTL = 30 * 86400e3;  // 방 생성 코드 유효 기간
 const MANAGER_MAX = 10;           // 매니저 코드 하나로 만들 수 있는 동시 경매방 수
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
@@ -401,13 +402,13 @@ export default {
         // 본문을 읽기 전에 먼저 거릅니다:
         //   1) 진행자 키가 아예 없으면 인증 실패 — 미인증 대용량 업로드를 막습니다.
         //   2) Content-Length가 한도를 넘으면 본문을 버퍼링하지 않고 즉시 거부.
-        if (!url.searchParams.get('k')) return json({ error: '진행자만 사진을 관리할 수 있습니다' }, 403);
-        if (+(req.headers.get('content-length') || 0) > 100 * 1024) {
-          return json({ error: '사진이 너무 큽니다 (최대 100KB)' }, 413);
+        if (!url.searchParams.get('k')) return json({ error: '진행자만 소개 카드를 관리할 수 있습니다' }, 403);
+        if (+(req.headers.get('content-length') || 0) > IMG_MAX) {
+          return json({ error: '이미지가 너무 큽니다 (최대 200KB)' }, 413);
         }
         // 스트림을 그대로 넘기면 DO가 읽지 않고 응답할 때 미처리 예외가 생기므로 여기서 읽습니다.
         const body = await req.arrayBuffer();
-        if (body.byteLength > 100 * 1024) return json({ error: '사진이 너무 큽니다 (최대 100KB)' }, 413);
+        if (body.byteLength > IMG_MAX) return json({ error: '이미지가 너무 큽니다 (최대 200KB)' }, 413);
         return stub.fetch(`https://do/img-put?${qs}`, {
           method: 'POST',
           headers: { 'content-type': req.headers.get('content-type') || '' },
@@ -663,11 +664,11 @@ export class AuctionRoom {
       });
     }
 
-    /* 매물 사진. SQLite 백엔드 DO는 값 한도가 2MB지만 100KB로 넉넉히 제한합니다. */
+    /* 매물 소개 카드. SQLite 백엔드 DO는 값 한도가 2MB지만 200KB로 넉넉히 제한합니다. */
     if (url.pathname === '/img-get') {
       if (!this.S) return json({ error: '없는 방입니다' }, 404);
       const rec = await this.ctx.storage.get('img:' + url.searchParams.get('pid'));
-      if (!rec) return json({ error: '사진이 없습니다' }, 404);
+      if (!rec) return json({ error: '소개 카드가 없습니다' }, 404);
       return new Response(rec.buf, {
         headers: { 'content-type': rec.type, 'cache-control': 'public, max-age=31536000, immutable' }
       });
@@ -675,7 +676,7 @@ export class AuctionRoom {
     if (url.pathname === '/img-put' || url.pathname === '/img-del') {
       if (!this.S) return json({ error: '없는 방입니다' }, 404);
       if (!safeEqual(url.searchParams.get('k') || '', this.auth.hostKey)) {
-        return json({ error: '진행자만 사진을 관리할 수 있습니다' }, 403);
+        return json({ error: '진행자만 소개 카드를 관리할 수 있습니다' }, 403);
       }
       const pid = url.searchParams.get('pid');
       const p = this.S.pool.find(x => x.id === pid);
@@ -691,7 +692,7 @@ export class AuctionRoom {
       if (!/^image\/(jpeg|png|webp)$/.test(type)) return json({ error: 'JPEG·PNG·WebP만 올릴 수 있습니다' }, 415);
       const buf = await req.arrayBuffer();
       if (!buf.byteLength) return json({ error: '빈 파일입니다' }, 400);
-      if (buf.byteLength > 100 * 1024) return json({ error: '사진이 너무 큽니다 (최대 100KB)' }, 413);
+      if (buf.byteLength > IMG_MAX) return json({ error: '이미지가 너무 큽니다 (최대 200KB)' }, 413);
       await this.ctx.storage.put('img:' + pid, { type, buf });
       // 방 전체 단조 카운터로 버전을 매깁니다. 되돌리기(undo)로도 되감기지 않아
       // 캐시된 옛 사진 주소가 재사용되는 문제를 막습니다.
