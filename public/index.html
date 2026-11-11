@@ -1278,7 +1278,7 @@ function lotBody(){
       ${p.imgV?'<button class="btn ghost sm" id="bImgDel">카드 삭제</button>':''}
       <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" hidden>
     </div>
-    <p class="hint cm-entry" style="margin:6px 0 0">권장: 가로 16:9 카드 (예: 1200×675). 휴대폰에서는 작게 보이니 큰 글자 위주로, 작은 글자는 눌러서 크게 보는 용도입니다. 올린 카드는 이 브라우저에 저장돼 다음 경매에서 다시 쓸 수 있습니다.</p>`:''}`;
+    <p class="hint cm-entry" style="margin:6px 0 0">권장: 가로 16:9 카드 (예: 1200×675). 휴대폰에서는 작게 보이니 큰 글자 위주로, 작은 글자는 눌러서 크게 보는 용도입니다. 한 번 올린 카드는 이 컴퓨터에 보관돼, 다음 경매에서는 다시 올리지 않아도 됩니다.</p>`:''}`;
 }
 
 function bidControls(t,mine){
@@ -1927,7 +1927,7 @@ function renderCardModal(){
     <ul class="cm-help hint">
       <li>카드는 경매 화면에서 선수 이름 위에 표시되고, 누르면 크게 보입니다. <b>가로 16:9 (예: 1200×675)</b>를 권장하며, 올리면 자동으로 줄여서 저장합니다.</li>
       <li><b>여러 장 한꺼번에</b>: 파일 이름을 선수 닉네임으로 맞춘 뒤 여러 파일을 함께 고르면 이름이 맞는 선수에게 자동으로 붙습니다. 예) <code>Alpha.png</code> 또는 <code>Alpha#KR1.png</code>. 같은 닉네임이 두 명 이상이면 <code>#태그</code>까지 써야 합니다. 대소문자·띄어쓰기는 구분하지 않고, 이미 카드가 있는 선수는 새 파일로 바뀝니다.</li>
-      <li>올린 카드는 <b>이 브라우저에도 저장</b>됩니다. 다음에 같은 닉네임#태그로 방을 만들면 <b>저장된 카드 불러오기</b>로 한 번에 다시 올릴 수 있습니다. 다른 PC·브라우저·시크릿 창에서는 저장본이 보이지 않습니다.</li>
+      <li><b>다음 경매에서는 다시 올릴 필요 없음</b>: 한 번 올린 카드는 지금 쓰는 컴퓨터에 자동으로 보관됩니다. 다음 경매 명단에 같은 선수(닉네임#태그가 같은 선수)가 있으면 <b>저장된 카드 불러오기</b> 버튼 하나로 한꺼번에 붙습니다. 단, 다른 컴퓨터·다른 브라우저(예: 크롬 → 엣지)·시크릿 창에서 진행하면 보관된 카드가 없으니 새로 올려야 합니다.</li>
     </ul>
     <div class="row" style="margin:12px 0 10px">
       <button class="btn gold sm" id="cmMulti" ${busy}>여러 장 한꺼번에 올리기</button>
