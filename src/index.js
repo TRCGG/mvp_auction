@@ -11,8 +11,13 @@ const LINES = ['TOP', 'JGL', 'MID', 'ADC', 'SUP'];
 const UNDO_MAX = 8;   // 되돌리기 보관 개수
 const ROOM_TTL = 14 * 86400e3;    // 경매방(소개 카드 포함) 보관 기간
 const IMG_MAX = 200 * 1024;        // 소개 카드 이미지 한 장 한도 (클라이언트는 1200px·195KB로 줄여 보냄)
-const INVITE_TTL = 30 * 86400e3;  // 방 생성 코드 유효 기간
-const MANAGER_MAX = 10;           // 매니저 코드 하나로 만들 수 있는 동시 경매방 수
+// 누구나 방을 만들 수 있으므로 한 곳(IP)에서 24시간 동안 만들 수 있는 방 수를 제한합니다.
+// 관리자 로그인 상태로 만드는 방은 세지 않습니다.
+const CREATE_MAX = 5;
+const CREATE_WINDOW = 24 * 3600e3;
+const MY_ROOMS_MAX = 10;          // '내가 만든 방' 최대 개수 = 한 번에 조회하는 방 수(클라이언트 MY_MAX와 같게)
+const MY_CHECK_MAX = 20;          // '내가 만든 방' 조회는 한 곳에서 1분에 이만큼까지(방 DO를 깨우는 비용 제한)
+const REGISTRY_MAX = 1000;        // 관리자 방 목록이 기억하는 최대 방 수
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
 
 // 클랜티어 파싱: '1'~'5.9' → 숫자, 아니면 null. (밴드 판정·매물 표기 공용)
@@ -127,6 +132,30 @@ async function issueToken(secret) {
   const exp = Date.now() + TOKEN_HOURS * 3600e3;
   return `${exp}.${await hmac(secret, String(exp))}`;
 }
+/* 요청한 곳(IP). IPv6는 한 가입자가 /64 대역 전체를 받아 주소를 얼마든지 바꿀 수 있으므로
+   앞 64비트만 남겨 한 곳으로 셉니다. IPv4가 IPv6 형태로 온 경우(::ffff:1.2.3.4)는 IPv4로 봅니다.
+   방 생성 횟수, 만든 곳 표시, 내가 만든 방 조회 제한이 모두 이 값을 씁니다. */
+function clientIp(req) {
+  const ip = String(req.headers.get('CF-Connecting-IP') || 'local').trim().toLowerCase();
+  if (!ip.includes(':')) return ip;
+  const v4 = ip.match(/^(?:::ffff:|(?:0+:){5}ffff:)(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4) return v4[1];
+  const [h, t] = ip.split('::');
+  const head = h ? h.split(':') : [];
+  const tail = t ? t.split(':') : [];
+  const full = t === undefined ? head : [...head, ...Array(Math.max(0, 8 - head.length - tail.length)).fill('0'), ...tail];
+  return full.slice(0, 4).map(x => (parseInt(x, 16) || 0).toString(16)).join(':') + '::/64';
+}
+
+/* 같은 곳에서 만든 방 표시: 접속 주소(IP)를 그대로 두지 않고 HMAC으로 바꾼 짧은 값만 목록에 적습니다.
+   관리자 화면에서 같은 표시끼리 '같은 곳에서 만든 방'으로 알아볼 수 있습니다. 비밀번호를 바꾸면 표시도 바뀝니다. */
+async function sourceTag(ip, env) {
+  const h = await hmac(env.ADMIN_PASSWORD || 'lol-auction-src', 'src:' + ip);
+  return h.slice(0, 6);
+}
+// 그룹(클랜 등) 이름: 선택 입력. 앞뒤·연속 공백을 정리하고 20자까지만 받습니다.
+const normGroup = g => String(g == null ? '' : g).trim().replace(/\s+/g, ' ').slice(0, 20);
+
 async function checkAdmin(req, env) {
   if (!env.ADMIN_PASSWORD) return 'nosecret';
   const t = (req.headers.get('Authorization') || '').replace(/^Bearer /, '');
@@ -188,30 +217,6 @@ export default {
         return json({ rooms, total: list.length, shown: capped.length });
       }
 
-      /* 방 생성 코드 발급/관리 */
-      if (path === '/api/admin/invites' && req.method === 'GET') {
-        return registry(env).fetch('https://do/invite-list');
-      }
-      if (path === '/api/admin/invite' && req.method === 'POST') {
-        let body; try { body = await req.json(); } catch { body = {}; }
-        if (!body || typeof body !== 'object') body = {};
-        // kind: 'once'(운영자·1회용) | 'manager'(매니저·다회용, 최대 10개)
-        const kind = body.kind === 'manager' ? 'manager' : 'once';
-        const invite = {
-          code: rand(8),
-          note: String(body.note || '').trim().slice(0, 20),
-          createdAt: Date.now(), kind,
-          ...(kind === 'once' ? { used: false } : {})
-        };
-        await registry(env).fetch('https://do/invite-add', { method: 'POST', body: JSON.stringify(invite) });
-        return json({ invite });
-      }
-      const im = path.match(/^\/api\/admin\/invite\/([A-Z0-9]{8})$/);
-      if (im && req.method === 'DELETE') {
-        await registry(env).fetch('https://do/invite-remove', { method: 'POST', body: JSON.stringify({ code: im[1] }) });
-        return json({ ok: true });
-      }
-
       const m = path.match(/^\/api\/admin\/room\/([A-Z0-9]{6})$/);
       if (m) {
         const stub = env.ROOM.get(env.ROOM.idFromName(m[1]));
@@ -225,133 +230,87 @@ export default {
       return json({ error: '없는 경로입니다' }, 404);
     }
 
-    // 생성 코드 확인 (운영자가 코드를 입력할 때 — 소모하지는 않습니다)
-    const ic = path.match(/^\/api\/invite\/([A-Z0-9]{8})$/);
-    if (ic && req.method === 'GET') {
-      const r = await registry(env).fetch('https://do/invite-check', { method: 'POST', body: JSON.stringify({ code: ic[1] }) });
-      const info = await r.json();
-      if (!r.ok) return json(info, r.status);          // 없는 코드(404)·만료(410) 그대로 전달
-      if (info.manager) return json({ manager: true, note: info.note || '' });  // 매니저 → 대시보드로
-      if (info.valid) return json({ valid: true });      // 미사용 → 설정 화면으로
-      // 이미 방을 만든 코드 → 그 방의 링크를 다시 보여줍니다(코드 = 운영자의 방 열쇠).
-      if (info.used) {
-        if (!info.roomCode) return json({ error: '이미 사용된 코드인데 연결된 방을 찾을 수 없습니다' }, 410);
-        const res = await env.ROOM.get(env.ROOM.idFromName(info.roomCode)).fetch('https://do/admin');
-        if (!res.ok) return json({ error: '이 코드로 만든 방이 삭제되었거나 보관 기간이 지났습니다' }, 410);
-        const a = await res.json();
-        return json({ used: true, room: { code: a.code, title: a.title, hostKey: a.hostKey, viewKey: a.viewKey, links: a.links } });
-      }
-      return json(info);
-    }
-
-    // 매니저 코드: 자기가 만든 방 목록/관리 (코드가 곧 열쇠)
-    const mgr = path.match(/^\/api\/manager\/([A-Z0-9]{8})\/rooms$/);
-    if (mgr && req.method === 'GET') {
-      const code = mgr[1];
-      const chk = await registry(env).fetch('https://do/invite-check', { method: 'POST', body: JSON.stringify({ code }) });
-      const info = await chk.json();
-      if (!chk.ok || !info.manager) return json({ error: '매니저 코드가 아닙니다' }, 403);
-      const list = await (await registry(env).fetch('https://do/list')).json();
-      const all = list.filter(x => x.via === code);
-      const mine = all.slice(0, 40);
-      const rooms = await Promise.all(mine.map(async r => {
+    // 내가 만든 방: 브라우저가 기억한 [방 코드, 진행자 키] 목록으로 각 방의 현재 상태를 돌려줍니다.
+    // 진행자 키가 맞는 방만 알려주고, 키·링크는 응답에 싣지 않습니다(키는 이미 브라우저에 있음).
+    if (path === '/api/my-rooms' && req.method === 'POST') {
+      let body; try { body = await req.json(); } catch { return json({ error: '잘못된 요청입니다' }, 400); }
+      const list = Array.isArray(body && body.rooms) ? body.rooms.slice(0, MY_ROOMS_MAX) : [];
+      // 로그인 없이 부를 수 있고 한 번에 방 DO를 여러 개 깨우므로, 한 곳에서 부르는 횟수를 제한합니다.
+      const gate = await (await registry(env).fetch('https://do/my-try', {
+        method: 'POST', body: JSON.stringify({ ip: clientIp(req) })
+      })).json();
+      if (!gate.ok) return json({ error: '잠시 후 다시 시도해주세요' }, 429);
+      const rooms = await Promise.all(list.map(async x => {
+        const code = String((x && x.code) || '').toUpperCase();
+        if (!/^[A-Z0-9]{6}$/.test(code)) return { code, missing: true };
         try {
-          const res = await env.ROOM.get(env.ROOM.idFromName(r.code)).fetch('https://do/admin');
-          return res.ok ? { ...r, ...(await res.json()) } : { ...r, missing: true };
-        } catch { return { ...r, missing: true }; }
+          const res = await env.ROOM.get(env.ROOM.idFromName(code)).fetch('https://do/admin');
+          if (!res.ok) return { code, missing: true };
+          const a = await res.json();
+          // 키가 다르면 진행자 키가 아닌 값이 저장된 것입니다. 방 정보를 알려주지 않습니다.
+          if (!safeEqual(String((x && x.k) || ''), a.hostKey)) return { code, missing: true };
+          const { hostKey, viewKey, links, ...info } = a;
+          return info;
+        } catch { return { code, error: true }; }
       }));
-      return json({ rooms, count: all.length, max: MANAGER_MAX });
-    }
-    const mgrDel = path.match(/^\/api\/manager\/([A-Z0-9]{8})\/room\/([A-Z0-9]{6})$/);
-    if (mgrDel && req.method === 'DELETE') {
-      const code = mgrDel[1], rc = mgrDel[2];
-      const chk = await registry(env).fetch('https://do/invite-check', { method: 'POST', body: JSON.stringify({ code }) });
-      const info = await chk.json();
-      if (!chk.ok || !info.manager) return json({ error: '매니저 코드가 아닙니다' }, 403);
-      const list = await (await registry(env).fetch('https://do/list')).json();
-      const target = list.find(x => x.code === rc);
-      if (!target || target.via !== code) return json({ error: '이 코드로 만든 방이 아닙니다' }, 403);
-      // destroy가 실패해도 목록에서는 반드시 제거해 슬롯이 물리지 않게 합니다.
-      try { await env.ROOM.get(env.ROOM.idFromName(rc)).fetch('https://do/destroy', { method: 'POST' }); } catch { /* 이미 비어있음 */ }
-      await registry(env).fetch('https://do/remove', { method: 'POST', body: JSON.stringify({ code: rc }) });
-      return json({ ok: true });
+      return json({ rooms });
     }
 
-    // 방 생성 — 관리자 토큰 또는 생성 코드(1회용/매니저)
+    // 방 생성 — 누구나. 관리자 로그인이 아니면 한 곳(IP)에서 24시간에 CREATE_MAX개까지.
     if (path === '/api/room' && req.method === 'POST') {
       let cfg;
       try { cfg = await req.json(); } catch { return json({ error: '잘못된 요청입니다' }, 400); }
       const err = validate(cfg);
       if (err) return json({ error: err }, 400);
 
-      const invite = String(cfg.inviteCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-      let onceConsumed = false;   // 1회용 코드를 소모했는지(실패 시 되살리기용)
-      let manager = false;        // 매니저 코드로 만드는지(개수 제한은 /add에서 원자적으로)
-      if (invite) {
-        const chk = await registry(env).fetch('https://do/invite-check', { method: 'POST', body: JSON.stringify({ code: invite }) });
-        const info = await chk.json();
-        if (!chk.ok) return json(info, chk.status);   // 없는 코드·만료 그대로 전달
-        if (info.manager) {
-          // 매니저 코드는 소모하지 않습니다. 개수 제한(최대 N개)은 /add에서 원자적으로 강제하고,
-          // 여기서는 빠른 사전 확인으로 흔한 초과 케이스에 방 DO를 만들지 않게만 합니다.
-          manager = true;
-          const list = await (await registry(env).fetch('https://do/list')).json();
-          if (list.filter(x => x.via === invite).length >= MANAGER_MAX) {
-            return json({ error: `경매방이 이미 ${MANAGER_MAX}개예요. 기존 방을 정리(삭제)한 뒤 다시 만들어주세요.` }, 409);
-          }
-        } else if (info.used) {
-          return json({ error: '이미 사용된 코드입니다' }, 403);
-        } else {
-          // 1회용 미사용 코드 → 먼저 소모를 확정(동시 생성 방지).
-          const u = await (await registry(env).fetch('https://do/invite-use', {
-            method: 'POST', body: JSON.stringify({ code: invite })
-          })).json();
-          if (!u.ok) return json({ error: u.error || '유효하지 않은 생성 코드입니다' }, 403);
-          onceConsumed = true;
-        }
-      } else {
-        const ok = await checkAdmin(req, env);
-        if (ok === 'nosecret') return noSecret();
-        if (!ok) return json({ error: '경매방을 만들려면 생성 코드가 필요합니다' }, 401);
+      // 관리자 화면의 '직접 만들기'는 로그인 정보를 함께 보냅니다. 로그인이 만료됐는데 조용히
+      // 일반 생성으로 넘기면 하루 개수에 세어지고 '만든 곳'도 관리자가 아닌 것으로 적히므로 거절합니다.
+      let admin = false;
+      if (req.headers.has('Authorization')) {
+        const a = await checkAdmin(req, env);
+        if (a === 'nosecret') return noSecret();
+        if (a !== true) return json({ error: '관리자 인증이 필요합니다' }, 401);
+        admin = true;
       }
-
-      // init이 예외를 던져도 소모한 1회용 코드를 반드시 되살립니다(매니저 코드는 소모 안 하므로 무관).
-      const restoreInvite = () => onceConsumed
-        ? registry(env).fetch('https://do/invite-restore', { method: 'POST', body: JSON.stringify({ code: invite }) })
+      const ip = clientIp(req);
+      let counted = false;   // 생성 횟수를 하나 썼는지(방 만들기에 실패하면 돌려줍니다)
+      if (!admin) {
+        const gate = await (await registry(env).fetch('https://do/create-try', {
+          method: 'POST', body: JSON.stringify({ ip })
+        })).json();
+        if (!gate.ok) {
+          const h = Math.max(1, Math.ceil(gate.wait / 3600e3));
+          return json({ error: `하루에 만들 수 있는 방(${CREATE_MAX}개)을 모두 만들었습니다. 약 ${h}시간 뒤에 다시 만들 수 있습니다.` }, 429);
+        }
+        counted = true;
+      }
+      const refund = () => counted
+        ? registry(env).fetch('https://do/create-refund', { method: 'POST', body: JSON.stringify({ ip }) })
         : Promise.resolve();
-      let code, stub, res;
+
+      let code, res;
       try {
         // 아주 드물지만 코드가 겹칠 수 있어 몇 번 다시 뽑습니다.
         for (let i = 0; i < 5; i++) {
           code = rand(6);
-          stub = env.ROOM.get(env.ROOM.idFromName(code));
-          res = await stub.fetch('https://do/init', { method: 'POST', body: JSON.stringify({ code, cfg }) });
+          res = await env.ROOM.get(env.ROOM.idFromName(code)).fetch('https://do/init', { method: 'POST', body: JSON.stringify({ code, cfg }) });
           if (res.status !== 409) break;
         }
       } catch (e) {
-        await restoreInvite();
+        await refund();
         return json({ error: '방을 만들지 못했습니다. 잠시 후 다시 시도해주세요.' }, 503);
       }
       if (!res.ok) {
-        await restoreInvite();
+        await refund();
         const body = await res.text();
         return new Response(body, { status: res.status, headers: res.headers });
       }
-      const added = await (await registry(env).fetch('https://do/add', {
+      await registry(env).fetch('https://do/add', {
         method: 'POST',
         body: JSON.stringify({
-          code, title: cfg.title || '경매', createdAt: Date.now(), via: invite || '',
-          // 매니저면 개수 제한을 /add에서 원자적으로 확인(경합 방지). 초과면 방을 롤백합니다.
-          ...(manager ? { limitVia: invite, limitMax: MANAGER_MAX } : {})
+          code, title: cfg.title || '경매', createdAt: Date.now(),
+          group: normGroup(cfg.group), by: admin ? 'admin' : await sourceTag(ip, env)
         })
-      })).json();
-      if (manager && added && added.full) {
-        try { await stub.fetch('https://do/destroy', { method: 'POST' }); } catch { /* 롤백 */ }
-        return json({ error: `경매방이 이미 ${MANAGER_MAX}개예요. 기존 방을 정리(삭제)한 뒤 다시 만들어주세요.` }, 409);
-      }
-      // 1회용 코드만 방과 1:1로 묶어 재진입에 씁니다(매니저는 방이 여러 개라 묶지 않음).
-      if (onceConsumed) await registry(env).fetch('https://do/invite-bind', {
-        method: 'POST', body: JSON.stringify({ code: invite, roomCode: code })
       });
       return new Response(res.body, { status: res.status, headers: res.headers });
     }
@@ -361,6 +320,17 @@ export default {
     if (peek && req.method === 'GET') {
       const stub = env.ROOM.get(env.ROOM.idFromName(peek[1]));
       return stub.fetch('https://do/peek');
+    }
+    // 방 삭제 — 진행자 키를 가진 사람(방을 만든 사람)만. '내가 만든 방'의 삭제 버튼이 씁니다.
+    if (peek && req.method === 'DELETE') {
+      const stub = env.ROOM.get(env.ROOM.idFromName(peek[1]));
+      const res = await stub.fetch('https://do/admin');
+      if (!res.ok) return json({ error: '이미 삭제되었거나 보관 기간이 지난 방입니다' }, 404);
+      const a = await res.json();
+      if (!safeEqual(url.searchParams.get('k') || '', a.hostKey)) return json({ error: '진행자만 삭제할 수 있습니다' }, 403);
+      try { await stub.fetch('https://do/destroy', { method: 'POST' }); } catch { /* 이미 비어있음 */ }
+      await registry(env).fetch('https://do/remove', { method: 'POST', body: JSON.stringify({ code: peek[1] }) });
+      return json({ ok: true });
     }
     // 방 설정 수정 — hostKey 검증과 상태 검사는 DO가 합니다(시작 전에만 허용).
     if (peek && req.method === 'PATCH') {
@@ -374,10 +344,10 @@ export default {
         body: JSON.stringify({ k: url.searchParams.get('k') || '', cfg })
       });
       if (res.ok) {
-        // 관리자·매니저 목록의 제목 동기화. /add를 다시 부르면 createdAt·via가 초기화되므로 전용 경로를 씁니다.
+        // 관리자 목록의 제목 동기화. /add를 다시 부르면 createdAt이 초기화되므로 전용 경로를 씁니다.
         try {
           await registry(env).fetch('https://do/retitle', {
-            method: 'POST', body: JSON.stringify({ code: peek[1], title: String(cfg.title || '경매').slice(0, 40) })
+            method: 'POST', body: JSON.stringify({ code: peek[1], title: String(cfg.title || '경매').slice(0, 40), group: normGroup(cfg.group) })
           });
         } catch { /* 목록 제목 동기화 실패는 치명적이지 않습니다 */ }
       }
@@ -444,6 +414,7 @@ function validate(cfg) {
   if (!(cfg.base >= 1 && cfg.base <= 100000000)) return '기본 시작 포인트는 1 이상이어야 합니다';
   if (!(cfg.clock >= 5 && cfg.clock <= 300)) return '제한 시간은 5~300초여야 합니다';
   if (cfg.order != null && cfg.order !== 'random' && cfg.order !== 'draw') return '매물 순서 옵션이 올바르지 않습니다';
+  if (cfg.group != null && typeof cfg.group !== 'string') return '그룹 이름이 올바르지 않습니다';
   // 드래프트 규칙: ['tier','score'] 부분집합만 허용(빈 배열 = 자유).
   if (cfg.rules != null) {
     if (!Array.isArray(cfg.rules) || !cfg.rules.every(r => r === 'tier' || r === 'score')) {
@@ -633,7 +604,7 @@ export class AuctionRoom {
       if (!this.S) return json({ error: '없는 방입니다' }, 404);
       const sold = this.S.pool.filter(p => p.status === 'sold').length;
       return json({
-        code: this.S.code, title: this.S.title,
+        code: this.S.code, title: this.S.title, group: this.S.group || '',
         mode: this.S.mode || 'auction',
         draftBalance: this.S.draft ? this.S.draft.balance : null,
         // 규칙 조합 표시용. 예전 방은 balance 문자열 하나뿐이라 그것으로 만들어 줍니다.
@@ -641,7 +612,7 @@ export class AuctionRoom {
           ? (Array.isArray(this.S.draft.rules) ? this.S.draft.rules
              : this.S.draft.balance === 'free' ? [] : [this.S.draft.balance])
           : null,
-        phase: this.S.phase, current: this.S.current,
+        phase: this.S.phase, current: this.S.current, createdAt: this.S.createdAt,
         teams: this.S.teams.length, players: this.S.pool.length, sold,
         filled: this.S.teams.every(t => this.openSlots(t) <= 0),
         online: this.ctx.getWebSockets().length,
@@ -775,6 +746,7 @@ export class AuctionRoom {
     this.S = {
       code, mode, draft,
       title: String(cfg.title || '경매').slice(0, 40),
+      group: normGroup(cfg.group),
       base, size: TEAM_SIZE, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
       teams, pool, orderMode, order,
       current: null, bid: null, deadline: null, pausedLeft: null,
@@ -868,6 +840,7 @@ export class AuctionRoom {
       mode: cfg.mode === 'draft' ? 'draft' : 'auction',
       draft: dr.draft,
       title: String(cfg.title || '경매').slice(0, 40),
+      group: normGroup(cfg.group),
       base, minBid: cfg.minBid | 0, clock: cfg.clock | 0,
       teams, pool, orderMode, order,
       current: null, bid: null, deadline: null, pausedLeft: null,
@@ -1423,6 +1396,11 @@ export class AuctionRoom {
 export class Registry {
   constructor(ctx) { this.ctx = ctx; }
 
+  // storage.delete(키 배열)은 한 번에 128개까지만 받습니다. 넘으면 예외가 나므로 나눠 지웁니다.
+  async sweep(keys) {
+    for (let i = 0; i < keys.length; i += 128) await this.ctx.storage.delete(keys.slice(i, i + 128));
+  }
+
   async fetch(req) {
     const path = new URL(req.url).pathname;
 
@@ -1433,16 +1411,14 @@ export class Registry {
       if (live.length !== rooms.length) await this.ctx.storage.put('rooms', live);
       return json(live.slice().sort((a, b) => b.createdAt - a.createdAt));
     }
+    // 요청 본문을 먼저 읽습니다. 목록을 읽은 뒤 본문을 기다리면 그 사이 다른 /add가 끼어들어
+    // 같은 옛 목록을 덮어써 방 하나가 빠질 수 있습니다(저장소 읽기·쓰기 사이에는 다른 대기를 두지 않음).
     if (path === '/add') {
-      const rooms = (await this.ctx.storage.get('rooms')) || [];
       const r = await req.json();
-      // 매니저 개수 제한: 카운트와 등록을 한 번에 처리해 경합을 없앱니다.
-      if (r.limitVia) {
-        const live = rooms.filter(x => x.via === r.limitVia && Date.now() - x.createdAt < ROOM_TTL);
-        if (live.length >= (r.limitMax || MANAGER_MAX)) return json({ ok: false, full: true });
-      }
-      const rec = { code: r.code, title: r.title, createdAt: r.createdAt, via: r.via || '' };
-      const next = [rec, ...rooms.filter(x => x.code !== r.code)].slice(0, 200);
+      const rooms = (await this.ctx.storage.get('rooms')) || [];
+      // group: 만든 사람이 적은 그룹(선택), by: 만든 곳 표시(sourceTag) 또는 'admin'
+      const rec = { code: r.code, title: r.title, createdAt: r.createdAt, group: r.group || '', by: r.by || '' };
+      const next = [rec, ...rooms.filter(x => x.code !== r.code)].slice(0, REGISTRY_MAX);
       await this.ctx.storage.put('rooms', next);
       return json({ ok: true });
     }
@@ -1466,78 +1442,76 @@ export class Registry {
       for (const [k, v] of all) {
         if (k !== key && v && v.until <= now && now - (v.at || 0) > 600e3) dead.push(k);
       }
-      if (dead.length) await this.ctx.storage.delete(dead);
+      await this.sweep(dead);
       return json({ locked: false, fails });
     }
 
     if (path === '/remove') {
-      const rooms = (await this.ctx.storage.get('rooms')) || [];
       const { code } = await req.json();
+      const rooms = (await this.ctx.storage.get('rooms')) || [];
       await this.ctx.storage.put('rooms', rooms.filter(x => x.code !== code));
       return json({ ok: true });
     }
 
-    // 방 설정 수정 시 목록의 제목만 갱신합니다(createdAt·via는 유지).
+    // 방 설정 수정 시 목록의 제목·그룹만 갱신합니다(createdAt·by는 유지).
     if (path === '/retitle') {
+      const { code, title, group } = await req.json();
       const rooms = (await this.ctx.storage.get('rooms')) || [];
-      const { code, title } = await req.json();
       const rec = rooms.find(x => x.code === code);
-      if (rec && title) { rec.title = title; await this.ctx.storage.put('rooms', rooms); }
+      if (rec && title) {
+        rec.title = title;
+        if (typeof group === 'string') rec.group = group;
+        await this.ctx.storage.put('rooms', rooms);
+      }
       return json({ ok: true });
     }
 
-    /* 방 생성 코드. Registry는 단일 스레드라 use(소모)가 경합 없이 처리됩니다. */
-    if (path.startsWith('/invite-')) {
-      const stored = (await this.ctx.storage.get('invites')) || [];
-      const save = v => this.ctx.storage.put('invites', v);
-      // 1회용 코드는 발급 후 30일이 지나면 걷어냅니다. 매니저 코드는 지속형이라 만료 없음.
-      const invites = stored.filter(x => x.kind === 'manager' || Date.now() - x.createdAt < INVITE_TTL);
-      if (invites.length !== stored.length) await save(invites);
-      const expired = code => stored.some(x => x.code === code) && !invites.some(x => x.code === code);
+    /* 방 생성 횟수 제한: IP마다 최근 24시간 안에 만든 시각을 적어두고 CREATE_MAX개를 넘으면 막습니다.
+       Registry는 단일 스레드라 확인과 기록이 경합 없이 한 번에 처리됩니다. */
+    if (path === '/create-try' || path === '/create-refund') {
+      const { ip } = await req.json();
+      const key = 'cr:' + ip;
+      const now = Date.now();
+      const recent = ((await this.ctx.storage.get(key)) || []).filter(t => now - t < CREATE_WINDOW);
 
-      if (path === '/invite-list') {
-        return json(invites.slice().sort((a, b) => b.createdAt - a.createdAt));
-      }
-      const body = await req.json();
-      if (path === '/invite-add') {
-        // 200개 상한에서 지속형 매니저 코드는 밀려나지 않도록 보존하고, 1회용만 잘라냅니다.
-        const merged = [body, ...invites.filter(x => x.code !== body.code)];
-        const managers = merged.filter(x => x.kind === 'manager');
-        const onces = merged.filter(x => x.kind !== 'manager');
-        await save([...managers, ...onces.slice(0, Math.max(0, 200 - managers.length))]);
-        return json({ ok: true });
-      }
-      if (path === '/invite-remove') {
-        await save(invites.filter(x => x.code !== body.code));
+      if (path === '/create-refund') {
+        // 방 만들기에 실패했을 때 방금 쓴 한 번을 돌려줍니다.
+        recent.pop();
+        if (recent.length) await this.ctx.storage.put(key, recent); else await this.ctx.storage.delete(key);
         return json({ ok: true });
       }
 
-      const inv = invites.find(x => x.code === body.code);
-      if (path === '/invite-check') {
-        if (expired(body.code)) return json({ error: '기한(30일)이 지난 코드입니다' }, 410);
-        if (!inv) return json({ error: '없는 생성 코드입니다' }, 404);
-        if (inv.kind === 'manager') return json({ manager: true, note: inv.note || '' });
-        // 이미 방을 만든 코드는 그 방으로 재진입할 수 있게 방 번호를 알려줍니다.
-        if (inv.used) return json({ used: true, roomCode: inv.roomCode || null });
-        return json({ valid: true });
+      if (recent.length >= CREATE_MAX) {
+        return json({ ok: false, wait: recent[0] + CREATE_WINDOW - now });
       }
-      if (path === '/invite-use') {
-        if (expired(body.code)) return json({ ok: false, error: '기한(30일)이 지난 코드입니다' });
-        if (!inv) return json({ ok: false, error: '없는 생성 코드입니다' });
-        if (inv.kind === 'manager') return json({ ok: false, error: '매니저 코드는 소모 대상이 아닙니다' });
-        if (inv.used) return json({ ok: false, error: '이미 사용된 코드입니다' });
-        inv.used = true; inv.usedAt = Date.now();
-        await save(invites);
-        return json({ ok: true });
+      recent.push(now);
+      await this.ctx.storage.put(key, recent);
+
+      // 24시간이 지난 다른 IP의 기록을 청소해 무한 누적을 막습니다. 한 번에 최대 1000개만 훑습니다.
+      try {
+        const all = await this.ctx.storage.list({ prefix: 'cr:', limit: 1000 });
+        const dead = [];
+        for (const [k, v] of all) {
+          if (k !== key && (!Array.isArray(v) || v.every(t => now - t >= CREATE_WINDOW))) dead.push(k);
+        }
+        await this.sweep(dead);
+      } catch { /* 청소 실패는 다음 생성 때 다시 시도합니다 — 방 만들기는 막지 않습니다 */ }
+      return json({ ok: true, left: CREATE_MAX - recent.length });
+    }
+
+    /* '내가 만든 방' 조회 제한: 한 곳에서 1분에 MY_CHECK_MAX번까지. 잠깐의 제한이라 저장소에 쓰지 않고
+       메모리에만 둡니다(Registry가 잠들면 초기화되지만 그 정도는 괜찮습니다). */
+    if (path === '/my-try') {
+      const { ip } = await req.json();
+      const now = Date.now();
+      if (!this.myHits) this.myHits = new Map();
+      const hits = (this.myHits.get(ip) || []).filter(t => now - t < 60e3);
+      if (hits.length >= MY_CHECK_MAX) return json({ ok: false });
+      hits.push(now); this.myHits.set(ip, hits);
+      if (this.myHits.size > 5000) {
+        for (const [k, v] of this.myHits) if (!v.length || now - v[v.length - 1] >= 60e3) this.myHits.delete(k);
       }
-      if (path === '/invite-bind') {
-        if (inv) { inv.roomCode = body.roomCode; await save(invites); }
-        return json({ ok: true });
-      }
-      if (path === '/invite-restore') {
-        if (inv && inv.kind !== 'manager') { inv.used = false; delete inv.usedAt; await save(invites); }
-        return json({ ok: true });
-      }
+      return json({ ok: true });
     }
     return json({ error: 'not found' }, 404);
   }

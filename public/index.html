@@ -146,6 +146,11 @@ button.pres:hover{background:rgba(255,255,255,.05)}
   border-radius:var(--r-md);font-size:var(--fs-xs);color:#E88A85;line-height:1.7;word-break:keep-all}
 .blockbox b{display:block;font-size:var(--fs-sm);margin-bottom:3px}
 .blockbox ul{margin:0;padding-left:17px}
+/* 꼭 읽어야 할 안내(경고가 아님) — 방을 만든 직후 '진행자 링크 저장' 안내에 씁니다 */
+.notebox{padding:10px 13px;background:var(--gold-soft);border:1px solid var(--gold);
+  border-radius:var(--r-md);font-size:var(--fs-xs);color:var(--text);line-height:1.7;word-break:keep-all}
+.notebox .nb-hd{display:block;font-size:var(--fs-sm);color:var(--gold);margin-bottom:3px}
+.notebox ul{margin:0;padding-left:17px}
 /* 고정값 표시(수정 불가) — input과 같은 높이로 맞춰 나란히 놓인다. */
 .fixedval{background:var(--bg);border:1px dashed var(--line);border-radius:var(--r-sm);padding:9px 11px;
   font-size:var(--fs-base);color:var(--body2)}
@@ -183,17 +188,40 @@ button.pres:hover{background:rgba(255,255,255,.05)}
 .room-sum .s{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 12px;font-size:var(--fs-xs);color:var(--muted)}
 .room-sum .s b{font-family:var(--num);font-size:var(--fs-lg);margin-left:4px;color:var(--text)}
 .room-sum .s.live b{color:var(--gold)} .room-sum .s.done b{color:var(--ok)} .room-sum .s.warn{color:var(--danger)} .room-sum .s.warn b{color:var(--danger)}
-.room-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0 9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
-.room-group .gc{font-family:var(--num);font-size:18px;color:var(--text);letter-spacing:.1em}
-.room-group .gk{font-size:var(--fs-2xs);font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:var(--r-pill);border:1px solid currentColor}
-.room-group .gk.mgr{color:var(--gold)} .room-group .gk.direct,.room-group .gk.gone{color:var(--muted)}
-.room-group .gm{font-size:var(--fs-xs);color:var(--muted)}
-.room-group .gn{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
+/* 내가 만든 방 (첫 화면) — 폭이 좁아 관리자 카드(.room)의 3열 대신 위아래로 쌓습니다 */
+.myrooms{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.myroom{display:flex;flex-direction:column;gap:7px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px}
+.myroom.st-live{box-shadow:inset 4px 0 0 var(--gold)} .myroom.st-done{box-shadow:inset 4px 0 0 var(--ok)}
+.myroom.st-ready{box-shadow:inset 4px 0 0 var(--muted)}
+.myroom .mr-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.myroom .rc{font-family:var(--num);font-size:18px;letter-spacing:.1em;color:var(--text)}
+.myroom .rt{font-weight:600;font-size:var(--fs-base);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.myroom .rs{font-size:var(--fs-xs);color:var(--muted);display:flex;gap:9px;flex-wrap:wrap}
+.myroom .rs .warn{color:var(--danger)}
+.myroom .row{gap:6px;flex-wrap:wrap}
 .room.st-live{box-shadow:inset 4px 0 0 var(--gold)} .room.st-done{box-shadow:inset 4px 0 0 var(--ok)}
 .room.st-ready{box-shadow:inset 4px 0 0 var(--muted)} .room.st-gone{box-shadow:inset 4px 0 0 var(--danger);opacity:.6}
 .room .rbar{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-top:7px;max-width:200px}
 .room .rbar i{display:block;height:100%;background:var(--ok)}
 .room .rs .warn{color:var(--danger)}
+.rgrp{margin-bottom:14px}
+.rgrp>summary{display:flex;align-items:baseline;gap:10px;cursor:pointer;padding:4px 2px 8px;list-style:none;border-bottom:1px solid var(--line);margin-bottom:9px}
+.rgrp>summary::-webkit-details-marker{display:none}
+.rgrp>summary::before{content:'▾';color:var(--muted);font-size:var(--fs-xs)}
+.rgrp:not([open])>summary::before{content:'▸'}
+.rgrp>summary b{font-size:var(--fs-base)}
+.rgrp>summary span{font-size:var(--fs-xs);color:var(--muted)} .rgrp>summary i{font-style:normal;color:var(--gold)}
+.rgrp.nogrp>summary b{color:var(--muted);font-weight:500}
+.src{display:inline-block;font:inherit;font-size:var(--fs-xs);font-weight:500;line-height:1.5;padding:1px 8px;border-radius:999px;cursor:pointer;vertical-align:middle;
+  color:hsl(var(--h) 55% 72%);background:hsl(var(--h) 45% 50% / .14);border:1px solid hsl(var(--h) 45% 55% / .35)}
+.src.admin{cursor:default;color:var(--muted);background:transparent;border-color:var(--line)}
+.srcbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted);margin:-4px 0 12px}
+.srcbar b{color:var(--text)}
+.pill.p-grp{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.grpchips{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px;font-size:var(--fs-xs);color:var(--muted)}
+.grpchip{font:inherit;font-size:var(--fs-xs);color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 9px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grpchip:hover,.grpchip:focus-visible{border-color:var(--gold);color:var(--gold)}
+label .opt{font-style:normal;font-weight:400;color:var(--muted);margin-left:4px}
 .empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:var(--fs-sm);line-height:1.9}
 
 /* 참가자 목록 */
@@ -597,8 +625,8 @@ function askConfirm({title,msg,confirmLabel='확인',danger='soft',code=null}){
 /* ═══ 상태 ═══ */
 let S=null, me=null, ws=null, connected=false, skew=0, links=null;
 let players=[];
-let opCode=null, setupMode='admin';   // 방 생성: 관리자 직접('admin') 또는 생성 코드('op')
-let managerMode=false;                 // 매니저 코드로 들어왔는지(다회용, 최대 10개)
+let setupMode='open';                  // 설정 화면: 누구나('open') · 관리자('admin') · 방 설정 수정('edit')
+let adminEntry=false;                  // 관리자 목록에서 남의 방에 들어왔는지 — '내가 만든 방'에 적지 않습니다
 let poolView='order';                 // 남은 매물 보기: 순서('order')·포지션('pos')·솔랭('tier')·클랜티어('grade')·클랜점수('score')
 let draftOrder=null;                   // 드래프트 첫 라운드 지명 순서(팀 id 배열). 진행자가 준비 화면에서 정함.
 let tiePick=[];                        // 동점 정리 중 진행자가 '먼저'로 지정한 팀 (묶음별 id 배열)
@@ -668,7 +696,7 @@ function connSummary(r){
 // 접속한 팀장 수 / 전체 팀 수. presOn에는 방 설정 수정으로 사라진 팀이 남을 수 있어 현재 팀 기준으로 셉니다.
 const leadersOn=()=>S?S.teams.filter(t=>presOn.has(t.id)).length:0;
 const leadersOff=()=>S?S.teams.filter(t=>!presOn.has(t.id)):[];
-const fmtInv=c=>c.length===8?c.slice(0,4)+'-'+c.slice(4):c;
+
 const copyText=txt=>navigator.clipboard.writeText(txt).then(()=>toast('복사했습니다')).catch(()=>{
   const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
   ta.select(); document.execCommand('copy'); ta.remove(); toast('복사했습니다');
@@ -719,7 +747,7 @@ const RULE_DEFS=[
 const TEAM_SIZE=5;
 const TEAM_MAX=20;   // 서버 validate()의 팀장 상한과 같은 값이어야 합니다
 // 규칙 입력값은 모드 전환 시 재렌더돼도 유지되도록 모듈 상태로 보관합니다.
-let rules={title:'클랜 내전',clock:15,base:1000,minBid:10,order:'random'};
+let rules={title:'클랜 내전',group:'',clock:15,base:1000,minBid:10,order:'random'};
 /* 모드별 기본 제한 시간(초).
    드래프트는 팀장이 남은 매물을 훑어보고 골라야 해서 입찰보다 길게 둡니다.
    경매는 입찰이 들어올 때마다 시간이 다시 채워지므로 짧게 둡니다. */
@@ -733,6 +761,7 @@ function syncRules(){
   const g=(id,d)=>{ const el=$(id); return el?el.value:d; };
   const n=(id,d)=>{ const el=$(id); return el&&el.value!==''?+el.value:d; };
   rules.title=g('cTitle',rules.title);
+  rules.group=g('cGroup',rules.group);
   rules.base=n('cBase',rules.base); rules.minBid=n('cMin',rules.minBid); rules.order=g('cOrder',rules.order);
   const c=n('cClock',rules.clock);
   if(c!==rules.clock) clockTouched=true;
@@ -764,7 +793,7 @@ let wsAuth='';           // 진행자의 k=… 키. 사진 업로드 인증에�
 let closedForGood=false; // 방 삭제/만료로 서버가 정상 종료(code 1000)한 경우
 let reconnectMs=1500;    // 지수 백오프 (최대 20초)
 function connect(code,auth){
-  wsAuth=auth; managerMode=false;   // 방에 입장하면 매니저 컨텍스트를 벗어납니다(방어)
+  wsAuth=auth;
   // pendingEdit는 '수정' 버튼이 connect 직전에 세웁니다. 그 외 경로의 입장이면
   // 이전 시도의 잔류값이 수정 폼을 강제로 열지 않도록 여기서 소거하는 대신,
   // 실패 경로(renderClosed)에서 해제합니다 — 재연결 중에는 유지되어야 하기 때문.
@@ -786,6 +815,7 @@ function connect(code,auth){
     const m=JSON.parse(e.data);
     if(m.t==='hello'){
       me=m.you; S=m.S; skew=Date.now()-m.S.now; applyPresence(m.P);
+      rememberHostRoom();
       // 새로고침으로 다시 들어온 진행자 — 진행 중이면 이어 틀고, 그 사이 초기화됐으면 끕니다.
       // (자동재생이 막히면 bgmSync가 다음 클릭 한 번에 다시 시도합니다)
       bgmFollowPhase();
@@ -799,6 +829,7 @@ function connect(code,auth){
     }
     else if(m.t==='state'){
       S=m.S; skew=Date.now()-m.S.now;
+      rememberHostRoom();   // 방 설정 수정으로 제목이 바뀌면 목록에도 반영(바뀐 게 없으면 쓰지 않음)
       bgmFollowPhase();   // 초기화·되돌리기(대기)·완료에서 정지. 다시 시작하면 처음부터 나옵니다.
       paint(); if(m.event) onEvent(m.event);
     }
@@ -1138,7 +1169,7 @@ function topbar(){
 // 진행자 전용: 방 안에서 접속 링크를 모달로 다시 보기. 이번 세션 링크가 없으면(새로고침·북마크) hostKey로 서버 조회.
 async function openLinksModal(){
   if(!S||me.role!=='host') return;
-  // 캐시된 링크는 '이 방'의 것일 때만 재사용(관리자·매니저 목록에서 다른 방으로 입장한 경우 방지).
+  // 캐시된 링크는 '이 방'의 것일 때만 재사용(관리자 목록·내가 만든 방에서 다른 방으로 입장한 경우 방지).
   let d=(links&&links.code===S.code&&links.links)?links:null;
   if(!d){
     try{
@@ -2179,25 +2210,13 @@ function renderLogin(msg){
 }
 
 async function renderRooms(){
-  setupMode='admin'; managerMode=false;   // 관리자 화면에서는 링크 뷰가 다른 컨텍스트로 오인되지 않게 고정
+  setupMode='admin';
   $('app').innerHTML=`
   <div class="topbar">
     <div class="brand">관리자 <span>경매방</span></div>
     <div class="conn"><button class="btn ghost sm" id="bOut">로그아웃</button></div>
   </div>
-  <div class="panel" style="margin-bottom:16px">
-    <span class="lbl">방 생성 코드</span>
-    <p class="hint" style="margin-bottom:12px"><b>1회용(운영자)</b>: 코드 하나로 방 하나만 만듭니다(발급 후 30일 만료). <b>매니저</b>: 코드 하나로 방을 여러 개(최대 10개) 자유롭게 만들 수 있는 지속형 권한입니다. 경매방(소개 카드 포함)은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
-    <div class="row">
-      <select id="invKind" style="max-width:200px">
-        <option value="once">1회용 · 운영자 (방 1개)</option>
-        <option value="manager">매니저 (최대 10개)</option>
-      </select>
-      <input type="text" id="invNote" maxlength="20" placeholder="메모 (받을 사람 이름 등, 선택)" style="flex:1;min-width:160px">
-      <button class="btn gold" id="bInv">코드 발급</button>
-    </div>
-    <div id="invList" style="margin-top:14px"><span class="hint">불러오는 중…</span></div>
-  </div>
+  <p class="hint" style="margin-bottom:12px">누구나 첫 화면에서 방을 만들 수 있습니다(한 곳에서 하루 ${CREATE_MAX}개). 여기서는 모든 방을 보고 지울 수 있고, <b>직접 만들기</b>로 만든 방은 하루 개수에 세지 않습니다. 경매방(소개 카드 포함)은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
   <div class="row" style="margin-bottom:16px;align-items:center">
     <span class="lbl" style="margin:0">경매방 목록</span>
     <button class="btn ghost" id="bNew" style="margin-left:auto;padding:6px 12px;font-size:var(--fs-xs)">직접 만들기</button>
@@ -2207,157 +2226,257 @@ async function renderRooms(){
   $('bOut').onclick=()=>{ store.clear(); renderLogin('로그아웃했습니다.'); };
   $('bNew').onclick=()=>renderSetup('admin');
   $('bRe').onclick=renderRooms;
-  $('bInv').onclick=async()=>{
-    $('bInv').disabled=true;
-    try{
-      const kind=$('invKind').value==='manager'?'manager':'once';
-      const {invite}=await api('/api/admin/invite',{method:'POST',
-        body:JSON.stringify({note:$('invNote').value.trim(),kind})});
-      toast(`${kind==='manager'?'매니저':'1회용'} 코드 ${fmtInv(invite.code)} 를 발급했습니다`);
-      renderRooms();
-    }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); $('bInv').disabled=false; } }
-  };
 
-  let rooms, total, shown, invites;
-  try{
-    [{rooms,total,shown},invites]=await Promise.all([api('/api/admin/rooms'),api('/api/admin/invites')]);
-  }catch(e){ if(e.message!=='unauth') toast(e.message,true); return; }
+  let rooms, total, shown;
+  try{ ({rooms,total,shown}=await api('/api/admin/rooms')); }
+  catch(e){ if(e.message!=='unauth') toast(e.message,true); return; }
   total=total??rooms.length; shown=shown??rooms.length;   // 서버는 최신 40개만 상세 조회
 
-  $('invList').innerHTML=invites.length?invites.map(v=>{
-    const mgr=v.kind==='manager';
-    const date=new Date(v.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    const state=mgr?'<b style="color:var(--gold)">매니저</b> · 다회용(최대 10)'
-      :(v.used?`사용됨${v.roomCode?' → 방 '+v.roomCode:''}`:'미사용 · 1회용');
-    const expiry=(mgr||v.used)?'':' · 만료 '+new Date(v.createdAt+30*86400e3).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'});
-    const copyable=mgr||!v.used;
-    return `<div class="link-row">
-      <b class="num" style="font-size:var(--fs-lg);letter-spacing:.1em;color:${(mgr||!v.used)?'var(--gold)':'var(--muted)'}">${fmtInv(v.code)}</b>
-      <code>${state}${v.note?' · '+esc(v.note):''} · ${date}${expiry}</code>
-      <span class="row" style="gap:6px">
-        ${copyable?`<button class="btn" data-invcopy="${v.code}" data-invkind="${mgr?'manager':'once'}">복사</button>`:''}
-        <button class="btn danger-soft" data-invdel="${v.code}">삭제</button>
-      </span>
-    </div>`;
-  }).join(''):'<span class="hint">발급한 코드가 없습니다. 위에서 발급해 매니저/운영자에게 보내세요.</span>';
-
-  document.querySelectorAll('[data-invcopy]').forEach(b=>b.onclick=()=>{
-    const c=b.dataset.invcopy, mgr=b.dataset.invkind==='manager';
-    copyText(`${mgr?'매니저 코드':'경매방 생성 코드'}: ${fmtInv(c)}\n아래 링크를 열면 바로 ${mgr?'경매방을 만들 수 있습니다':'만들 수 있습니다'}.\n${location.origin}/#/op/${c}`);
-  });
-  document.querySelectorAll('[data-invdel]').forEach(b=>b.onclick=async()=>{
-    const c=b.dataset.invdel;
-    if(!await askConfirm({title:`코드 ${fmtInv(c)} 를 삭제할까요?`,msg:'아직 안 쓴 코드라면 더는 방을 만들 수 없게 됩니다.',confirmLabel:'삭제'})) return;
-    try{ await api('/api/admin/invite/'+c,{method:'DELETE'}); toast('삭제했습니다'); renderRooms(); }
-    catch(e){ if(e.message!=='unauth') toast(e.message,true); }
-  });
-
-  // 경매방을 만든 코드(via)별로 묶어 표시. 코드 종류/메모는 발급 코드 목록에서 가져옵니다.
-  const invMeta={}; invites.forEach(v=>invMeta[v.code]={kind:v.kind,note:v.note,createdAt:v.createdAt});
-  const stOf=r=>r.missing?['p-gone','삭제됨','st-gone']
-    :r.filled||r.phase==='done'?['p-done','종료','st-done']
-    :r.phase==='live'?['p-live','진행 중','st-live']:['p-ready','대기','st-ready'];
   const daysOf=r=>Math.ceil((r.createdAt+14*86400e3-Date.now())/86400e3);
 
   if(!rooms.length){
-    $('rooms').innerHTML='<div class="empty">아직 만든 경매방이 없습니다<br>위의 버튼으로 새로 만들어보세요</div>';
-  }else{
-    // 상단 요약 바
-    const c={live:0,ready:0,done:0,gone:0,soon:0};
-    rooms.forEach(r=>{ const s=stOf(r)[2];
-      if(s==='st-gone')c.gone++; else if(s==='st-done')c.done++; else if(s==='st-live')c.live++; else c.ready++;
-      const d=daysOf(r); if(s!=='st-gone'&&d>=0&&d<=3)c.soon++; });
-    const capped=total>shown;   // 방이 40개를 넘으면 최신 40개만 집계·표시됩니다.
-    const sum=`<div class="room-sum">
-      <span class="s">${capped?'표시':'전체'} <b>${rooms.length}</b>${capped?` <i style="font-style:normal;color:var(--muted)">/ 전체 ${total}</i>`:''}</span>
-      <span class="s live">진행중 <b>${c.live}</b></span>
-      <span class="s">대기 <b>${c.ready}</b></span>
-      <span class="s done">종료 <b>${c.done}</b></span>
-      ${c.gone?`<span class="s">삭제됨 <b>${c.gone}</b></span>`:''}
-      ${c.soon?`<span class="s warn">곧 삭제 <b>${c.soon}</b></span>`:''}
-    </div>${capped?`<div class="hint" style="margin:-6px 0 12px;color:var(--muted)">방이 많아 최신 40개만 표시됩니다. 끝난 방을 삭제하면 정리됩니다.</div>`:''}`;
-
-    // 코드별 그룹: 원본 인덱스(idx)를 유지해 아래 버튼 핸들러가 그대로 동작하게 함.
-    const gmap=new Map();
-    rooms.forEach((r,idx)=>{ const k=r.via||''; if(!gmap.has(k))gmap.set(k,[]); gmap.get(k).push({r,idx}); });
-    // 그룹 순서: 코드 발급순(오래된 먼저) → 삭제된 코드 → 직접 생성(맨 뒤)
-    const rank=k=> k===''?Number.MAX_SAFE_INTEGER : (invMeta[k]?invMeta[k].createdAt:Number.MAX_SAFE_INTEGER-1);
-    const newest=k=>Math.max(...gmap.get(k).map(it=>it.r.createdAt));   // 발급순 동률(만료·삭제 코드) 보조정렬
-    const keys=[...gmap.keys()].sort((a,b)=> rank(a)-rank(b) || newest(b)-newest(a));
-
-    const card=({r,idx})=>{ const st=stOf(r), d=daysOf(r);
-      const prog=(!r.missing&&r.players)?`<div class="rbar"><i style="width:${Math.round(r.sold/r.players*100)}%"></i></div>`:'';
-      return `<div class="room ${st[2]}">
-        <div class="rc">${r.code}</div>
-        <div>
-          <div class="rt">${esc(r.title)} <span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트 · '+rulesLabel({rules:r.draftRules,balance:r.draftBalance}).replace('클랜티어 균형','클랜티어')):'경매'}</span> <span class="pill ${st[0]}">${st[1]}</span></div>
-          <div class="rs">
-            ${r.missing?'<span>방 데이터가 없습니다</span>':`
-            <span>${r.teams}팀 · 참가자 ${r.players}명</span>
-            <span>낙찰 ${r.sold}/${r.players}</span>
-            <span>${connSummary(r)}</span>`}
-            <span>${new Date(r.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
-            <span class="${!r.missing&&d>=0&&d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
-          </div>
-          ${prog}
-        </div>
-        <div class="row" style="gap:6px">
-          ${r.missing?'':`<button class="btn" data-links="${idx}">링크</button>
-          ${r.phase==='ready'?`<button class="btn" data-redit="${idx}">수정</button>`:''}
-          <button class="btn gold" data-enter="${idx}">진행자로 입장</button>`}
-          <button class="btn danger-soft" data-del="${r.code}">삭제</button>
-        </div>
-      </div>`;
-    };
-    const header=k=>{ const n=gmap.get(k).length;
-      if(k==='') return `<div class="room-group"><span class="gc">직접 생성</span><span class="gk direct">관리자</span><span class="gn">방 ${n}개</span></div>`;
-      const m=invMeta[k];
-      const kind=m?(m.kind==='manager'?['mgr','매니저']:['once','1회용']):['gone','만료·삭제된 코드'];
-      const memo=(m&&m.note)?`<span class="gm">${esc(m.note)}</span>`:'';
-      return `<div class="room-group"><span class="gc">${fmtInv(k)}</span><span class="gk ${kind[0]}">${kind[1]}</span>${memo}<span class="gn">방 ${n}개</span></div>`;
-    };
-    const body=keys.map(k=>{
-      const items=gmap.get(k).sort((x,y)=>y.r.createdAt-x.r.createdAt);  // 그룹 내 최신순
-      return header(k)+'<div class="rooms">'+items.map(card).join('')+'</div>';
-    }).join('');
-
-    $('rooms').innerHTML=sum+body;
+    $('rooms').innerHTML='<div class="empty">아직 만든 경매방이 없습니다</div>';
+    return;
   }
+  // 상단 요약 바
+  const c={live:0,ready:0,done:0,gone:0,soon:0};
+  rooms.forEach(r=>{ const s=roomState(r)[2];
+    if(s==='st-gone')c.gone++; else if(s==='st-done')c.done++; else if(s==='st-live')c.live++; else c.ready++;
+    const d=daysOf(r); if(s!=='st-gone'&&d>=0&&d<=3)c.soon++; });
+  const capped=total>shown;   // 방이 40개를 넘으면 최신 40개만 집계·표시됩니다.
+  const sum=`<div class="room-sum">
+    <span class="s">${capped?'표시':'전체'} <b>${rooms.length}</b>${capped?` <i style="font-style:normal;color:var(--muted)">/ 전체 ${total}</i>`:''}</span>
+    <span class="s live">진행중 <b>${c.live}</b></span>
+    <span class="s">대기 <b>${c.ready}</b></span>
+    <span class="s done">종료 <b>${c.done}</b></span>
+    ${c.gone?`<span class="s">삭제됨 <b>${c.gone}</b></span>`:''}
+    ${c.soon?`<span class="s warn">곧 삭제 <b>${c.soon}</b></span>`:''}
+  </div>${capped?`<div class="hint" style="margin:-6px 0 12px;color:var(--muted)">방이 많아 최신 40개만 표시됩니다. 끝난 방을 삭제하면 정리됩니다.</div>`:''}`;
+
+  // 같은 곳(접속 주소)에서 만든 방 수. by는 서버가 주소를 HMAC으로 바꾼 짧은 값입니다.
+  const srcCount={}; rooms.forEach(r=>{ if(r.by&&r.by!=='admin') srcCount[r.by]=(srcCount[r.by]||0)+1; });
+  const srcChip=r=>!r.by?''
+    :r.by==='admin'?'<span class="src admin" title="관리자 화면에서 만든 방">관리자</span>'
+    :`<button type="button" class="src" data-src="${esc(r.by)}" style="--h:${[...r.by].reduce((h,c)=>(h*31+c.charCodeAt(0))%360,0)}"
+        title="같은 곳(접속 주소)에서 만든 방은 같은 표시가 붙습니다. 눌러서 모아 보기">만든 곳 ${esc(r.by)}${srcCount[r.by]>1?` · ${srcCount[r.by]}개`:''}</button>`;
+  const card=(r,idx)=>{ const st=roomState(r), d=daysOf(r);
+    const prog=(!r.missing&&r.players)?`<div class="rbar"><i style="width:${Math.round(r.sold/r.players*100)}%"></i></div>`:'';
+    return `<div class="room ${st[2]}">
+      <div class="rc">${r.code}</div>
+      <div>
+        <div class="rt">${esc(r.title)} ${modePill(r)} <span class="pill ${st[0]}">${st[1]}</span> ${srcChip(r)}</div>
+        <div class="rs">
+          ${r.missing?'<span>방 데이터가 없습니다</span>':`
+          <span>${r.teams}팀 · 참가자 ${r.players}명</span>
+          <span>낙찰 ${r.sold}/${r.players}</span>
+          <span>${connSummary(r)}</span>`}
+          <span>${new Date(r.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+          <span class="${!r.missing&&d>=0&&d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
+        </div>
+        ${prog}
+      </div>
+      <div class="row" style="gap:6px">
+        ${r.missing?'':`<button class="btn" data-links="${idx}">링크</button>
+        ${r.phase==='ready'?`<button class="btn" data-redit="${idx}">수정</button>`:''}
+        <button class="btn gold" data-enter="${idx}">진행자로 입장</button>`}
+        <button class="btn danger-soft" data-del="${r.code}">삭제</button>
+      </div>
+    </div>`;
+  };
+  // 그룹으로 묶기: 대소문자·띄어쓰기만 다른 이름은 같은 그룹으로 봅니다. 최근에 만든 방이 있는 그룹이 위,
+  // 그룹을 안 적은 방은 맨 아래 '그룹 없음'. 그룹을 적은 방이 하나도 없으면 묶지 않고 그대로 보여줍니다.
+  const gkey=g=>String(g||'').toLowerCase().replace(/\s+/g,'');
+  const draw=()=>{
+    const view=rooms.map((r,i)=>({r,i})).filter(x=>!roomSrc||x.r.by===roomSrc);
+    const groups=new Map();
+    view.forEach(x=>{ const k=gkey(x.r.group); if(!groups.has(k)) groups.set(k,{name:x.r.group,items:[]}); groups.get(k).items.push(x); });
+    const none=groups.get(''); groups.delete('');
+    const list=items=>'<div class="rooms">'+items.map(x=>card(x.r,x.i)).join('')+'</div>';
+    const sec=(name,items,cls)=>{ const live=items.filter(x=>roomState(x.r)[2]==='st-live').length;
+      return `<details class="rgrp${cls||''}" open><summary><b>${name}</b><span>방 ${items.length}개${live?` · <i>진행중 ${live}</i>`:''}</span></summary>${list(items)}</details>`; };
+    const filt=roomSrc?`<div class="srcbar">만든 곳 <b>${esc(roomSrc)}</b>에서 만든 방만 보는 중 <button class="btn ghost sm" id="bSrcAll">전체 보기</button></div>`:'';
+    $('rooms').innerHTML=sum+filt+(groups.size
+      ? [...groups.values()].map(g=>sec(esc(g.name),g.items)).join('')+(none?sec('그룹 없음',none.items,' nogrp'):'')
+      : list(view));
+    bind();
+  };
+  const bind=()=>{
+  if($('bSrcAll')) $('bSrcAll').onclick=()=>{ roomSrc=''; draw(); };
+  document.querySelectorAll('[data-src]').forEach(b=>b.onclick=()=>{ roomSrc=roomSrc===b.dataset.src?'':b.dataset.src; draw(); });
 
   document.querySelectorAll('[data-links]').forEach(b=>b.onclick=()=>{
     const r=rooms[+b.dataset.links];
     renderLinks({code:r.code,hostKey:r.hostKey,viewKey:r.viewKey,links:r.links},true);
   });
-  document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>{
-    const r=rooms[+b.dataset.enter];
-    pendingEdit=false;   // 일반 입장 — 이전 '수정' 시도의 잔류값이 폼을 열지 않게
-    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
-    $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
-    connect(r.code,'k='+r.hostKey);
-  });
-  // '수정': 진행자로 입장하되 hello 수신 후 곧장 수정 폼을 엽니다(pendingEdit).
-  document.querySelectorAll('[data-redit]').forEach(b=>b.onclick=()=>{
-    const r=rooms[+b.dataset.redit];
-    pendingEdit=true;
-    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
-    $('app').innerHTML='<div class="landing"><p class="hint">수정 화면을 여는 중입니다…</p></div>';
-    connect(r.code,'k='+r.hostKey);
-  });
+  // 관리자가 남의 방에 들어갈 때는 '내가 만든 방'에 적지 않습니다(adminEntry).
+  document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>{ const r=rooms[+b.dataset.enter]; adminEntry=true; enterRoom(r.code,r.hostKey,false); });
+  document.querySelectorAll('[data-redit]').forEach(b=>b.onclick=()=>{ const r=rooms[+b.dataset.redit]; adminEntry=true; enterRoom(r.code,r.hostKey,true); });
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
     const code=b.dataset.del;
     if(!await askConfirm({title:`${code} 방을 삭제할까요?`,msg:'진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.\n확인을 위해 방 코드를 입력하세요.',confirmLabel:'삭제',danger:'solid',code})) return;
     try{ await api('/api/admin/room/'+code,{method:'DELETE'}); toast('삭제했습니다'); renderRooms(); }
     catch(e){ if(e.message!=='unauth') toast(e.message,true); }
   });
+  };
+  draw();
+}
+let roomSrc='';   // 관리자 목록: '만든 곳' 표시로 모아 보는 중이면 그 값
+
+// 방 목록 공용: [pill 클래스, 라벨, 카드 클래스]
+function roomState(r){
+  return r.missing?['p-gone','삭제됨','st-gone']
+    :r.filled||r.phase==='done'?['p-done','종료','st-done']
+    :r.phase==='live'?['p-live','진행 중','st-live']:['p-ready','대기','st-ready'];
+}
+const modePill=r=>`<span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트 · '+rulesLabel({rules:r.draftRules,balance:r.draftBalance}).replace('클랜티어 균형','클랜티어')):'경매'}</span>`;
+
+// 진행자로 방에 들어갑니다. edit이면 접속 직후 바로 방 설정 수정 화면을 엽니다(pendingEdit).
+function enterRoom(code,k,edit){
+  pendingEdit=!!edit;
+  if(adminEntry) markAdminRoom(code);
+  history.replaceState(null,'',`/#/r/${code}?k=${k}`);
+  $('app').innerHTML=`<div class="landing"><p class="hint">${edit?'수정 화면을 여는 중입니다…':'입장하는 중입니다…'}</p></div>`;
+  connect(code,'k='+k);
+}
+
+/* ═══ 내가 만든 방 (이 브라우저에만 기억) ═══
+   누구나 방을 만들 수 있게 되면서, 만든 사람이 자기 방을 다시 찾는 열쇠는 진행자 키뿐입니다.
+   이 브라우저에 [방 코드, 진행자 키]를 적어두고 첫 화면에 보여줍니다. 서버에는 저장하지 않습니다.
+   진행자 링크로 들어온 방도 함께 적으므로, 다른 기기에서도 진행자 링크로 한 번 들어오면 목록에 생깁니다. */
+const CREATE_MAX=5;          // 서버 CREATE_MAX와 같은 값 (안내 문구용)
+const MY_KEY='myRooms', MY_MAX=10, ROOM_MS=14*86400e3;   // MY_MAX는 서버 MY_ROOMS_MAX와 같은 값
+function myRoomsGet(){
+  try{
+    const a=JSON.parse(localStorage.getItem(MY_KEY)||'[]');
+    if(!Array.isArray(a)) return [];
+    const now=Date.now();
+    return a.filter(r=>r&&/^[A-Z0-9]{6}$/.test(r.code)&&r.k&&!(r.at&&now-r.at>=ROOM_MS)).slice(0,MY_MAX);
+  }catch{ return []; }
+}
+function myRoomsSet(a){ try{ localStorage.setItem(MY_KEY,JSON.stringify(a.slice(0,MY_MAX))); }catch{} }
+function rememberRoom(code,k,title,at,group){
+  if(!code||!k) return;
+  const a=myRoomsGet(), i=a.findIndex(r=>r.code===code), old=i>=0?a[i]:null;
+  const rec={code,k,title:String(title||'').slice(0,40),at:at||(old&&old.at)||Date.now(),g:String(group||'').slice(0,20)};
+  if(old&&old.k===rec.k&&old.title===rec.title&&old.at===rec.at&&(old.g||'')===rec.g) return;   // 바뀐 게 없으면 쓰지 않음
+  if(old) a[i]=rec; else a.unshift(rec);   // 새 방은 맨 앞 — MY_MAX개를 넘으면 가장 오래된 것이 빠집니다
+  const out=a.length>MY_MAX?a[a.length-1]:null;
+  myRoomsSet(a);
+  // 빠진 방도 서버에는 그대로 있습니다. 진행자 링크가 없으면 다시 찾을 수 없으니 알려줍니다.
+  if(out) toast(`내가 만든 방은 ${MY_MAX}개까지 기억합니다. 가장 오래된 ${out.code}${out.title?` (${out.title})`:''} 방이 목록에서 빠졌습니다. 그 방은 진행자 링크로 들어갈 수 있습니다.`,true);
+}
+function recentGroups(){
+  const seen=new Set(), out=[];
+  for(const r of myRoomsGet()){ const g=String(r.g||'').trim(), k=g.toLowerCase().replace(/\s+/g,'');
+    if(g&&!seen.has(k)){ seen.add(k); out.push(g); } }
+  return out.slice(0,6);
+}
+function forgetRoom(code){ myRoomsSet(myRoomsGet().filter(r=>r.code!==code)); }
+// 진행자로 접속한 방을 기억합니다. 관리자가 목록에서 들어간 남의 방은 제외합니다.
+// adminEntry는 메모리 값이라 새로고침하면 사라집니다. 관리자로 들어간 방 코드를 이 탭(sessionStorage)에 남겨둡니다.
+function markAdminRoom(code){
+  try{ const a=JSON.parse(sessionStorage.getItem('admRooms')||'[]'); if(!a.includes(code)){ a.push(code); sessionStorage.setItem('admRooms',JSON.stringify(a.slice(-50))); } }catch{}
+}
+function isAdminRoom(code){
+  try{ return JSON.parse(sessionStorage.getItem('admRooms')||'[]').includes(code); }catch{ return false; }
+}
+function rememberHostRoom(){
+  if(!S||!me||me.role!=='host'||adminEntry||isAdminRoom(S.code)) return;
+  rememberRoom(S.code,new URLSearchParams(wsAuth).get('k')||'',S.title,S.createdAt,S.group);
+}
+
+async function renderMyRooms(){
+  const box=$('myRooms'); if(!box) return;
+  const mine=myRoomsGet();
+  if(!mine.length){ box.innerHTML=''; return; }
+  const shell=inner=>`<div class="panel" style="text-align:left;margin-top:14px">
+    <div style="display:flex;align-items:center;gap:8px"><span class="lbl" style="margin:0">내가 만든 방</span>
+      <button class="btn ghost sm" id="mrRe" style="margin-left:auto">새로고침</button></div>
+    ${inner}
+    <p class="hint" style="margin:10px 0 0">이 브라우저에만 기억됩니다. 다른 기기에서는 진행자 링크로 한 번 들어오면 그 기기 목록에도 생깁니다.</p>
+  </div>`;
+  box.innerHTML=shell('<div class="hint" style="margin:8px 0 0">불러오는 중…</div>');
+  $('mrRe').onclick=renderMyRooms;
+  let data;
+  try{
+    const r=await fetch('/api/my-rooms',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({rooms:mine.map(({code,k})=>({code,k}))})});
+    data=await r.json().catch(()=>({}));
+    if(!r.ok||!Array.isArray(data.rooms)) throw new Error(r.status===429?'busy':(data.error||'불러오지 못했습니다'));
+  }catch(e){
+    if(!$('myRooms')) return;
+    box.innerHTML=shell(`<div class="hint" style="margin:8px 0 0;color:var(--danger)">${e.message==='busy'?'너무 자주 불러왔습니다. 1분쯤 뒤에 새로고침해주세요.':'방 목록을 불러오지 못했습니다. 새로고침해주세요.'}</div>`);
+    $('mrRe').onclick=renderMyRooms;
+    return;
+  }
+  if(!$('myRooms')) return;   // 기다리는 사이 다른 화면으로 넘어갔으면 그리지 않습니다
+  // 삭제됐거나 기간이 지난 방은 목록에서 걷어냅니다. 일시적 오류(error)는 남겨둡니다.
+  const byCode=new Map(data.rooms.map(x=>[x.code,x]));
+  const gone=data.rooms.filter(x=>x.missing).map(x=>x.code);
+  if(gone.length) myRoomsSet(myRoomsGet().filter(r=>!gone.includes(r.code)));
+  const list=myRoomsGet().filter(r=>byCode.has(r.code)&&!byCode.get(r.code).missing);
+  if(!list.length){ box.innerHTML=''; return; }
+
+  box.innerHTML=shell(`<div class="myrooms">${list.map((m,i)=>{
+    const r=byCode.get(m.code);
+    if(r.error) return `<div class="myroom"><div class="mr-hd"><span class="rc">${m.code}</span><span class="rt">${esc(m.title)}</span></div>
+      <div class="rs"><span>상태를 불러오지 못했습니다</span></div>
+      <div class="row"><button class="btn gold" data-mrenter="${i}">진행자로 입장</button></div></div>`;
+    const st=roomState(r);
+    const d=Math.ceil(((r.createdAt||m.at)+ROOM_MS-Date.now())/86400e3);
+    return `<div class="myroom ${st[2]}">
+      <div class="mr-hd"><span class="rc">${m.code}</span><span class="rt">${esc(r.title)}</span>${r.group?`<span class="pill p-grp">${esc(r.group)}</span>`:''}${modePill(r)}<span class="pill ${st[0]}">${st[1]}</span></div>
+      <div class="rs">
+        <span>${r.teams}팀 · 참가자 ${r.players}명</span>
+        <span>${r.mode==='draft'?'지명':'낙찰'} ${r.sold}/${r.players}</span>
+        <span>${connSummary(r)}</span>
+        <span class="${d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
+      </div>
+      <div class="row">
+        <button class="btn gold" data-mrenter="${i}">진행자로 입장</button>
+        <button class="btn" data-mrlinks="${i}">링크</button>
+        ${r.phase==='ready'?`<button class="btn" data-mredit="${i}">수정</button>`:''}
+        <button class="btn danger-soft" data-mrdel="${i}" style="margin-left:auto">삭제</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`);
+  $('mrRe').onclick=renderMyRooms;
+  document.querySelectorAll('[data-mrenter]').forEach(b=>b.onclick=()=>{ const m=list[+b.dataset.mrenter]; enterRoom(m.code,m.k,false); });
+  document.querySelectorAll('[data-mredit]').forEach(b=>b.onclick=()=>{ const m=list[+b.dataset.mredit]; enterRoom(m.code,m.k,true); });
+  document.querySelectorAll('[data-mrlinks]').forEach(b=>b.onclick=async()=>{
+    const m=list[+b.dataset.mrlinks];
+    try{
+      const r=await fetch(`/api/room/${m.code}/links?k=${encodeURIComponent(m.k)}`);
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||'링크를 불러오지 못했습니다');
+      setupMode='open'; links=d; renderLinks(d,true);
+    }catch(e){ toast(e.message,true); }
+  });
+  document.querySelectorAll('[data-mrdel]').forEach(b=>b.onclick=async()=>{
+    const m=list[+b.dataset.mrdel];
+    if(!await askConfirm({title:`${m.code} 방을 삭제할까요?`,msg:'진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.\n확인을 위해 방 코드를 입력하세요.',confirmLabel:'삭제',danger:'solid',code:m.code})) return;
+    try{
+      const r=await fetch(`/api/room/${m.code}?k=${encodeURIComponent(m.k)}`,{method:'DELETE'});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok&&r.status!==404) throw new Error(d.error||'삭제하지 못했습니다');
+      forgetRoom(m.code); toast('삭제했습니다'); renderMyRooms();
+    }catch(e){ toast(/fetch|network|failed/i.test(e.message)?'네트워크 오류입니다. 다시 시도해주세요.':e.message,true); }
+  });
 }
 
 /* ═══ 랜딩 · 설정 ═══ */
 function renderLanding(){
-  managerMode=false;
+  adminEntry=false;
   $('app').innerHTML=`<div class="landing">
     <h1>실시간 경매</h1>
-    <p class="hint">진행자가 방을 만들고 팀장들에게 링크를 보내면, 각자 화면에서 직접 입찰할 수 있습니다.</p>
+    <p class="hint">방을 만들고 팀장들에게 링크를 보내면, 각자 화면에서 직접 입찰하거나 지명할 수 있습니다.</p>
     <div class="panel" style="text-align:left">
+      <span class="lbl">경매방 만들기</span>
+      <button class="btn gold" id="bNewRoom" style="width:100%;padding:13px;margin-top:4px">＋ 새 경매방 만들기</button>
+      <p class="hint" style="margin:10px 0 0">가입 없이 바로 만들 수 있습니다. 한 곳에서 하루 <b>${CREATE_MAX}개</b>까지 만들 수 있고, 방은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
+    </div>
+    <div id="myRooms"></div>
+    <div class="panel" style="text-align:left;margin-top:14px">
       <span class="lbl">방 코드로 참가</span>
       <div class="join">
         <input type="text" id="joinCode" maxlength="6" placeholder="ABC123" aria-label="방 코드">
@@ -2365,18 +2484,8 @@ function renderLanding(){
       </div>
       <p class="hint" style="margin-top:10px">팀장이라면 진행자가 보낸 링크를 그대로 열어야 합니다. 코드만으로는 관전만 가능합니다.</p>
     </div>
-    <div class="panel" style="text-align:left;margin-top:14px">
-      <span class="lbl">경매방 만들기 · 운영자/매니저</span>
-      <div class="join">
-        <input type="text" id="opIn" maxlength="9" placeholder="ABCD-EFGH" aria-label="생성 코드" style="font-size:19px">
-        <button class="btn" id="bOp">확인</button>
-      </div>
-      <p class="hint" style="margin-top:10px">관리자에게 받은 코드를 입력하면 경매방을 만들 수 있습니다. <b>1회용 코드</b>는 방 1개, <b>매니저 코드</b>는 방을 여러 개(최대 10개) 만들 수 있습니다.</p>
-    </div>
   </div>`;
-  const goOp=()=>startOperator($('opIn').value);
-  $('bOp').onclick=goOp;
-  $('opIn').onkeydown=e=>{ if(e.key==='Enter') goOp(); };
+  $('bNewRoom').onclick=()=>renderSetup('open');
   $('bJoin').onclick=async()=>{
     const c=$('joinCode').value.trim().toUpperCase();
     if(c.length!==6) return toast('6자리 코드를 입력하세요',true);
@@ -2387,121 +2496,8 @@ function renderLanding(){
     }catch{ toast('연결에 실패했습니다. 잠시 후 다시 시도해주세요.',true); }
   };
   $('joinCode').onkeydown=e=>{ if(e.key==='Enter') $('bJoin').click(); };
+  renderMyRooms();
 }
-
-/* 운영자: 생성 코드를 확인하고 설정 화면으로 */
-async function startOperator(raw){
-  const c=String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  if(c.length!==8) return toast('8자리 생성 코드를 입력하세요',true);
-  try{
-    const r=await fetch('/api/invite/'+c);
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok){
-      toast(d.error||'코드를 확인하지 못했습니다',true);
-      if(!$('opIn')) renderLanding();
-      return;
-    }
-    opCode=c; setupMode='op'; go('#/op/'+c);
-    if(d.manager){
-      // 매니저 코드 → 방을 여러 개 관리하는 대시보드.
-      managerMode=true; renderManager();
-    }else if(d.used&&d.room){
-      // 1회용인데 이미 방을 만든 상태 → 그 방의 링크 화면으로 재진입.
-      managerMode=false; links=d.room; renderLinks(d.room,true);
-    }else{
-      managerMode=false; renderSetup('op');
-    }
-  }catch{ toast('네트워크 오류입니다. 잠시 후 다시 시도해주세요.',true); }
-}
-
-/* 매니저: 자기가 만든 경매방들을 한 화면에서 관리(최대 10개) */
-async function renderManager(){
-  $('app').innerHTML=`
-  <div class="topbar"><div class="brand">매니저 <span>경매방</span></div>
-    <div class="who">코드 ${fmtInv(opCode)}</div>
-    <div class="conn"><button class="btn ghost sm" id="bHome">처음으로</button></div>
-  </div>
-  <div class="row" style="margin-bottom:14px;align-items:center">
-    <span class="lbl" style="margin:0">내 경매방 <b id="mCount" class="num" style="color:var(--gold);font-size:16px">–</b><span class="hint" style="text-transform:none;letter-spacing:0"> / <span id="mMax">10</span></span></span>
-    <button class="btn gold" id="mNew" style="margin-left:auto;padding:9px 18px">＋ 새 경매방 만들기</button>
-    <button class="btn ghost sm" id="mRe">새로고침</button>
-  </div>
-  <div id="mRooms"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:9px"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:60%"></span><span class="skl" style="height:11px;width:85%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:var(--r-sm)"></span><span class="skl" style="height:36px;width:100px;border-radius:var(--r-sm)"></span></span></div><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;opacity:.6"><span class="skl" style="height:26px;width:80px"></span><span style="display:flex;flex-direction:column;gap:7px"><span class="skl" style="height:14px;width:45%"></span><span class="skl" style="height:11px;width:70%"></span></span><span style="display:flex;gap:6px"><span class="skl" style="height:36px;width:52px;border-radius:var(--r-sm)"></span><span class="skl" style="height:36px;width:100px;border-radius:var(--r-sm)"></span></span></div></div>`;
-  $('bHome').onclick=()=>{ managerMode=false; go(''); renderLanding(); };
-  $('mRe').onclick=renderManager;
-  $('mNew').onclick=()=>renderSetup('op');   // 매니저도 op 흐름으로 생성(코드=opCode, 서버가 소모 안 함)
-
-  let data;
-  try{
-    const r=await fetch('/api/manager/'+opCode+'/rooms');
-    data=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.error||'불러오지 못했습니다');
-    if(!Array.isArray(data.rooms)) throw new Error('불러오지 못했습니다');
-  }catch(e){
-    toast(/fetch|network|failed/i.test(e.message)?'네트워크 오류입니다. 새로고침해주세요.':e.message,true);
-    $('mNew').disabled=true;
-    $('mRooms').innerHTML='<div class="empty">불러오지 못했습니다<br>새로고침하거나 처음으로 돌아가세요</div>';
-    return;
-  }
-
-  const {rooms,count,max}=data;
-  $('mCount').textContent=count;
-  $('mMax').textContent=max;
-  const full=count>=max;
-  $('mNew').disabled=full;
-
-  $('mRooms').innerHTML=(full?`<div class="hint" style="color:var(--danger);margin-bottom:10px">경매방이 ${max}개예요. 끝난 방을 삭제하면 새로 만들 수 있어요.</div>`:'')
-    +(rooms.length?`<div class="rooms">`+rooms.map((r,i)=>{
-      const st=r.missing?['p-gone','삭제됨']:(r.filled||r.phase==='done')?['p-done','종료']:r.phase==='live'?['p-live','진행 중']:['p-ready','대기'];
-      return `<div class="room">
-        <div class="rc">${r.code}</div>
-        <div>
-          <div class="rt">${esc(r.title)} <span class="pill ${st[0]}">${st[1]}</span></div>
-          <div class="rs">
-            ${r.missing?'<span>방 데이터가 없습니다</span>':`<span>${r.teams}팀 · 참가자 ${r.players}명</span><span>낙찰 ${r.sold}/${r.players}</span><span>${connSummary(r)}</span>`}
-            <span>삭제까지 ${Math.max(0,Math.ceil((r.createdAt+14*86400e3-Date.now())/86400e3))}일</span>
-          </div>
-        </div>
-        <div class="row" style="gap:6px">
-          ${r.missing?'':`<button class="btn" data-mlinks="${i}">링크</button>
-          ${r.phase==='ready'?`<button class="btn" data-medit="${i}">수정</button>`:''}
-          <button class="btn gold" data-menter="${i}">진행자 입장</button>`}
-          <button class="btn danger-soft" data-mdel="${r.code}">삭제</button>
-        </div>
-      </div>`;
-    }).join('')+`</div>`
-    :'<div class="empty">아직 만든 경매방이 없습니다<br>위의 <b>＋ 새 경매방 만들기</b>로 시작하세요</div>');
-
-  document.querySelectorAll('[data-mlinks]').forEach(b=>b.onclick=()=>{
-    const r=rooms[+b.dataset.mlinks];
-    renderLinks({code:r.code,hostKey:r.hostKey,viewKey:r.viewKey,links:r.links},true);
-  });
-  document.querySelectorAll('[data-menter]').forEach(b=>b.onclick=()=>{
-    const r=rooms[+b.dataset.menter];
-    pendingEdit=false;   // 일반 입장 — 이전 '수정' 시도의 잔류값이 폼을 열지 않게
-    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
-    $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
-    connect(r.code,'k='+r.hostKey);
-  });
-  document.querySelectorAll('[data-medit]').forEach(b=>b.onclick=()=>{
-    const r=rooms[+b.dataset.medit];
-    pendingEdit=true;
-    history.replaceState(null,'',`/#/r/${r.code}?k=${r.hostKey}`);
-    $('app').innerHTML='<div class="landing"><p class="hint">수정 화면을 여는 중입니다…</p></div>';
-    connect(r.code,'k='+r.hostKey);
-  });
-  document.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=async()=>{
-    const rc=b.dataset.mdel;
-    if(!await askConfirm({title:`${rc} 방을 삭제할까요?`,msg:'진행 기록과 링크가 모두 사라지고 되돌릴 수 없습니다.\n확인을 위해 방 코드를 입력하세요.',confirmLabel:'삭제',danger:'solid',code:rc})) return;
-    try{
-      const r=await fetch('/api/manager/'+opCode+'/room/'+rc,{method:'DELETE'});
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok) throw new Error(d.error||'삭제하지 못했습니다');
-      toast('삭제했습니다'); renderManager();
-    }catch(e){ toast(/fetch|network|failed/i.test(e.message)?'네트워크 오류입니다. 다시 시도해주세요.':e.message,true); }
-  });
-}
-
 /* 방 설정 수정: 현재 방 상태(S)를 생성 폼의 전역들에 역매핑합니다.
    grade/score는 서버가 숫자로 저장하지만 폼 검증(gnum/snum)은 문자열을 기대하므로 변환합니다.
    leaders의 id는 서버가 팀 토큰(=배포된 링크)을 보존하는 열쇠입니다 — drawLeaders는 id를 건드리지 않습니다. */
@@ -2512,7 +2508,7 @@ function seedSetupFromRoom(S0){
        :(S0.draft.balance&&S0.draft.balance!=='free'?[S0.draft.balance]:[]))
     : [];
   draftRules={tier:rl.includes('tier'),score:rl.includes('score')};
-  rules={title:S0.title,clock:S0.clock,base:S0.base,minBid:S0.minBid,order:S0.orderMode==='draw'?'draw':'random'};
+  rules={title:S0.title,group:S0.group||'',clock:S0.clock,base:S0.base,minBid:S0.minBid,order:S0.orderMode==='draw'?'draw':'random'};
   clockTouched=true;   // 모드 토글이 기존 제한시간을 기본값으로 덮지 않게
   leaders=S0.teams.map(t=>({id:t.id,name:t.leader,line:t.leaderLine||'',
     points:t.start===S0.base?null:t.start,
@@ -2537,13 +2533,12 @@ function openRoomEdit(){
 }
 
 function renderSetup(mode){
-  setupMode = mode==='op' ? 'op' : mode==='edit' ? 'edit' : 'admin';
+  setupMode = mode==='admin' ? 'admin' : mode==='edit' ? 'edit' : 'open';
   const edit=setupMode==='edit';
   $('app').innerHTML=`
   <div class="topbar"><div class="brand">${edit?'방 설정 <span>수정</span>':'새 경매방 <span>설정</span>'}</div>
     ${edit?`<div class="code">${esc(editCtx?editCtx.code:'')}</div>`:''}
-    ${setupMode==='op'?`<div class="who">${managerMode?'매니저':'생성'} 코드 ${fmtInv(opCode)}</div>`:''}
-    <div class="conn"><button class="btn ghost sm" id="bBackList">${edit?'수정 취소':managerMode?'매니저 홈':(setupMode==='op'?'처음으로':'목록으로')}</button></div>
+    <div class="conn"><button class="btn ghost sm" id="bBackList">${edit?'수정 취소':setupMode==='admin'?'목록으로':'처음으로'}</button></div>
   </div>
   <div class="setup">
     <div style="display:flex;flex-direction:column;gap:16px">
@@ -2573,6 +2568,8 @@ function renderSetup(mode){
         </div>`:''}
         <div class="grid2">
           <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="${esc(rules.title)}"></div>
+          <div><label class="lbl" for="cGroup">그룹 <i class="opt">선택</i></label><input type="text" id="cGroup" maxlength="20" placeholder="예: 클랜 이름" autocomplete="off" value="${esc(rules.group||'')}">
+            ${(gs=>gs.length?`<div class="grpchips"><span>최근</span>${gs.map(g=>`<button type="button" class="grpchip" data-grp="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'')(recentGroups())}</div>
           <div><span class="lbl">팀 인원</span><div class="fixedval">${TEAM_SIZE}명 <i>팀장 1 + ${TEAM_SIZE-1}명</i></div></div>
           <div><label class="lbl" for="cClock">${gameMode==='draft'?'지명 제한 시간 (초)':'입찰 제한 시간 (초)'}</label><input type="number" id="cClock" value="${rules.clock}" min="5" max="300"></div>
           ${gameMode==='auction'?`
@@ -2650,11 +2647,12 @@ function renderSetup(mode){
       </div>
     </div>
   </div>`;
+  document.querySelectorAll('[data-grp]').forEach(b=>b.onclick=()=>{ const i=$('cGroup'); i.value=b.dataset.grp; rules.group=i.value; i.focus(); });
   $('bBackList').onclick=edit
     ? ()=>{ editing=false; editCtx=null; paint(); }
-    : setupMode==='op'
-    ? (managerMode ? renderManager : ()=>{ go(''); renderLanding(); })
-    : renderRooms;
+    : setupMode==='admin'
+    ? renderRooms
+    : ()=>{ go(''); renderLanding(); };
   drawLeaders(); drawPlayers();
   const drop=$('drop'), file=$('file');
   drop.onclick=()=>file.click();
@@ -3036,7 +3034,7 @@ async function createRoom(){
     }
     // 드래프트는 포인트를 안 쓰므로 base/minBid는 서버 검증만 통과할 안전값으로 보냅니다.
     const ruleList=[draftRules.tier&&'tier',draftRules.score&&'score'].filter(Boolean);
-    return submitRoom({ mode:'draft', rules:ruleList, title:rules.title.trim()||'드래프트',
+    return submitRoom({ mode:'draft', rules:ruleList, title:rules.title.trim()||'드래프트', group:(rules.group||'').trim(),
       base:1000, minBid:10, clock, leaders:names, pool:players });
   }
 
@@ -3044,7 +3042,7 @@ async function createRoom(){
   const base=rules.base, minBid=rules.minBid;
   if(!(base>=1)) return toast('기본 시작 포인트를 1 이상으로 입력하세요',true);
   if(!(minBid>=1&&minBid<=100000)) return toast('최소 입찰 단위는 1~100000이어야 합니다',true);
-  const cfg={ mode:'auction', title:rules.title.trim()||'경매', base, minBid, clock,
+  const cfg={ mode:'auction', title:rules.title.trim()||'경매', group:(rules.group||'').trim(), base, minBid, clock,
     order:rules.order==='draw'?'draw':'random', leaders:names, pool:players };
   const need=(TEAM_SIZE-1)*cfg.minBid;
   const poor=names.filter(l=>(l.points??cfg.base)<need);
@@ -3080,15 +3078,18 @@ async function submitRoom(cfg){
   $('bCreate').disabled=true;
   try{
     let d;
-    if(setupMode==='op'){
-      // 운영자는 로그인 없이 생성 코드로 만듭니다. 성공하면 코드는 소모됩니다.
+    if(setupMode==='admin'){
+      // 관리자 로그인으로 만든 방은 하루 생성 개수에 세지 않습니다.
+      d=await api('/api/room',{method:'POST',body:JSON.stringify(cfg)});
+    }else{
+      // 누구나 로그인 없이 만듭니다. 한 곳에서 하루 개수 제한은 서버가 겁니다.
       const r=await fetch('/api/room',{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({...cfg,inviteCode:opCode})});
+        body:JSON.stringify(cfg)});
       d=await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error||'방을 만들지 못했습니다');
-    }else{
-      d=await api('/api/room',{method:'POST',body:JSON.stringify(cfg)});
     }
+    // 이 브라우저의 '내가 만든 방'에 적어둡니다. 진행자 키가 곧 이 방을 다시 여는 열쇠입니다.
+    rememberRoom(d.code,d.hostKey,cfg.title,Date.now(),cfg.group);
     links=d; renderLinks(d);
   }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); const b=$('bCreate'); if(b) b.disabled=false; } }
 }
@@ -3101,8 +3102,8 @@ function renderLinks(d,again){
     ...d.links.map(l=>({label:l.name, url:`${origin}/#/r/${d.code}?t=${l.token}`})),
     {label:'관전용', url:`${origin}/#/r/${d.code}?v=${d.viewKey}`}
   ];
-  const opCtx=setupMode==='op';
-  const backLabel=managerMode?'매니저 홈':(opCtx?'처음으로':'목록으로');
+  const adminCtx=setupMode==='admin';
+  const backLabel=adminCtx?'목록으로':'처음으로';
   $('app').innerHTML=`
   <div class="topbar"><div class="brand">경매방 <span>${again?'링크':'생성됨'}</span></div><div class="code">${d.code}</div>
     <div class="conn"><button class="btn ghost sm" id="bBackList2">${backLabel}</button></div>
@@ -3120,25 +3121,23 @@ function renderLinks(d,again){
     <button class="btn gold" id="bGo" style="flex:1;padding:13px">진행자로 입장</button>
     <button class="btn" id="bCopyAll">전체 목록 복사</button>
   </div>
-  <p class="hint" style="margin-top:12px">${managerMode
-    ?`<b>매니저 홈</b>에서 이 방의 링크를 언제든 다시 볼 수 있습니다. 각 팀장에게는 <b>자기 링크만</b> 보내세요.`
-    :opCtx
-    ?`받은 <b>생성 코드(${fmtInv(opCode)})를 다시 입력하면</b> 언제든 이 화면으로 돌아올 수 있습니다. 각 팀장에게는 <b>자기 링크만</b> 보내세요.`
-    :'링크는 관리자 화면의 <b>링크</b> 버튼으로 언제든 다시 볼 수 있습니다.'} 방과 소개 카드는 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`;
-  $('bBackList2').onclick=managerMode
-    ? renderManager
-    : opCtx
-    ? ()=>{ go(''); renderLanding(); }
-    : renderRooms;
+  ${adminCtx
+    ?'<p class="hint" style="margin-top:12px">링크는 관리자 화면의 <b>링크</b> 버튼으로 언제든 다시 볼 수 있습니다. 방과 소개 카드는 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>'
+    :`<div class="notebox" style="margin-top:14px"><b class="nb-hd">진행자 링크를 따로 저장해 두세요</b>
+      <ul>
+        <li>이 방은 <b>이 브라우저</b>의 첫 화면 <b>내가 만든 방</b>에서 다시 열 수 있습니다.</li>
+        <li>다른 컴퓨터·다른 브라우저·시크릿 창에서는 목록에 없습니다. 그때는 <b>진행자 링크</b>로 들어오면 됩니다.</li>
+        <li>진행자 링크를 잃어버리면 방을 다시 찾을 방법이 없습니다. 메모나 나에게 보내기로 저장해 두세요.</li>
+      </ul></div>
+    <p class="hint" style="margin-top:12px">각 팀장에게는 <b>자기 링크만</b> 보내세요. 방과 소개 카드는 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`}`;
+  $('bBackList2').onclick=adminCtx
+    ? renderRooms
+    : ()=>{ go(''); renderLanding(); };
 
   document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(rows[+b.dataset.copy].url));
   $('bCopyAll').onclick=()=>copyText(rows.map(r=>`${r.label}\n${r.url}`).join('\n\n'));
-  $('bGo').onclick=()=>{
-    pendingEdit=false;   // 일반 입장 — 이전 '수정' 시도의 잔류값이 폼을 열지 않게
-    history.replaceState(null,'',`/#/r/${d.code}?k=${d.hostKey}`);
-    $('app').innerHTML='<div class="landing"><p class="hint">입장하는 중입니다…</p></div>';
-    connect(d.code,'k='+d.hostKey);
-  };
+  // 관리자 화면에서 연 링크면 남의 방일 수 있어 '내가 만든 방'에 적지 않습니다.
+  $('bGo').onclick=()=>{ adminEntry=adminCtx; enterRoom(d.code,d.hostKey,false); };
 }
 
 /* ═══ 시작 ═══ */
@@ -3157,11 +3156,9 @@ if(roomCode){
 }else if(location.hash.startsWith('#/admin')){
   renderAdmin();
 }else if(location.hash.startsWith('#/op')){
-  const om=location.hash.match(/^#\/op\/([A-Z0-9]{8})/i);
-  if(om){
-    $('app').innerHTML='<div class="landing"><p class="hint">생성 코드를 확인하는 중입니다…</p></div>';
-    startOperator(om[1]);
-  }else renderLanding();
+  // 예전 생성 코드 링크. 이제 코드 없이 누구나 만들 수 있으므로 첫 화면으로 보냅니다.
+  go(''); renderLanding();
+  toast('이제 생성 코드 없이 누구나 방을 만들 수 있습니다');
 }else{
   renderLanding();
 }
