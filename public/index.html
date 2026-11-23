@@ -529,6 +529,98 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
    규칙 카드의 줄 수가 늘고, 창을 넓혔는데 입력칸이 오히려 화면 밖으로 나간다. */
 @media(max-width:1100px){.setup{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ── 랜랜내 ── */
+.mode-random{color:#c084fc}
+.rro-list{display:flex;flex-direction:column;gap:12px}
+.rro .lbl{margin-bottom:6px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 10px;border-radius:var(--r-sm);
+  background:var(--bg);border:1px solid var(--line);color:var(--body2);font:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:.13s}
+.seg button i{font-style:normal;font-size:var(--fs-2xs);font-weight:400;color:var(--muted)}
+.seg button:hover:not(:disabled){border-color:var(--line2);color:var(--text)}
+.seg button.on{background:var(--gold-soft);border-color:var(--gold);color:var(--gold)}
+.seg button.on i{color:var(--body2)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.seg.seg-n button{flex:0 0 auto;min-width:52px}
+.rr-etc{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.rr-etc summary{cursor:pointer}
+.rr-etc summary b{color:var(--text);font-weight:600}
+.rr-cnt{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:var(--fs-sm);color:var(--body2)}
+.rr-cnt span{display:inline-flex;align-items:center;gap:5px}
+.rr-cnt b{color:var(--text);font-family:var(--num)}
+.rr{--rh:104px;max-width:1080px;margin:0 auto}
+.rr-board{position:relative;padding:20px 22px}
+.rr-meta{font-size:var(--fs-sm);color:var(--body2);text-align:center;margin-bottom:14px}
+.rr-meta b{color:var(--gold)}
+.rr-grid{display:grid;grid-template-columns:1fr 112px 1fr;gap:10px 14px;align-items:center}
+.rr-grid.three{--rh:76px}
+.rr-grid>*{min-width:0}
+.rr-hd{font-size:var(--fs-xs);color:var(--muted);min-height:18px}
+.rr-hd.r{text-align:right}
+.rr-rl b{color:var(--gold);font-family:var(--num);font-size:var(--fs-md)}
+.rr-lane{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:var(--r-md);border:1px solid transparent;color:var(--body2)}
+.rr-lane .posic{width:26px;height:26px;opacity:.85}
+.rr-lane b{font-size:var(--fs-md)}
+.rr-lane.cur{border-color:var(--gold);background:var(--gold-soft);color:var(--gold)}
+.rr-lane.mirror em{font-style:normal;font-size:var(--fs-2xs);font-weight:800;color:#111;background:var(--gold);border-radius:var(--r-pill);padding:1px 8px}
+.rrcell{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 10px;min-height:calc(var(--rh) + 58px)}
+.rrcell.set{border-color:var(--line2)}
+.reel{position:relative;width:var(--rh);height:var(--rh);overflow:hidden;border-radius:var(--r-md);background:var(--panel2);
+  box-shadow:inset 0 0 0 2px var(--line2)}
+.reel.spin{box-shadow:inset 0 0 0 2px var(--gold),0 0 18px -6px var(--gold)}
+.reel img,.reel .q{display:block;width:var(--rh);height:var(--rh);object-fit:cover}
+.reel .q{display:grid;place-items:center;font-family:var(--num);font-size:calc(var(--rh) * .42);color:var(--line2)}
+.reel .strip{will-change:transform}
+.rrfoot{display:flex;align-items:center;gap:8px;min-height:26px;flex-wrap:wrap;justify-content:center}
+.rrfoot b{font-size:var(--fs-lg)}
+.rr-re{font:inherit;font-size:var(--fs-xs);color:var(--body2);background:transparent;border:1px solid var(--line2);border-radius:var(--r-pill);padding:3px 10px;cursor:pointer}
+.rr-re:hover{border-color:var(--gold);color:var(--gold)}
+.rr3{display:flex;gap:8px}
+.rrpick{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:0;font:inherit;color:inherit}
+button.rrpick{cursor:pointer}
+button.rrpick .reel{transition:box-shadow .13s,transform .13s}
+button.rrpick:hover .reel{box-shadow:inset 0 0 0 3px var(--gold);transform:translateY(-2px)}
+.rrpick .rn{font-size:var(--fs-xs);color:var(--body2);max-width:var(--rh);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reel.chosen{box-shadow:inset 0 0 0 3px var(--gold),0 0 18px -4px var(--gold)}
+.reel.dim{opacity:.3;filter:grayscale(1)}
+.rr-ctrl{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.rr-ctrl .rr-spin{min-width:220px;padding:13px 22px;font-size:var(--fs-md);font-weight:700}
+.rr-note{text-align:center;margin-top:8px}
+.rr-tip{text-align:center;margin-top:12px;color:var(--muted)}
+.rr-fear{margin-top:12px}
+.rr-fear-hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.rr-used{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.rr-used img{width:30px;height:30px;border-radius:5px;opacity:.75}
+.modal.rrl{max-width:980px}
+.rrd-panel{margin-bottom:16px}
+.rrd-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.rrd-hd .lbl{margin-right:auto!important}
+.rrd-body{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm);color:var(--body2)}
+.rrd-body b{color:var(--text)}
+.rrd-body .ok{color:var(--ok)} .rrd-body .bad{color:var(--danger)}
+.rrl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.rrl-col{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;min-width:0}
+.rrl-hd{display:flex;align-items:center;gap:6px;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.rrl-hd .posic{width:18px;height:18px}
+.rrl-hd b{font-size:var(--fs-md)}
+.rrl-hd span{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
+.rrl-hd i{font-style:normal;color:var(--danger)}
+.rrl-col ul{list-style:none;margin:0;padding:0}
+.rrl-col li{font-size:var(--fs-sm);color:var(--body2);padding:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrl-col li.used{text-decoration:line-through;color:var(--muted);opacity:.55}
+@media(max-width:760px){.rrl-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){
+  .rr-board{padding:14px 10px}
+  .rr{--rh:64px}
+  .rr-grid{grid-template-columns:1fr 54px 1fr;gap:8px}
+  .rr-grid.three{--rh:34px}
+  .rr3{gap:3px}
+  .rrcell{padding:10px 5px}
+  .rr-lane .posic{width:20px;height:20px}
+  .rr-lane b{font-size:var(--fs-xs)}
+  .rrfoot b{font-size:var(--fs-sm)}
+  .rr-ctrl .rr-spin{min-width:0;flex:1 1 100%}
+}
 </style>
 </head>
 <body>
@@ -855,6 +947,7 @@ const send=(t,extra={})=>{
 };
 
 function onEvent(ev){
+  if(typeof ev.kind==='string'&&ev.kind.startsWith('rr')) return rrOnEvent(ev);
   if(ev.kind==='sold'){ flash(`${esc(ev.team)}<br><span style="font-size:.55em">${esc(ev.player)} · ${esc(ev.price)}P</span>`); if(sfxOn()) soldChime(); }
   else if(ev.kind==='pass'){ flash('유찰'); if(sfxOn()) passSound(); }
   else if(ev.kind==='assign'){ flash(`${esc(ev.team)}<br><span style="font-size:.5em">${esc(ev.player)} · 배정</span>`); if(sfxOn()) soldChime(); }
@@ -1038,7 +1131,7 @@ function bgmStop(){ bgmOn=false; if(bgm){ bgm.pause(); bgm.currentTime=0; } }
    한 곳에 모아둬야 초기화·되돌리기·완료·재접속이 전부 같은 규칙을 따릅니다. */
 function bgmFollowPhase(){
   if(!S||!me||me.role!=='host') return;
-  if(S.phase==='live'){ if(!bgmOn) bgmStart(); }
+  if(S.phase==='live'&&S.mode!=='random'){ if(!bgmOn) bgmStart(); }
   else if(bgmOn) bgmStop();
 }
 function tickSound(){ try{ tone(1180,0,.045,.05,'square'); }catch{} }
@@ -1097,6 +1190,7 @@ function paint(){
   if(editing) return;   // 방 설정 수정 중 — 브로드캐스트가 폼을 날리지 않게 렌더를 미룹니다.
   // 음량 슬라이더를 끄는 중 — 여기서 다시 그리면 손잡이가 손에서 빠집니다. 놓을 때 밀린 것을 처리합니다.
   if(volDrag){ paintPending=true; return; }
+  if(S.mode==='random'){ rrPaint(); return; }
   totalsCache=null;   // 이번 렌더에서 다시 계산 (상태가 바뀌었으므로)
   // 드래그 도중 재렌더되면 소스 노드가 사라져 dragend가 안 뜨므로, 드래그 시각효과를 여기서 정리.
   document.body.classList.remove('dragging');
@@ -1146,6 +1240,7 @@ ${off.map(t=>`· ${t.leader} (${t.name})`).join('\n')}
 /* 상단 접속 현황 칩. 팀장이 몇 명 들어와 있는지가 핵심이고 관전 인원은 뒤에 덧붙입니다.
    진행자는 눌러서 링크 모달로 바로 갑니다 — '안 들어왔네' 다음 행동이 링크 재전송이기 때문입니다. */
 function presChip(){
+  if(presence&&S&&S.mode==='random') return presence.view?`<span class="pres full" title="관전 링크로 보는 사람">👀 관전 ${presence.view}</span>`:'';
   if(!presence||!S||!S.teams.length) return '';
   const on=leadersOn(), all=S.teams.length, off=leadersOff();
   const v=presence.view?` · 관전 ${presence.view}`:'';
@@ -1162,7 +1257,7 @@ function topbar(){
     <div class="brand">${esc(S.title)} <span class="live">LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
-    <div class="conn">${presChip()}${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button><span class="vollb ${sfxMuted?'off':''}" title="브금 음량">🎵</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bVol" min="0" max="100" step="1" value="${bgmVolToSlider(bgmVol)}" title="브금 음량 ${bgmVolToSlider(bgmVol)}%" aria-label="브금 음량"><span class="vollb ${sfxMuted?'off':''}" title="낙찰음·입찰음·초읽기 음량">🔔</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bSVol" min="0" max="100" step="1" value="${Math.round(sfxVol/SFX_MAX*100)}" title="연출음 음량 ${Math.round(sfxVol/SFX_MAX*100)}%" aria-label="연출음 음량">`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+    <div class="conn">${presChip()}${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>${S.mode==='random'?'':`<span class="vollb ${sfxMuted?'off':''}" title="브금 음량">🎵</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bVol" min="0" max="100" step="1" value="${bgmVolToSlider(bgmVol)}" title="브금 음량 ${bgmVolToSlider(bgmVol)}%" aria-label="브금 음량">`}<span class="vollb ${sfxMuted?'off':''}" title="낙찰음·입찰음·초읽기 음량">🔔</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bSVol" min="0" max="100" step="1" value="${Math.round(sfxVol/SFX_MAX*100)}" title="연출음 음량 ${Math.round(sfxVol/SFX_MAX*100)}%" aria-label="연출음 음량">`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
   </div>`;
 }
 
@@ -1198,8 +1293,8 @@ async function openLinksModal(){
   m.className='modal-bg';
   m.innerHTML=`<div class="modal">
     <div class="modal-hd"><b>접속 링크</b><button class="btn ghost sm" id="lmClose">닫기</button></div>
-    <p class="hint" style="margin-bottom:12px">각 팀장에게 <b>자기 링크만</b> 개인적으로 보내세요. 링크가 곧 신분입니다.</p>
-    ${presence?`<p class="hint" style="margin-bottom:12px;color:${off.length?'var(--gold)':'var(--ok)'}">${off.length
+    <p class="hint" style="margin-bottom:12px">${S.mode==='random'?'관전 링크는 누구에게나 보내도 됩니다. 진행자 링크는 따로 저장해 두세요.':'각 팀장에게 <b>자기 링크만</b> 개인적으로 보내세요. 링크가 곧 신분입니다.'}</p>
+    ${presence&&S.mode!=='random'?`<p class="hint" style="margin-bottom:12px;color:${off.length?'var(--gold)':'var(--ok)'}">${off.length
       ? `아직 안 들어온 팀장 ${off.length}명 — ${esc(off.map(t=>t.leader).join(', '))}. 아래 위쪽 줄의 링크를 다시 보내세요.`
       : '팀장 전원이 접속해 있습니다.'}</p>`:''}
     ${rows.map((r,i)=>`<div class="link-row"><b style="${r.gold?'color:var(--gold)':''}">${r.team&&presence?`<i class="pdot${r.on?' on':''}"></i>`:''}${esc(r.label)}</b><code>${esc(r.url)}</code><button class="btn" data-lcopy="${i}">복사</button></div>`).join('')}
@@ -2217,6 +2312,7 @@ async function renderRooms(){
     <div class="conn"><button class="btn ghost sm" id="bOut">로그아웃</button></div>
   </div>
   <p class="hint" style="margin-bottom:12px">누구나 첫 화면에서 방을 만들 수 있습니다(한 곳에서 하루 ${CREATE_MAX}개). 여기서는 모든 방을 보고 지울 수 있고, <b>직접 만들기</b>로 만든 방은 하루 개수에 세지 않습니다. 경매방(소개 카드 포함)은 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>
+  <div class="panel rrd-panel" id="rrdPanel"><span class="lbl">랜랜내 챔피언 데이터</span><p class="hint">불러오는 중…</p></div>
   <div class="row" style="margin-bottom:16px;align-items:center">
     <span class="lbl" style="margin:0">경매방 목록</span>
     <button class="btn ghost" id="bNew" style="margin-left:auto;padding:6px 12px;font-size:var(--fs-xs)">직접 만들기</button>
@@ -2226,6 +2322,7 @@ async function renderRooms(){
   $('bOut').onclick=()=>{ store.clear(); renderLogin('로그아웃했습니다.'); };
   $('bNew').onclick=()=>renderSetup('admin');
   $('bRe').onclick=renderRooms;
+  loadRRStatus();
 
   let rooms, total, shown;
   try{ ({rooms,total,shown}=await api('/api/admin/rooms')); }
@@ -2267,9 +2364,10 @@ async function renderRooms(){
         <div class="rt">${esc(r.title)} ${modePill(r)} <span class="pill ${st[0]}">${st[1]}</span> ${srcChip(r)}</div>
         <div class="rs">
           ${r.missing?'<span>방 데이터가 없습니다</span>':`
+          ${r.mode==='random'?`<span>${r.rrGame||1}판째 · 확정 ${r.sold}/10</span><span>${r.pres&&r.pres.view?`관전 ${r.pres.view}`:'관전 없음'}</span>`:`
           <span>${r.teams}팀 · 참가자 ${r.players}명</span>
           <span>낙찰 ${r.sold}/${r.players}</span>
-          <span>${connSummary(r)}</span>`}
+          <span>${connSummary(r)}</span>`}`}
           <span>${new Date(r.createdAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
           <span class="${!r.missing&&d>=0&&d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
         </div>
@@ -2277,7 +2375,7 @@ async function renderRooms(){
       </div>
       <div class="row" style="gap:6px">
         ${r.missing?'':`<button class="btn" data-links="${idx}">링크</button>
-        ${r.phase==='ready'?`<button class="btn" data-redit="${idx}">수정</button>`:''}
+        ${r.phase==='ready'&&r.mode!=='random'?`<button class="btn" data-redit="${idx}">수정</button>`:''}
         <button class="btn gold" data-enter="${idx}">진행자로 입장</button>`}
         <button class="btn danger-soft" data-del="${r.code}">삭제</button>
       </div>
@@ -2306,7 +2404,7 @@ async function renderRooms(){
 
   document.querySelectorAll('[data-links]').forEach(b=>b.onclick=()=>{
     const r=rooms[+b.dataset.links];
-    renderLinks({code:r.code,hostKey:r.hostKey,viewKey:r.viewKey,links:r.links},true);
+    renderLinks({code:r.code,hostKey:r.hostKey,viewKey:r.viewKey,links:r.links,mode:r.mode},true);
   });
   // 관리자가 남의 방에 들어갈 때는 '내가 만든 방'에 적지 않습니다(adminEntry).
   document.querySelectorAll('[data-enter]').forEach(b=>b.onclick=()=>{ const r=rooms[+b.dataset.enter]; adminEntry=true; enterRoom(r.code,r.hostKey,false); });
@@ -2320,6 +2418,47 @@ async function renderRooms(){
   };
   draw();
 }
+/* 관리자: 랜랜내 챔피언 데이터 상태 · 지금 갱신 · 파일 올리기 · 기본값으로 */
+async function loadRRStatus(){
+  const box=$('rrdPanel'); if(!box) return;
+  let d;
+  try{ d=await api('/api/admin/rr'); }
+  catch(e){ if(e.message!=='unauth'&&$('rrdPanel')) box.innerHTML='<span class="lbl">랜랜내 챔피언 데이터</span><p class="hint" style="color:var(--danger)">상태를 불러오지 못했습니다.</p>'; return; }
+  if(!$('rrdPanel')) return;
+  const fmt=t=>t?new Date(t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'-';
+  const BY={auto:'자동 갱신',manual:'지금 갱신',upload:'파일 올리기',reset:'기본값으로 되돌림'};
+  const KR=['탑','정글','미드','원딜','서폿'], c=d.current, L=d.last;
+  box.innerHTML=`<div class="rrd-hd"><span class="lbl" style="margin:0">랜랜내 챔피언 데이터</span>
+      <button class="btn sm" id="rrdRefresh">지금 갱신</button>
+      <label class="btn ghost sm" style="cursor:pointer">데이터 파일 올리기<input type="file" id="rrdFile" accept=".json,application/json" hidden></label>
+      ${d.using==='stored'?'<button class="btn ghost sm" id="rrdReset">기본값으로</button>':''}</div>
+    <div class="rrd-body">
+      <span>사용 중 <b>${esc(c.patch)} 패치</b> · ${d.using==='stored'?`${esc(c.updated)} 갱신 데이터`:'기본값(배포에 든 데이터)'}</span>
+      <span>뽑힐 수 있는 챔피언 (기본 / 메타픽) · ${KR.map((k,i)=>`${k} ${c.base[i]}/${c.meta[i]}`).join(' · ')}</span>
+      <span>다음 자동 갱신 ${fmt(d.next)} (2주마다, 실패하면 하루 뒤 다시)</span>
+      ${L?`<span class="${L.ok?'ok':'bad'}">마지막 시도 ${fmt(L.at)} · ${BY[L.by]||L.by} · ${L.ok?'성공'+(L.patch?` (${esc(L.patch)} 패치)`:''):'실패 — '+esc(L.msg||'')}</span>`:''}
+    </div>`;
+  $('rrdRefresh').onclick=async()=>{
+    const b=$('rrdRefresh'); b.disabled=true; b.textContent='가져오는 중…';
+    try{ const r=await api('/api/admin/rr/refresh',{method:'POST'}); toast(`챔피언 데이터를 갱신했습니다 (${r.patch} 패치)`); }
+    catch(e){ if(e.message!=='unauth') toast('갱신 실패: '+e.message,true); }
+    loadRRStatus();
+  };
+  $('rrdFile').onchange=async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    try{ const r=await api('/api/admin/rr/upload',{method:'POST',body:await f.text()}); toast(`데이터 파일을 적용했습니다 (${r.patch} 패치)`); }
+    catch(err){ if(err.message!=='unauth') toast('파일 올리기 실패: '+err.message,true); }
+    loadRRStatus();
+  };
+  const rs=$('rrdReset');
+  if(rs) rs.onclick=async()=>{
+    if(!await askConfirm({title:'기본값으로 되돌릴까요?',msg:`갱신된 데이터를 지우고 배포에 든 기본값(${d.def.patch} 패치)을 씁니다.
+다음 자동 갱신 때 다시 최신 데이터로 바뀝니다.`,confirmLabel:'되돌리기'})) return;
+    try{ await api('/api/admin/rr/reset',{method:'POST'}); toast('기본값으로 되돌렸습니다'); }
+    catch(e){ if(e.message!=='unauth') toast(e.message,true); }
+    loadRRStatus();
+  };
+}
 let roomSrc='';   // 관리자 목록: '만든 곳' 표시로 모아 보는 중이면 그 값
 
 // 방 목록 공용: [pill 클래스, 라벨, 카드 클래스]
@@ -2328,7 +2467,7 @@ function roomState(r){
     :r.filled||r.phase==='done'?['p-done','종료','st-done']
     :r.phase==='live'?['p-live','진행 중','st-live']:['p-ready','대기','st-ready'];
 }
-const modePill=r=>`<span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트 · '+rulesLabel({rules:r.draftRules,balance:r.draftBalance}).replace('클랜티어 균형','클랜티어')):'경매'}</span>`;
+const modePill=r=>r.mode==='random'?'<span class="pill mode-random">랜랜내</span>':`<span class="pill ${r.mode==='draft'?'mode-draft':'mode-auction'}">${r.mode==='draft'?('드래프트 · '+rulesLabel({rules:r.draftRules,balance:r.draftBalance}).replace('클랜티어 균형','클랜티어')):'경매'}</span>`;
 
 // 진행자로 방에 들어갑니다. edit이면 접속 직후 바로 방 설정 수정 화면을 엽니다(pendingEdit).
 function enterRoom(code,k,edit){
@@ -2427,15 +2566,15 @@ async function renderMyRooms(){
     return `<div class="myroom ${st[2]}">
       <div class="mr-hd"><span class="rc">${m.code}</span><span class="rt">${esc(r.title)}</span>${r.group?`<span class="pill p-grp">${esc(r.group)}</span>`:''}${modePill(r)}<span class="pill ${st[0]}">${st[1]}</span></div>
       <div class="rs">
-        <span>${r.teams}팀 · 참가자 ${r.players}명</span>
+        ${r.mode==='random'?`<span>${r.rrGame||1}판째 · 확정 ${r.sold}/10</span>${r.pres&&r.pres.view?`<span>관전 ${r.pres.view}</span>`:''}`:`<span>${r.teams}팀 · 참가자 ${r.players}명</span>
         <span>${r.mode==='draft'?'지명':'낙찰'} ${r.sold}/${r.players}</span>
-        <span>${connSummary(r)}</span>
+        <span>${connSummary(r)}</span>`}
         <span class="${d<=3?'warn':''}">삭제까지 ${Math.max(0,d)}일</span>
       </div>
       <div class="row">
         <button class="btn gold" data-mrenter="${i}">진행자로 입장</button>
         <button class="btn" data-mrlinks="${i}">링크</button>
-        ${r.phase==='ready'?`<button class="btn" data-mredit="${i}">수정</button>`:''}
+        ${r.phase==='ready'&&r.mode!=='random'?`<button class="btn" data-mredit="${i}">수정</button>`:''}
         <button class="btn danger-soft" data-mrdel="${i}" style="margin-left:auto">삭제</button>
       </div>
     </div>`;
@@ -2449,7 +2588,7 @@ async function renderMyRooms(){
       const r=await fetch(`/api/room/${m.code}/links?k=${encodeURIComponent(m.k)}`);
       const d=await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error||'링크를 불러오지 못했습니다');
-      setupMode='open'; links=d; renderLinks(d,true);
+      setupMode='open'; d.mode=(byCode.get(m.code)||{}).mode; links=d; renderLinks(d,true);
     }catch(e){ toast(e.message,true); }
   });
   document.querySelectorAll('[data-mrdel]').forEach(b=>b.onclick=async()=>{
@@ -2525,6 +2664,7 @@ function seedSetupFromRoom(S0){
 // 방 안(진행자)에서 수정 화면 열기. hostKey는 접속에 쓴 키에서 얻습니다(openLinksModal과 동일).
 function openRoomEdit(){
   if(!S||me.role!=='host') return;
+  if(S.mode==='random') return openRRCfg();
   if(S.phase!=='ready') return toast('시작 전(대기 상태)에만 수정할 수 있습니다',true);
   editCtx={code:S.code,hostKey:new URLSearchParams(wsAuth).get('k')||''};
   seedSetupFromRoom(S);
@@ -2535,6 +2675,7 @@ function openRoomEdit(){
 function renderSetup(mode){
   setupMode = mode==='admin' ? 'admin' : mode==='edit' ? 'edit' : 'open';
   const edit=setupMode==='edit';
+  if(gameMode==='random'){ if(edit) gameMode='auction'; else return renderRandomSetup(); }
   $('app').innerHTML=`
   <div class="topbar"><div class="brand">${edit?'방 설정 <span>수정</span>':'새 경매방 <span>설정</span>'}</div>
     ${edit?`<div class="code">${esc(editCtx?editCtx.code:'')}</div>`:''}
@@ -2544,10 +2685,7 @@ function renderSetup(mode){
     <div style="display:flex;flex-direction:column;gap:16px">
       <div class="panel">
         <span class="lbl">진행 방식</span>
-        <div class="modesel" style="display:flex;gap:8px;margin-bottom:14px">
-          <button type="button" class="btn ${gameMode==='auction'?'gold':'ghost'}" data-gm="auction" style="flex:1">경매</button>
-          <button type="button" class="btn ${gameMode==='draft'?'gold':'ghost'}" data-gm="draft" style="flex:1">드래프트 (순서 지명)</button>
-        </div>
+        ${modeSelHtml(edit)}
         ${gameMode==='draft'?`
         <div style="margin-bottom:14px"><span class="lbl">적용 규칙</span>
           <div class="rulegrp">
@@ -3090,6 +3228,7 @@ async function submitRoom(cfg){
     }
     // 이 브라우저의 '내가 만든 방'에 적어둡니다. 진행자 키가 곧 이 방을 다시 여는 열쇠입니다.
     rememberRoom(d.code,d.hostKey,cfg.title,Date.now(),cfg.group);
+    if(cfg.mode==='random') d.mode='random';
     links=d; renderLinks(d);
   }catch(e){ if(e.message!=='unauth'){ toast(e.message,true); const b=$('bCreate'); if(b) b.disabled=false; } }
 }
@@ -3105,12 +3244,14 @@ function renderLinks(d,again){
   const adminCtx=setupMode==='admin';
   const backLabel=adminCtx?'목록으로':'처음으로';
   $('app').innerHTML=`
-  <div class="topbar"><div class="brand">경매방 <span>${again?'링크':'생성됨'}</span></div><div class="code">${d.code}</div>
+  <div class="topbar"><div class="brand">${d.mode==='random'?'랜랜내 방':'경매방'} <span>${again?'링크':'생성됨'}</span></div><div class="code">${d.code}</div>
     <div class="conn"><button class="btn ghost sm" id="bBackList2">${backLabel}</button></div>
   </div>
   <div class="panel">
     <span class="lbl">접속 링크</span>
-    <p class="hint" style="margin-bottom:14px">각 팀장에게 <b>자기 링크만</b> 개인 메시지로 보내세요. 링크가 곧 신분이라, 남의 링크를 받으면 그 팀으로 입찰할 수 있습니다.</p>
+    <p class="hint" style="margin-bottom:14px">${d.mode==='random'
+      ?'보통은 <b>진행자 화면을 디스코드로 공유</b>하면 됩니다. 각자 화면으로 보고 싶은 사람에게는 <b>관전용</b> 링크를 보내세요.'
+      :'각 팀장에게 <b>자기 링크만</b> 개인 메시지로 보내세요. 링크가 곧 신분이라, 남의 링크를 받으면 그 팀으로 입찰할 수 있습니다.'}</p>
     ${rows.map((r,i)=>`<div class="link-row">
       <b style="${r.gold?'color:var(--gold)':''}">${esc(r.label)}</b>
       <code>${esc(r.url)}</code>
@@ -3129,7 +3270,7 @@ function renderLinks(d,again){
         <li>다른 컴퓨터·다른 브라우저·시크릿 창에서는 목록에 없습니다. 그때는 <b>진행자 링크</b>로 들어오면 됩니다.</li>
         <li>진행자 링크를 잃어버리면 방을 다시 찾을 방법이 없습니다. 메모나 나에게 보내기로 저장해 두세요.</li>
       </ul></div>
-    <p class="hint" style="margin-top:12px">각 팀장에게는 <b>자기 링크만</b> 보내세요. 방과 소개 카드는 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`}`;
+    <p class="hint" style="margin-top:12px">${d.mode==='random'?'':'각 팀장에게는 <b>자기 링크만</b> 보내세요. '}방${d.mode==='random'?'은':'과 소개 카드는'} 만든 지 <b>14일</b>이 지나면 자동 삭제됩니다.</p>`}`;
   $('bBackList2').onclick=adminCtx
     ? renderRooms
     : ()=>{ go(''); renderLanding(); };
@@ -3138,6 +3279,385 @@ function renderLinks(d,again){
   $('bCopyAll').onclick=()=>copyText(rows.map(r=>`${r.label}\n${r.url}`).join('\n\n'));
   // 관리자 화면에서 연 링크면 남의 방일 수 있어 '내가 만든 방'에 적지 않습니다.
   $('bGo').onclick=()=>{ adminEntry=adminCtx; enterRoom(d.code,d.hostKey,false); };
+}
+
+/* ═══ 랜랜내 (랜덤랜덤내전) ═══
+   라인마다 양쪽 챔피언을 슬롯머신으로 뽑습니다. 결과는 서버가 정하고(src/randpick.js),
+   화면은 칸에 적힌 시작·정지 시각(at·stops)에 맞춰 슬롯을 돌리다 그 챔피언에서 멈춥니다.
+   위치를 시각으로 계산하므로 화면을 다시 그려도, 중간에 들어와도 같은 자리에서 이어집니다. */
+const RR_LANES=['TOP','JGL','MID','ADC','SUP'];
+const RR_LANE_KR={TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서폿'};
+const RR_RANGE={base:.5,meta:1};
+const RR_OPTS=[
+  {k:'range',lbl:'챔피언 범위',opts:[['base','기본','그 라인 픽률 0.5% 이상'],['meta','메타픽','그 라인 픽률 1.0% 이상']]},
+  {k:'dup',lbl:'중복',opts:[[true,'상대와 중복 가능','블라인드 픽으로 게임 생성'],[false,'10명 전원 중복 불가','같은 챔피언 없음']]},
+  {k:'pick',lbl:'뽑기 방식',opts:[['one','바로 확정','멈춘 챔피언으로 결정'],['three','3개 중 고르기','후보 3명 중 팀이 고름']]},
+  {k:'rerolls',lbl:'리롤 (팀당 · 판마다)',opts:[0,1,2,3,4,5].map(n=>[n,n+'회',''])},
+  {k:'fearless',lbl:'피어리스',opts:[[false,'끄기',''],[true,'켜기','지난 판에 쓴 챔피언은 양쪽 모두 금지']]}
+];
+const rrParse=(k,v)=>k==='dup'||k==='fearless'?v==='true':k==='rerolls'?+v:v;
+let rrCfg={range:'base',dup:true,pick:'one',rerolls:1,fearless:false};   // 설정 화면 값
+let rrTitle=null;   // 설정 화면 대회 이름. null이면 오늘 날짜 기본값을 씁니다.
+const rrDefaultTitle=()=>{ const d=new Date(); return `랜랜내 ${d.getMonth()+1}/${d.getDate()}`; };
+
+let RRD=null, rrDataP=null;   // 챔피언 데이터(/api/rr/data)
+function rrLoad(){
+  if(RRD) return Promise.resolve(RRD);
+  if(!rrDataP) rrDataP=fetch('/api/rr/data').then(r=>{ if(!r.ok) throw new Error('data'); return r.json(); })
+    .then(d=>{ RRD=d; return d; }).catch(e=>{ rrDataP=null; throw e; });
+  return rrDataP;
+}
+const rrIcon=k=>RRD&&RRD.champs[k]?`https://ddragon.leagueoflegends.com/cdn/${RRD.ddragon}/img/champion/${RRD.champs[k].id}.png`:'';
+const rrName=k=>RRD&&RRD.champs[k]?RRD.champs[k].name:'?';
+const rrPool=(lane,range)=>RRD?RRD.lanes[lane].filter(x=>x[1]>=RR_RANGE[range]).map(x=>x[0]):[];
+const rrNow=()=>Date.now()-skew;
+const rrDone=c=>!!c.v&&rrNow()>=Math.max(...c.stops);
+const rrOptLabel=(k,v)=>{ const o=RR_OPTS.find(x=>x.k===k); const f=o&&o.opts.find(x=>x[0]===v); return f?f[1]:String(v); };
+
+function rrOptsHtml(c,dis){
+  return RR_OPTS.map(o=>`<div class="rro"><span class="lbl">${o.lbl}</span><div class="seg${o.k==='rerolls'?' seg-n':''}">${
+    o.opts.map(([v,t,sub])=>`<button type="button" class="${c[o.k]===v?'on':''}" data-rro="${o.k}" data-v="${String(v)}"${dis?' disabled':''}>${t}${sub?`<i>${sub}</i>`:''}</button>`).join('')
+  }</div></div>`).join('');
+}
+const modeSelHtml=edit=>`<div class="modesel" style="display:flex;gap:8px;margin-bottom:14px">
+  <button type="button" class="btn ${gameMode==='auction'?'gold':'ghost'}" data-gm="auction" style="flex:1">경매</button>
+  <button type="button" class="btn ${gameMode==='draft'?'gold':'ghost'}" data-gm="draft" style="flex:1">드래프트 (순서 지명)</button>
+  ${edit?'':`<button type="button" class="btn ${gameMode==='random'?'gold':'ghost'}" data-gm="random" style="flex:1">랜랜내 (랜덤 픽)</button>`}
+</div>`;
+
+/* ── 설정 화면 ── */
+function rrSyncInputs(){
+  const ti=$('rTitle'); if(ti) rrTitle=ti.value.trim()===rrDefaultTitle()?null:ti.value;
+  const gi=$('cGroup'); if(gi) rules.group=gi.value;
+}
+function renderRandomSetup(){
+  // 그룹은 이 브라우저에서 마지막으로 쓴 그룹을 기본으로 채웁니다(비워 두면 그대로 빈칸).
+  if(rules.group==null||rules.group===''){ const g=recentGroups()[0]; if(g) rules.group=g; }
+  const title=rrTitle==null?rrDefaultTitle():rrTitle;
+  $('app').innerHTML=`
+  <div class="topbar"><div class="brand">새 랜랜내 <span>설정</span></div>
+    <div class="conn"><button class="btn ghost sm" id="bBackList">${setupMode==='admin'?'목록으로':'처음으로'}</button></div>
+  </div>
+  <div class="setup">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <span class="lbl">진행 방식</span>
+        ${modeSelHtml(false)}
+        <p class="hint" style="margin:-4px 0 14px">10명이 5:5로, 라인마다 양쪽 챔피언을 <b>슬롯머신</b>으로 뽑습니다. 밸런스보다 재미가 목적인 모드입니다.</p>
+        <div class="rro-list">${rrOptsHtml(rrCfg,false)}</div>
+        <details class="rr-etc"${rrTitle!=null?' open':''}>
+          <summary class="hint">기타 설정 · 대회 이름 <b>${esc(title)}</b>${rules.group?` · 그룹 <b>${esc(rules.group)}</b>`:''}</summary>
+          <div class="grid2" style="margin-top:10px">
+            <div><label class="lbl" for="rTitle">대회 이름</label><input type="text" id="rTitle" maxlength="40" value="${esc(title)}"></div>
+            <div><label class="lbl" for="cGroup">그룹 <i class="opt">선택</i></label><input type="text" id="cGroup" maxlength="20" placeholder="예: 클랜 이름" autocomplete="off" value="${esc(rules.group||'')}">
+              ${(gs=>gs.length?`<div class="grpchips"><span>최근</span>${gs.map(g=>`<button type="button" class="grpchip" data-grp="${esc(g)}">${esc(g)}</button>`).join('')}</div>`:'')(recentGroups())}</div>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel" id="rrInfo"><span class="lbl">챔피언 데이터</span><p class="hint">불러오는 중…</p></div>
+      <div class="panel">
+        <button class="btn gold" id="bCreate" style="width:100%;padding:13px">랜랜내 방 만들기</button>
+        <p class="hint" style="margin-top:10px">만들면 <b>진행자 링크</b>와 <b>관전 링크</b>가 나옵니다. 보통은 진행자 화면을 디스코드로 공유해 진행하고, 각자 보고 싶은 사람에게 관전 링크를 보내면 됩니다.</p>
+      </div>
+    </div>
+  </div>`;
+  $('bBackList').onclick=setupMode==='admin'?renderRooms:()=>{ go(''); renderLanding(); };
+  document.querySelectorAll('[data-grp]').forEach(b=>b.onclick=()=>{ const i=$('cGroup'); i.value=b.dataset.grp; rules.group=i.value; i.focus(); });
+  document.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{
+    if(gameMode===b.dataset.gm) return;
+    rrSyncInputs(); gameMode=b.dataset.gm; applyModeDefaults();
+    renderSetup(setupMode); refocus('[data-gm="'+gameMode+'"]');
+  });
+  document.querySelectorAll('[data-rro]').forEach(b=>b.onclick=()=>{
+    rrSyncInputs(); rrCfg={...rrCfg,[b.dataset.rro]:rrParse(b.dataset.rro,b.dataset.v)};
+    const det=document.querySelector('.rr-etc'), open=det&&det.open;
+    renderRandomSetup(); if(open) document.querySelector('.rr-etc').open=true;
+    refocus(`[data-rro="${b.dataset.rro}"][data-v="${b.dataset.v}"]`);
+  });
+  $('bCreate').onclick=createRandomRoom;
+  rrLoad().then(d=>{
+    const box=$('rrInfo'); if(!box) return;
+    const n=RR_LANES.map(l=>[l,rrPool(l,rrCfg.range).length]);
+    const games=Math.min(...n.map(x=>Math.floor(x[1]/2)));
+    box.innerHTML=`<span class="lbl">챔피언 데이터</span>
+      <p class="hint" style="margin-bottom:10px">패치 <b>${esc(d.patch)}</b> · 한국 서버 · 에메랄드 이상 · ${esc(d.updated)} 기준</p>
+      <div class="rr-cnt">${n.map(([l,c])=>`<span>${posIcon(l)}${RR_LANE_KR[l]} <b>${c}</b>명</span>`).join('')}</div>
+      <p class="hint" style="margin-top:10px">${rrCfg.range==='meta'?'메타픽':'기본'} 범위에서 라인별로 뽑힐 수 있는 챔피언 수입니다.${rrCfg.fearless?` 피어리스로는 최대 <b>${games}판</b>까지 할 수 있습니다.`:''}</p>`;
+  }).catch(()=>{ const box=$('rrInfo'); if(box) box.innerHTML='<span class="lbl">챔피언 데이터</span><p class="hint" style="color:var(--danger)">챔피언 데이터를 불러오지 못했습니다. 새로고침해주세요.</p>'; });
+}
+function createRandomRoom(){
+  rrSyncInputs();
+  const title=(rrTitle==null?rrDefaultTitle():rrTitle).trim()||rrDefaultTitle();
+  return submitRoom({mode:'random',title,group:(rules.group||'').trim(),rr:{...rrCfg}});
+}
+
+/* ── 방 화면 ── */
+const RR_STRIP=30;   // 한 번 돌 때 지나가는 칸 수(마지막 칸이 결과)
+function rrHash(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function rrRng(a){ return ()=>{ a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+/** 슬롯 띠. 같은 칸·같은 회차면 늘 같은 띠가 나와야 다시 그려도 그림이 튀지 않습니다. */
+function rrStrip(lane,side,ri,cell,target){
+  const pool=rrPool(lane,S.rr.range), rnd=rrRng(rrHash(`${S.code}|${S.game.n}|${lane}|${side}|${ri}|${cell.v}`));
+  const out=[null];
+  for(let i=1;i<RR_STRIP-1;i++) out.push(pool[Math.floor(rnd()*pool.length)]);
+  out.push(target);
+  return out;
+}
+const rrTile=k=>k==null?'<div class="q">?</div>':`<img src="${rrIcon(k)}" alt="" draggable="false">`;
+function rrReel(lane,side,ri,cell,target,extra=''){
+  if(!cell.v) return `<div class="reel${extra}"><div class="q">?</div></div>`;
+  if(rrNow()>=cell.stops[ri]) return `<div class="reel${extra}">${rrTile(target)}</div>`;
+  return `<div class="reel spin${extra}" data-rk="${lane}:${side}:${ri}"><div class="strip">${rrStrip(lane,side,ri,cell,target).map(rrTile).join('')}</div></div>`;
+}
+const rrMirror=lane=>{ const [a,b]=S.game.cells[lane]; return a.c!=null&&a.c===b.c&&rrDone(a)&&rrDone(b); };
+function rrCell(lane,side){
+  const g=S.game, c=g.cells[lane][side], host=me.role==='host', busy=rrNow()<g.busy, done=rrDone(c);
+  const canRe=host&&done&&!busy&&g.rl[side]>0;
+  if(S.rr.pick==='three'&&!c.cand){
+    return `<div class="rrcell three"><div class="rr3">${'<div class="rrpick"><div class="reel"><div class="q">?</div></div><span class="rn">&nbsp;</span></div>'.repeat(3)}</div><div class="rrfoot"></div></div>`;
+  }
+  if(S.rr.pick==='three'&&c.cand){
+    const choosing=host&&done&&c.c==null;
+    const reels=c.cand.map((k,i)=>{
+      const st=c.c==null?'':c.c===k?' chosen':' dim';
+      const r=rrReel(lane,side,i,c,k,st);
+      const nm=done?`<span class="rn">${esc(rrName(k))}</span>`:'<span class="rn">…</span>';
+      return choosing?`<button type="button" class="rrpick" data-rch="${lane}:${side}:${k}" title="${esc(rrName(k))} 고르기">${r}${nm}</button>`:`<div class="rrpick">${r}${nm}</div>`;
+    }).join('');
+    return `<div class="rrcell three${c.c!=null?' set':''}">
+      <div class="rr3">${reels}</div>
+      <div class="rrfoot">${c.c!=null?`<b>${esc(rrName(c.c))}</b>`:done?'<span class="hint">'+(host?'고를 챔피언을 누르세요':'고르는 중…')+'</span>':''}
+        ${canRe&&c.c==null?`<button class="rr-re" data-rre="${lane}:${side}">↻ 후보 다시</button>`:''}</div>
+    </div>`;
+  }
+  const target=S.rr.pick==='three'?null:c.c;
+  return `<div class="rrcell${done?' set':''}">
+    ${rrReel(lane,side,0,c,target)}
+    <div class="rrfoot">${done?`<b>${esc(rrName(c.c))}</b>`:c.v?'<span class="hint">…</span>':''}
+      ${canRe&&c.c!=null?`<button class="rr-re" data-rre="${lane}:${side}">↻ 리롤</button>`:''}</div>
+  </div>`;
+}
+function rrStage(){
+  const g=S.game, host=me.role==='host', t=rrNow(), busy=t<g.busy, three=S.rr.pick==='three';
+  const curLane=RR_LANES[g.lane];
+  const pending=three&&g.lane<5&&g.cells[curLane].some(c=>c.cand&&c.c==null);
+  const complete=RR_LANES.every(l=>g.cells[l].every(c=>c.c!=null&&rrDone(c)));
+  // 도는 중이면 돌아가는 라인을, 아니면 다음에 돌릴 라인을 강조합니다.
+  const spinL=new Set(RR_LANES.filter(l=>g.cells[l].some(c=>c.v&&!rrDone(c))));
+  const isCur=(l,i)=>spinL.size?spinL.has(l):i===g.lane&&!complete;
+  const spinLabel=busy?'🎰 돌아가는 중…':pending?'후보를 고르세요':`🎰 ${RR_LANE_KR[curLane]} 돌리기`;
+  const meta=`<b>${g.n}판째</b> · ${rrOptLabel('range',S.rr.range)} · ${rrOptLabel('dup',S.rr.dup)} · ${rrOptLabel('pick',S.rr.pick)} · 리롤 ${S.rr.rerolls}회 · 피어리스 ${S.rr.fearless?'켜짐':'꺼짐'}`;
+  const rlTag=s=>S.rr.rerolls?`<span class="rr-rl">리롤 <b>${g.rl[s]}</b>/${S.rr.rerolls}</span>`:'';
+  let ctrl='';
+  if(host){
+    ctrl=`<div class="rr-ctrl">
+      ${g.lane<5
+        ?`<button class="btn gold rr-spin" id="rrSpin"${busy||pending?' disabled':''}>${spinLabel}</button>
+          <button class="btn" id="rrAll"${busy||pending||g.auto?' disabled':''}>남은 라인 한 번에</button>`
+        :`<button class="btn gold rr-spin" id="rrImg"${complete?'':' disabled'}>결과 이미지 저장</button>`}
+      <button class="btn ghost" id="rrNew"${busy?' disabled':''}>새 판</button>
+      <button class="btn ghost" id="rrListBtn">📋 챔피언 목록</button>
+      <button class="btn ghost" id="rrCfgBtn">⚙ 설정</button>
+    </div>
+    ${pending?'<p class="hint rr-note">양쪽 모두 후보 중에서 고르면 다음 라인으로 넘어갑니다.'+(g.auto?' (한 번에 돌리기 중)':'')+'</p>':''}`;
+  } else {
+    ctrl=`<div class="rr-ctrl">${complete?'<button class="btn gold rr-spin" id="rrImg">결과 이미지 저장</button>':`<span class="hint">${busy?'돌아가는 중…':g.lane<5?'진행자가 돌릴 차례를 기다리는 중입니다':''}</span>`}</div>`;
+  }
+  const fear=S.rr.fearless?`<div class="panel sub rr-fear">
+      <div class="rr-fear-hd"><span class="lbl" style="margin:0">피어리스 · 사용된 챔피언 ${S.used.length}명</span>
+        ${host&&S.used.length?'<button class="btn ghost sm" id="rrFReset">피어리스 초기화</button>':''}</div>
+      ${S.used.length?`<div class="rr-used">${S.used.map(k=>`<img src="${rrIcon(k)}" alt="${esc(rrName(k))}" title="${esc(rrName(k))}">`).join('')}</div>`
+        :'<p class="hint" style="margin:6px 0 0">판을 끝까지 뽑고 새 판을 누르면 그 판의 10명이 여기에 쌓이고, 다음 판부터 나오지 않습니다.</p>'}
+    </div>`:'';
+  return `<div class="rr">
+    <div class="panel rr-board" id="lotPanel">
+      <div class="rr-meta">${meta}</div>
+      <div class="rr-grid${three?' three':''}">
+        <div class="rr-hd">${rlTag(0)}</div><div></div><div class="rr-hd r">${rlTag(1)}</div>
+        ${RR_LANES.map((l,i)=>`
+          ${rrCell(l,0)}
+          <div class="rr-lane${isCur(l,i)?' cur':''}${rrMirror(l)?' mirror':''}">${posIcon(l)}<b>${RR_LANE_KR[l]}</b>${rrMirror(l)?'<em>미러전</em>':''}</div>
+          ${rrCell(l,1)}`).join('')}
+      </div>
+      ${ctrl}
+      <p class="hint rr-tip">${S.rr.dup
+        ?'상대와 같은 챔피언이 나올 수 있습니다. 롤 사용자 설정 게임을 <b>블라인드 픽</b>으로 만드세요.'
+        :'10명 모두 다른 챔피언입니다. 사용자 설정 게임에서 각자 나온 챔피언을 고르면 됩니다.'}</p>
+      <div class="flash" id="flash"><b></b></div>
+    </div>
+    ${fear}
+  </div>`;
+}
+
+let rrRaf=0, rrStopSeen=new Set(), rrLastTick=0, rrRepaintT=0, rrPreloaded=false;
+function rrPaint(){
+  if(!RRD){
+    $('app').innerHTML=topbar()+'<div class="panel" style="margin-top:16px"><p class="hint">챔피언 데이터를 불러오는 중…</p></div>';
+    wire();
+    rrLoad().then(()=>paint()).catch(()=>toast('챔피언 데이터를 불러오지 못했습니다. 새로고침해주세요',true));
+    return;
+  }
+  // 진행자 화면(디스코드로 공유하는 화면)은 슬롯 그림을 미리 받아 둡니다. 관전자는 보이는 것만 받습니다.
+  if(!rrPreloaded&&me.role==='host'){ rrPreloaded=true; const ks=new Set(RR_LANES.flatMap(l=>rrPool(l,'base'))); setTimeout(()=>ks.forEach(k=>{ const i=new Image(); i.src=rrIcon(k); }),300); }
+  $('app').innerHTML=topbar()+rrStage();
+  wire();      // 상단(링크·소리) 버튼
+  rrWire();
+  rrAnim();
+}
+function rrRepaintSoon(){ clearTimeout(rrRepaintT); rrRepaintT=setTimeout(paint,40); }
+function rrOnStop(m){
+  if(sfxOn()) tone(m.side?740:880,0,.14,.07,'triangle');
+  // 바로 확정: 오른쪽이 멈추는 순간 양쪽이 같으면 미러전 연출
+  if(S.rr.pick!=='three'&&m.side===1){
+    const [a,b]=S.game.cells[m.lane];
+    if(a.c!=null&&a.c===b.c){ flash(`미러전!<br><span style="font-size:.5em">${esc(rrName(a.c))}</span>`); if(sfxOn()) soldChime(); }
+  }
+}
+function rrAnim(){
+  cancelAnimationFrame(rrRaf);
+  const reels=[...document.querySelectorAll('.reel[data-rk]')];
+  if(!reels.length) return;
+  const meta=reels.map(el=>{
+    const [lane,side,ri]=el.dataset.rk.split(':'); const c=S.game.cells[lane][+side];
+    return {el,strip:el.firstElementChild,n:el.firstElementChild.children.length,at:c.at,stop:c.stops[+ri],
+      key:`${S.game.n}:${lane}:${side}:${ri}:${c.v}`,lane,side:+side,last:-1};
+  });
+  const frame=()=>{
+    const t=rrNow(); let spinning=false, stopped=false;
+    for(const m of meta){
+      const H=m.el.clientHeight||1;
+      const p=Math.max(0,Math.min(1,(t-m.at)/(m.stop-m.at)));
+      const pos=(1-Math.pow(1-p,3))*(m.n-1);      // 처음엔 빠르게, 끝에서 천천히 멈춤
+      m.strip.style.transform=`translateY(${(-pos*H).toFixed(1)}px)`;
+      const sp=p<1?3*Math.pow(1-p,2):0;           // 속도에 비례해 살짝 흐리게
+      m.strip.style.filter=sp>.5?`blur(${Math.min(2.5,sp).toFixed(1)}px)`:'none';
+      if(p<1){
+        spinning=true;
+        const idx=Math.floor(pos);
+        if(t>=m.at&&idx!==m.last){ m.last=idx; if(sfxOn()&&Date.now()-rrLastTick>55){ rrLastTick=Date.now(); tickSound(); } }
+      } else if(!rrStopSeen.has(m.key)){ rrStopSeen.add(m.key); stopped=true; rrOnStop(m); }
+    }
+    if(stopped) rrRepaintSoon();
+    if(spinning) rrRaf=requestAnimationFrame(frame);
+  };
+  frame();
+}
+function rrWire(){
+  const on=(id,fn)=>{ const el=$(id); if(el) el.onclick=fn; };
+  const started=()=>RR_LANES.some(l=>S.game.cells[l].some(c=>c.v));
+  on('rrSpin',()=>send('rrspin'));
+  on('rrAll',()=>send('rrspin',{all:true}));
+  on('rrImg',saveRRImage);
+  on('rrNew',async()=>{
+    const g=S.game, complete=RR_LANES.every(l=>g.cells[l].every(c=>c.c!=null));
+    if(started()&&!complete&&!await askConfirm({title:'새 판을 시작할까요?',msg:'아직 다 뽑지 않았습니다. 이번 판은 버리고 처음부터 다시 뽑습니다.'+(S.rr.fearless?'\n(끝내지 않은 판의 챔피언은 피어리스 기록에 들어가지 않습니다)':''),confirmLabel:'새 판'})) return;
+    send('rrnew');
+  });
+  on('rrFReset',async()=>{ if(await askConfirm({title:'피어리스를 초기화할까요?',msg:'사용된 챔피언 기록을 지우고 1판째부터 다시 셉니다.',confirmLabel:'초기화'})) send('rrfreset'); });
+  on('rrCfgBtn',openRRCfg);
+  on('rrListBtn',openRRList);
+  document.querySelectorAll('[data-rre]').forEach(b=>b.onclick=()=>{ const [lane,side]=b.dataset.rre.split(':'); send('rrreroll',{lane,side:+side}); });
+  document.querySelectorAll('[data-rch]').forEach(b=>b.onclick=()=>{ const [lane,side,key]=b.dataset.rch.split(':'); send('rrchoose',{lane,side:+side,key:+key}); });
+}
+function openRRCfg(){
+  if(!S||me.role!=='host') return;
+  const locked=RR_LANES.some(l=>S.game.cells[l].some(c=>c.v));
+  let tmp={...S.rr};
+  let m=$('rrcfgmodal');
+  if(!m){ m=document.createElement('div'); m.id='rrcfgmodal'; document.body.appendChild(m); }
+  m.className='modal-bg';
+  const draw=()=>{
+    m.innerHTML=`<div class="modal">
+      <div class="modal-hd"><b>랜랜내 설정</b><button class="btn ghost sm" id="rcClose">닫기</button></div>
+      ${locked?'<p class="hint" style="margin-bottom:12px;color:var(--gold)">이번 판을 이미 돌렸습니다. <b>새 판</b>을 누른 뒤 바꿀 수 있습니다.</p>':''}
+      <div class="rro-list">${rrOptsHtml(tmp,locked)}</div>
+      <div class="row" style="margin-top:14px"><button class="btn gold" id="rcSave" style="flex:1"${locked?' disabled':''}>저장</button></div>
+    </div>`;
+    $('rcClose').onclick=()=>m.remove();
+    m.querySelectorAll('[data-rro]').forEach(b=>b.onclick=()=>{ tmp={...tmp,[b.dataset.rro]:rrParse(b.dataset.rro,b.dataset.v)}; draw(); });
+    $('rcSave').onclick=()=>{ send('rrcfg',{rr:tmp}); m.remove(); };
+  };
+  m.onclick=e=>{ if(e.target===m) m.remove(); };
+  draw();
+}
+/* 라인별로 뽑힐 수 있는 챔피언 이름 목록(진행자). 지금 방의 챔피언 범위 기준, 가나다순.
+   피어리스로 금지된 챔피언은 줄을 그어 보여줍니다. */
+function openRRList(){
+  if(!S||!RRD) return;
+  const used=new Set(S.rr.fearless?S.used:[]);
+  let m=$('rrlistmodal');
+  if(!m){ m=document.createElement('div'); m.id='rrlistmodal'; document.body.appendChild(m); }
+  m.className='modal-bg';
+  const cols=RR_LANES.map(l=>{
+    const ks=rrPool(l,S.rr.range).slice().sort((a,b)=>rrName(a).localeCompare(rrName(b),'ko'));
+    const ban=ks.filter(k=>used.has(k)).length;
+    return `<div class="rrl-col">
+      <div class="rrl-hd">${posIcon(l)}<b>${RR_LANE_KR[l]}</b><span>${ks.length-ban}명${ban?` <i>(금지 ${ban})</i>`:''}</span></div>
+      <ul>${ks.map(k=>`<li${used.has(k)?' class="used" title="피어리스: 이미 사용됨"':''}>${esc(rrName(k))}</li>`).join('')}</ul>
+    </div>`;
+  }).join('');
+  m.innerHTML=`<div class="modal rrl">
+    <div class="modal-hd"><b>라인별 챔피언 목록</b><button class="btn ghost sm" id="rlClose">닫기</button></div>
+    <p class="hint" style="margin-bottom:12px">${rrOptLabel('range',S.rr.range)} 범위(그 라인 픽률 ${RR_RANGE[S.rr.range]}% 이상) · 패치 ${esc(RRD.patch)} · 한국 서버 · 에메랄드 이상${used.size?' · 줄 그은 챔피언은 피어리스로 금지':''}</p>
+    <div class="rrl-grid">${cols}</div>
+  </div>`;
+  $('rlClose').onclick=()=>m.remove();
+  m.onclick=e=>{ if(e.target===m) m.remove(); };
+}
+function rrOnEvent(ev){
+  if(ev.kind==='rrnew') toast(`${S.game.n}판째를 시작합니다`);
+  else if(ev.kind==='rrfreset') toast('피어리스를 초기화했습니다');
+  else if(ev.kind==='rrcfg'){ if(me.role!=='host') toast('진행자가 설정을 바꿨습니다'); else toast('설정을 저장했습니다'); }
+  else if(ev.kind==='rrchoose'){
+    if(ev.warn) toast(ev.warn,true);
+    if(rrMirror(ev.lane)){ flash(`미러전!<br><span style="font-size:.5em">${esc(rrName(S.game.cells[ev.lane][0].c))}</span>`); if(sfxOn()) soldChime(); }
+    else if(sfxOn()) tone(988,0,.12,.06,'triangle');
+  }
+}
+
+/* ── 결과 이미지 ── */
+function rrLoadImg(src){ return new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; }); }
+async function saveRRImage(){
+  const g=S.game, dpr=2, W=760, pad=28, headH=96, rowH=88, ic=64, H=headH+rowH*5+pad+(S.rr.fearless?24:0);
+  const keys=RR_LANES.flatMap(l=>g.cells[l].map(c=>c.c));
+  const [imgs,pos]=await Promise.all([
+    Promise.all(keys.map(k=>rrLoadImg(rrIcon(k)))),
+    Promise.all(RR_LANES.map(l=>rrLoadImg(`/pos/${l.toLowerCase()}.png`)))
+  ]);
+  const cv=document.createElement('canvas'); cv.width=W*dpr; cv.height=H*dpr;
+  const x=cv.getContext('2d'); x.scale(dpr,dpr); x.textBaseline='middle';
+  const C={bg:cssVar('--bg'),panel:cssVar('--panel'),line:cssVar('--line'),text:cssVar('--text'),muted:cssVar('--muted'),gold:cssVar('--gold')};
+  const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();};
+  x.fillStyle=C.bg; x.fillRect(0,0,W,H);
+  x.fillStyle=C.text; x.font='700 26px sans-serif'; x.textAlign='left'; x.fillText(S.title,pad,40,W-pad*2);
+  x.fillStyle=C.gold; x.font='700 13px sans-serif';
+  x.fillText(`랜랜내 결과 · ${g.n}판째 · `+new Date().toLocaleString('ko-KR',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),pad,72);
+  RR_LANES.forEach((l,i)=>{
+    const y=headH+i*rowH, cy=y+rowH/2-4;
+    x.fillStyle=C.panel; rr(pad,y,W-pad*2,rowH-10,10); x.fill(); x.strokeStyle=C.line; x.lineWidth=1; x.stroke();
+    const [a,b]=g.cells[l], mir=a.c===b.c;
+    // 가운데 라인 표시
+    if(pos[i]) x.drawImage(pos[i],W/2-11,cy-22,22,22);
+    x.fillStyle=mir?C.gold:C.muted; x.font='700 13px sans-serif'; x.textAlign='center';
+    x.fillText(mir?RR_LANE_KR[l]+' · 미러전':RR_LANE_KR[l],W/2,cy+14);
+    // 왼쪽: 그림 + 이름 / 오른쪽: 이름 + 그림
+    const L=imgs[i*2], R=imgs[i*2+1];
+    if(L) x.drawImage(L,pad+12,cy-ic/2,ic,ic);
+    if(R) x.drawImage(R,W-pad-12-ic,cy-ic/2,ic,ic);
+    x.fillStyle=C.text; x.font='700 19px sans-serif';
+    x.textAlign='left'; x.fillText(rrName(a.c),pad+12+ic+14,cy,W/2-pad-ic-70);
+    x.textAlign='right'; x.fillText(rrName(b.c),W-pad-12-ic-14,cy,W/2-pad-ic-70);
+  });
+  if(S.rr.fearless){ x.fillStyle=C.muted; x.font='12px sans-serif'; x.textAlign='left'; x.fillText(`피어리스 · 이 판까지 사용된 챔피언 ${new Set([...S.used,...keys]).size}명`,pad,H-pad+4); }
+  cv.toBlob(b=>{
+    if(!b) return toast('이미지를 만들지 못했습니다',true);
+    const url=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=url; a.download=`랜랜내_${S.code}_${g.n}판.png`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('결과 이미지를 저장했습니다');
+  },'image/png');
 }
 
 /* ═══ 시작 ═══ */

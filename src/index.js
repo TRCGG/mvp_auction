@@ -7,6 +7,9 @@
  * 지속시간 과금이 발생하지 않습니다.
  */
 
+import { RR_DEFAULT, RR_LANES, rrValidate, rrInitState, rrAction, rrConfirmed } from './randpick.js';
+import { buildRandpickData, checkRandpickData } from './randpick-fetch.js';
+
 const LINES = ['TOP', 'JGL', 'MID', 'ADC', 'SUP'];
 const UNDO_MAX = 8;   // 되돌리기 보관 개수
 const ROOM_TTL = 14 * 86400e3;    // 경매방(소개 카드 포함) 보관 기간
@@ -18,6 +21,10 @@ const CREATE_WINDOW = 24 * 3600e3;
 const MY_ROOMS_MAX = 10;          // '내가 만든 방' 최대 개수 = 한 번에 조회하는 방 수(클라이언트 MY_MAX와 같게)
 const MY_CHECK_MAX = 20;          // '내가 만든 방' 조회는 한 곳에서 1분에 이만큼까지(방 DO를 깨우는 비용 제한)
 const REGISTRY_MAX = 1000;        // 관리자 방 목록이 기억하는 최대 방 수
+const RR_REFRESH = 14 * 86400e3;  // 랜랜내 챔피언 데이터 자동 갱신 주기(롤 패치 주기와 같은 2주)
+const RR_RETRY = 86400e3;         // 자동 갱신이 실패하면 하루 뒤 다시 시도
+const RR_CACHE = 10 * 60e3;       // 방(DO)이 갱신된 데이터를 다시 물어보는 간격
+const RR_UPLOAD_MAX = 300 * 1024; // 관리자 '데이터 파일 올리기' 한도
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I 제외
 
 // 클랜티어 파싱: '1'~'5.9' → 숫자, 아니면 null. (밴드 판정·매물 표기 공용)
@@ -203,6 +210,17 @@ export default {
       if (ok === 'nosecret') return noSecret();
       if (!ok) return json({ error: '관리자 인증이 필요합니다' }, 401);
 
+      // 랜랜내 챔피언 데이터 관리
+      if (path === '/api/admin/rr' && req.method === 'GET') return registry(env).fetch('https://do/rr-status');
+      if (path === '/api/admin/rr/refresh' && req.method === 'POST') return registry(env).fetch('https://do/rr-refresh', { method: 'POST' });
+      if (path === '/api/admin/rr/reset' && req.method === 'POST') return registry(env).fetch('https://do/rr-reset', { method: 'POST' });
+      if (path === '/api/admin/rr/upload' && req.method === 'POST') {
+        if (+(req.headers.get('content-length') || 0) > RR_UPLOAD_MAX) return json({ error: '파일이 너무 큽니다' }, 413);
+        const body = await req.text();
+        if (body.length > RR_UPLOAD_MAX) return json({ error: '파일이 너무 큽니다' }, 413);
+        return registry(env).fetch('https://do/rr-upload', { method: 'POST', body });
+      }
+
       if (path === '/api/admin/rooms' && req.method === 'GET') {
         const list = await (await registry(env).fetch('https://do/list')).json();
         // 서브요청 상한(요청당 50)을 지키려 방 조회는 최신 40개로 제한하고,
@@ -315,6 +333,15 @@ export default {
       return new Response(res.body, { status: res.status, headers: res.headers });
     }
 
+    // 랜랜내 챔피언 데이터(라인별 픽률·이름·그림 키). Registry에 저장된 최신 데이터, 없으면 기본값.
+    // 갱신이 바로 보이도록 5분만 캐시합니다.
+    if (path === '/api/rr/data' && req.method === 'GET') {
+      const res = await registry(env).fetch('https://do/rr-data');
+      return new Response(res.body, {
+        headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' }
+      });
+    }
+
     // 방 존재 확인 (코드로 참가할 때)
     const peek = path.match(/^\/api\/room\/([A-Z0-9]{6})$/);
     if (peek && req.method === 'GET') {
@@ -400,6 +427,9 @@ export default {
 
 function validate(cfg) {
   if (!cfg || typeof cfg !== 'object') return '설정이 비어 있습니다';
+  if (cfg.group != null && typeof cfg.group !== 'string') return '그룹 이름이 올바르지 않습니다';
+  if (cfg.title != null && typeof cfg.title !== 'string') return '대회 이름이 올바르지 않습니다';
+  if (cfg.mode === 'random') return rrValidate(cfg);
   if (!Array.isArray(cfg.leaders) || cfg.leaders.length < 2) return '팀장을 2명 이상 입력하세요';
   if (cfg.leaders.length > 20) return '팀장은 최대 20명까지입니다';
   // 원소 형태까지 검증해야 init에서 null 참조로 터지지 않습니다.
@@ -414,7 +444,6 @@ function validate(cfg) {
   if (!(cfg.base >= 1 && cfg.base <= 100000000)) return '기본 시작 포인트는 1 이상이어야 합니다';
   if (!(cfg.clock >= 5 && cfg.clock <= 300)) return '제한 시간은 5~300초여야 합니다';
   if (cfg.order != null && cfg.order !== 'random' && cfg.order !== 'draw') return '매물 순서 옵션이 올바르지 않습니다';
-  if (cfg.group != null && typeof cfg.group !== 'string') return '그룹 이름이 올바르지 않습니다';
   // 드래프트 규칙: ['tier','score'] 부분집합만 허용(빈 배열 = 자유).
   if (cfg.rules != null) {
     if (!Array.isArray(cfg.rules) || !cfg.rules.every(r => r === 'tier' || r === 'score')) {
@@ -602,6 +631,15 @@ export class AuctionRoom {
 
     if (url.pathname === '/admin') {
       if (!this.S) return json({ error: '없는 방입니다' }, 404);
+      if (this.S.mode === 'random') {
+        return json({
+          code: this.S.code, title: this.S.title, group: this.S.group || '', mode: 'random',
+          phase: this.S.phase, createdAt: this.S.createdAt,
+          teams: 0, players: 10, sold: rrConfirmed(this.S.game), filled: false, rrGame: this.S.game.n,
+          online: this.ctx.getWebSockets().length, pres: this.presence(),
+          hostKey: this.auth.hostKey, viewKey: this.auth.viewKey, links: []
+        });
+      }
       const sold = this.S.pool.filter(p => p.status === 'sold').length;
       return json({
         code: this.S.code, title: this.S.title, group: this.S.group || '',
@@ -703,6 +741,16 @@ export class AuctionRoom {
     return json({ error: 'not found' }, 404);
   }
 
+  /** 랜랜내 챔피언 데이터. Registry에서 받아 10분 동안 기억합니다. 못 받으면 기본값으로 진행합니다. */
+  async rrData() {
+    if (this.rrd && Date.now() - this.rrdAt < RR_CACHE) return this.rrd;
+    try {
+      const d = await (await registry(this.env).fetch('https://do/rr-data')).json();
+      if (!checkRandpickData(d)) { this.rrd = d; this.rrdAt = Date.now(); return d; }
+    } catch { /* 아래 기본값 */ }
+    return this.rrd || RR_DEFAULT;
+  }
+
   identify(qs) {
     if (!this.auth) return null;
     const k = qs.get('k'), tk = qs.get('t'), v = qs.get('v');
@@ -718,6 +766,15 @@ export class AuctionRoom {
   async init(req) {
     if (this.S) return json({ error: '이미 사용 중인 코드입니다' }, 409);
     const { code, cfg } = await req.json();
+
+    if (cfg.mode === 'random') {
+      this.auth = { hostKey: token(), viewKey: token(), teams: {} };
+      this.S = rrInitState(code, cfg, String(cfg.title || '랜랜내').slice(0, 40), normGroup(cfg.group), await this.rrData());
+      this.um = { top: 0, count: 0 };
+      await this.ctx.storage.put({ S: this.S, auth: this.auth, um: this.um });
+      await this.armExpiry();
+      return json({ code, hostKey: this.auth.hostKey, viewKey: this.auth.viewKey, links: [] });
+    }
 
     const base = Math.max(0, cfg.base | 0);
     const teams = buildTeams(cfg, base);
@@ -766,6 +823,7 @@ export class AuctionRoom {
     if (!this.S) return json({ error: '없는 방입니다' }, 404);
     const { k, cfg } = await req.json();
     if (!safeEqual(String(k || ''), this.auth.hostKey)) return json({ error: '진행자만 수정할 수 있습니다' }, 403);
+    if (this.S.mode === 'random' || cfg.mode === 'random') return json({ error: '랜랜내 방은 방 안에서 설정을 바꿉니다' }, 400);
     if (this.S.phase !== 'ready') return json({ error: '시작 전(대기 상태)에만 수정할 수 있습니다. 초기화한 뒤 다시 시도하세요.' }, 409);
     const err = validate(cfg);
     if (err) return json({ error: err }, 400);
@@ -920,6 +978,7 @@ export class AuctionRoom {
 
   /** 클라이언트에 내려보내는 형태 (한도를 미리 계산해 붙임) */
   view() {
+    if (this.S.mode === 'random') return { ...this.S, now: Date.now() };
     const v = {
       ...this.S,
       teams: this.S.teams.map(t => ({
@@ -1006,6 +1065,16 @@ export class AuctionRoom {
       if (role !== 'host') { deny('진행자만 할 수 있습니다'); return true; }
       return false;
     };
+
+    if (this.S.mode === 'random') {
+      if (typeof m.t !== 'string' || !m.t.startsWith('rr')) return deny('랜랜내 방에서는 쓸 수 없는 기능입니다');
+      if (hostOnly()) return;
+      const data = await this.rrData();
+      const r = rrAction(this.S, m, Date.now(), data);
+      if (r.error) return deny(r.error);
+      await this.save();
+      return this.broadcast({ event: r.event });
+    }
 
     switch (m.t) {
       case 'ping':
@@ -1396,6 +1465,33 @@ export class AuctionRoom {
 export class Registry {
   constructor(ctx) { this.ctx = ctx; }
 
+  /* ── 랜랜내 챔피언 데이터 ──
+     'rrdata'  마지막으로 성공한 데이터(없으면 배포에 든 기본값을 씀)
+     'rrmeta'  마지막 시도 기록 { at, by: 'auto'|'manual'|'upload'|'reset', ok, msg, patch }
+     알람      다음 자동 갱신 시각. 2주마다, 실패하면 하루 뒤 다시. Registry의 알람은 이것 하나뿐입니다. */
+  async rrArm() {
+    if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + RR_REFRESH);
+  }
+  async rrSave(data, by) {
+    const meta = { at: Date.now(), by, ok: true, patch: data.patch };
+    await this.ctx.storage.put({ rrdata: data, rrmeta: meta });
+    await this.ctx.storage.setAlarm(Date.now() + RR_REFRESH);   // 성공하면 다음 자동 갱신은 2주 뒤
+    return meta;
+  }
+  async rrFail(msg, by) {
+    const meta = { at: Date.now(), by, ok: false, msg: String(msg).slice(0, 200) };
+    await this.ctx.storage.put('rrmeta', meta);
+    return meta;
+  }
+  async rrRefresh(by) {
+    try { return await this.rrSave(await buildRandpickData(), by); }
+    catch (e) { return this.rrFail(e && e.message || '알 수 없는 오류', by); }
+  }
+  async alarm() {
+    const meta = await this.rrRefresh('auto');
+    if (!meta.ok) await this.ctx.storage.setAlarm(Date.now() + RR_RETRY);
+  }
+
   // storage.delete(키 배열)은 한 번에 128개까지만 받습니다. 넘으면 예외가 나므로 나눠 지웁니다.
   async sweep(keys) {
     for (let i = 0; i < keys.length; i += 128) await this.ctx.storage.delete(keys.slice(i, i + 128));
@@ -1403,6 +1499,39 @@ export class Registry {
 
   async fetch(req) {
     const path = new URL(req.url).pathname;
+
+    if (path === '/rr-data') {
+      await this.rrArm();
+      return json((await this.ctx.storage.get('rrdata')) || RR_DEFAULT);
+    }
+    if (path === '/rr-status') {
+      await this.rrArm();
+      const [d, meta, next] = await Promise.all([
+        this.ctx.storage.get('rrdata'), this.ctx.storage.get('rrmeta'), this.ctx.storage.getAlarm()
+      ]);
+      const sum = x => ({
+        patch: x.patch, updated: x.updated, ddragon: x.ddragon,
+        base: RR_LANES.map(l => x.lanes[l].filter(c => c[1] >= 0.5).length),
+        meta: RR_LANES.map(l => x.lanes[l].filter(c => c[1] >= 1).length)
+      });
+      return json({ using: d ? 'stored' : 'default', current: sum(d || RR_DEFAULT), def: sum(RR_DEFAULT), last: meta || null, next });
+    }
+    if (path === '/rr-refresh') {
+      const meta = await this.rrRefresh('manual');
+      return meta.ok ? json(meta) : json({ ...meta, error: meta.msg }, 502);
+    }
+    if (path === '/rr-upload') {
+      let data; try { data = JSON.parse(await req.text()); } catch { return json({ error: 'JSON 파일이 아닙니다' }, 400); }
+      const err = checkRandpickData(data);
+      if (err) { await this.rrFail('파일 올리기: ' + err, 'upload'); return json({ error: err }, 400); }
+      return json(await this.rrSave(data, 'upload'));
+    }
+    if (path === '/rr-reset') {
+      await this.ctx.storage.delete('rrdata');
+      const meta = { at: Date.now(), by: 'reset', ok: true, patch: RR_DEFAULT.patch };
+      await this.ctx.storage.put('rrmeta', meta);
+      return json(meta);
+    }
 
     if (path === '/list') {
       const rooms = (await this.ctx.storage.get('rooms')) || [];
