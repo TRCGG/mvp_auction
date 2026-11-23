@@ -885,8 +885,35 @@ window.addEventListener('hashchange',()=>{ if(location.hash!==routedHash) locati
 let wsAuth='';           // 진행자의 k=… 키. 사진 업로드 인증에도 씁니다.
 let closedForGood=false; // 방 삭제/만료로 서버가 정상 종료(code 1000)한 경우
 let reconnectMs=1500;    // 지수 백오프 (최대 20초)
+/* 끊긴 줄 모르는 소켓 감지.
+   경로 중간에서 연결이 조용히 죽으면(와이파이 전환, 해외 경유 구간의 패킷 손실 등) 브라우저는
+   한참 동안 onclose를 부르지 않고 readyState도 OPEN으로 남습니다. 그동안 보낸 지명·입찰은
+   허공으로 사라지고 남의 지명도 안 보여 화면이 '멈춘' 것처럼 됩니다.
+   그래서 마지막으로 무언가 받은 시각을 재고, 너무 오래 조용하면 직접 끊고 다시 붙습니다.
+   다시 붙으면 hello로 최신 상태 전체를 받으므로 진행 상황은 그대로 이어집니다. */
+const WS_PING_MS=15000;    // 핑 간격. 응답은 하이버네이션 자동응답이라 DO를 깨우지 않습니다.
+const WS_IDLE_MAX=35000;   // 이만큼 아무것도 못 받으면 죽은 연결로 봅니다(핑 두 번 놓침).
+const WS_REPLY_MAX=6000;   // 동작을 보낸 뒤 이만큼 응답이 없으면 죽은 연결로 봅니다.
+const WS_OPEN_MAX=15000;   // 연결 시도가 이만큼 열리지 않으면 다시 시도합니다.
+let wsCode='', lastRx=0, waitSince=0, openSince=0;
+function reviveSocket(){
+  const old=ws; ws=null; connected=false; waitSince=0;
+  if(old){ old.onopen=old.onclose=old.onmessage=null; try{ old.close(); }catch{} }
+  paint();
+  if(!closedForGood&&wsCode) connect(wsCode,wsAuth);
+}
+setInterval(()=>{
+  if(!ws||closedForGood) return;
+  const now=Date.now();
+  if(ws.readyState===0){ if(now-openSince>WS_OPEN_MAX) reviveSocket(); return; }
+  if(ws.readyState!==1) return;
+  if(now-lastRx>WS_IDLE_MAX || (waitSince && now-waitSince>WS_REPLY_MAX)){
+    toast('연결이 멈춰 다시 연결했습니다. 방금 한 동작이 반영됐는지 확인해주세요',true);
+    reviveSocket();
+  }
+},1000);
 function connect(code,auth){
-  wsAuth=auth;
+  wsAuth=auth; wsCode=code; openSince=Date.now();
   // pendingEdit는 '수정' 버튼이 connect 직전에 세웁니다. 그 외 경로의 입장이면
   // 이전 시도의 잔류값이 수정 폼을 강제로 열지 않도록 여기서 소거하는 대신,
   // 실패 경로(renderClosed)에서 해제합니다 — 재연결 중에는 유지되어야 하기 때문.
@@ -894,7 +921,7 @@ function connect(code,auth){
   const url=`${proto}://${location.host}/api/room/${code}/ws?${auth}`;
   ws=new WebSocket(url);
 
-  ws.onopen=()=>{ connected=true; reconnectMs=1500; paint(); };
+  ws.onopen=()=>{ connected=true; reconnectMs=1500; lastRx=Date.now(); waitSince=0; paint(); };
   ws.onclose=e=>{
     connected=false;
     // 서버가 정상 종료(1000)로 닫으면 방이 사라진 것이므로 재시도하지 않습니다.
@@ -905,6 +932,7 @@ function connect(code,auth){
   };
   ws.onerror=()=>{};
   ws.onmessage=e=>{
+    lastRx=Date.now(); waitSince=0;
     const m=JSON.parse(e.data);
     if(m.t==='hello'){
       me=m.you; S=m.S; skew=Date.now()-m.S.now; applyPresence(m.P);
@@ -942,7 +970,13 @@ function renderClosed(reason){
   $('bHome').onclick=()=>{ location.hash=''; location.reload(); };
 }
 const send=(t,extra={})=>{
-  if(ws&&ws.readyState===1){ ws.send(JSON.stringify({t,...extra})); return true; }
+  if(ws&&ws.readyState===1){
+    ws.send(JSON.stringify({t,...extra}));
+    // 바로 뒤에 핑을 붙입니다. 소켓은 순서를 지키므로, 서버가 아무 답을 안 하는 동작이어도
+    // 연결이 살아 있으면 pong이 반드시 돌아옵니다 → 응답 대기 감시가 헛짚지 않습니다.
+    if(t!=='ping'){ ws.send('{"t":"ping"}'); if(!waitSince) waitSince=Date.now(); }
+    return true;
+  }
   if(t!=='ping') toast('연결이 끊겨 있습니다. 재연결 중…',true);
   return false;
 };
@@ -2256,7 +2290,7 @@ setInterval(()=>{
   else if(sec>3) lastTick=0;
 },200);
 
-setInterval(()=>send('ping'),25000);
+setInterval(()=>send('ping'),WS_PING_MS);
 
 /* ═══ 관리자 ═══ */
 const store={
