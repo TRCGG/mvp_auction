@@ -102,7 +102,7 @@ function draw(S, lane, side, count, extra = []) {
   return shuffle(avail).slice(0, count);
 }
 const LANE_KR = { TOP: '탑', JGL: '정글', MID: '미드', ADC: '원딜', SUP: '서폿' };
-const emptyMsg = lane => `${LANE_KR[lane]}에서 더 뽑을 챔피언이 없습니다. 피어리스를 초기화하거나 챔피언 범위를 넓혀 주세요.`;
+const emptyMsg = lane => `${LANE_KR[lane]}에서 더 뽑을 챔피언이 없습니다. 피어리스를 초기화하거나, 새 판에서 챔피언 범위를 넓혀 주세요.`;
 
 /** 한 칸을 돌립니다. 양쪽을 함께 돌릴 때는 왼쪽부터 정해야 중복 불가 규칙이 오른쪽에 반영됩니다. */
 function spinCell(S, lane, side, t0, extra) {
@@ -198,7 +198,13 @@ export function rrAction(S0, m, now, data = DATA) {
         g.lane++;
         if (g.auto && g.lane < RR_LANES.length) {
           const err = spinLane(S, RR_LANES[g.lane], now + AUTO_GAP);
-          if (err) { g.auto = false; event = { kind: 'rrchoose', lane, side, warn: err }; break; }
+          if (err) {
+            // spinLane은 왼쪽을 먼저 바꾼 뒤 오른쪽에서 실패할 수 있습니다. 반쯤 돈 라인을 남기지 않게 비웁니다.
+            g.cells[RR_LANES[g.lane]] = [emptyCell(), emptyCell()];
+            g.auto = false;
+            event = { kind: 'rrchoose', lane, side, warn: err };
+            break;
+          }
           g.busy = Math.max(g.busy, lastStop(S, RR_LANES[g.lane]));
         }
         if (g.lane >= RR_LANES.length) g.auto = false;

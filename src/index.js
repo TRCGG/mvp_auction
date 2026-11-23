@@ -1483,9 +1483,14 @@ export class Registry {
     await this.ctx.storage.put('rrmeta', meta);
     return meta;
   }
+  // 갱신은 외부 요청을 기다리는 동안 다른 요청이 끼어들 수 있습니다. 그 사이 '기본값으로'·파일 올리기가
+  // 끝나면 늦게 끝난 갱신이 덮어쓰므로, 갱신 중에는 다른 데이터 변경과 두 번째 갱신을 받지 않습니다.
   async rrRefresh(by) {
+    if (this.rrBusy) return { at: Date.now(), by, ok: false, msg: '이미 갱신하는 중입니다', busy: true };
+    this.rrBusy = true;
     try { return await this.rrSave(await buildRandpickData(), by); }
     catch (e) { return this.rrFail(e && e.message || '알 수 없는 오류', by); }
+    finally { this.rrBusy = false; }
   }
   async alarm() {
     const meta = await this.rrRefresh('auto');
@@ -1518,7 +1523,10 @@ export class Registry {
     }
     if (path === '/rr-refresh') {
       const meta = await this.rrRefresh('manual');
-      return meta.ok ? json(meta) : json({ ...meta, error: meta.msg }, 502);
+      return meta.ok ? json(meta) : json({ ...meta, error: meta.msg }, meta.busy ? 409 : 502);
+    }
+    if ((path === '/rr-upload' || path === '/rr-reset') && this.rrBusy) {
+      return json({ error: '챔피언 데이터를 갱신하는 중입니다. 잠시 후 다시 시도해주세요' }, 409);
     }
     if (path === '/rr-upload') {
       let data; try { data = JSON.parse(await req.text()); } catch { return json({ error: 'JSON 파일이 아닙니다' }, 400); }

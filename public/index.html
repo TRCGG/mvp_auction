@@ -565,22 +565,23 @@ button.pcard:disabled{opacity:.45;cursor:not-allowed}
 .rr-lane.mirror em{font-style:normal;font-size:var(--fs-2xs);font-weight:800;color:#111;background:var(--gold);border-radius:var(--r-pill);padding:1px 8px}
 .rrcell{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 10px;min-height:calc(var(--rh) + 58px)}
 .rrcell.set{border-color:var(--line2)}
-.reel{position:relative;width:var(--rh);height:var(--rh);overflow:hidden;border-radius:var(--r-md);background:var(--panel2);
+.reel{position:relative;width:var(--rh);max-width:100%;aspect-ratio:1/1;overflow:hidden;border-radius:var(--r-md);background:var(--panel2);
   box-shadow:inset 0 0 0 2px var(--line2)}
 .reel.spin{box-shadow:inset 0 0 0 2px var(--gold),0 0 18px -6px var(--gold)}
-.reel img,.reel .q{display:block;width:var(--rh);height:var(--rh);object-fit:cover}
+.reel img,.reel .q{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
 .reel .q{display:grid;place-items:center;font-family:var(--num);font-size:calc(var(--rh) * .42);color:var(--line2)}
 .reel .strip{will-change:transform}
 .rrfoot{display:flex;align-items:center;gap:8px;min-height:26px;flex-wrap:wrap;justify-content:center}
 .rrfoot b{font-size:var(--fs-lg)}
 .rr-re{font:inherit;font-size:var(--fs-xs);color:var(--body2);background:transparent;border:1px solid var(--line2);border-radius:var(--r-pill);padding:3px 10px;cursor:pointer}
 .rr-re:hover{border-color:var(--gold);color:var(--gold)}
-.rr3{display:flex;gap:8px}
-.rrpick{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:0;font:inherit;color:inherit}
+.rr3{display:flex;gap:8px;width:100%;justify-content:center}
+.rrpick{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:0;font:inherit;color:inherit;flex:0 1 var(--rh);min-width:0}
+.rrpick .reel{width:100%}
 button.rrpick{cursor:pointer}
 button.rrpick .reel{transition:box-shadow .13s,transform .13s}
 button.rrpick:hover .reel{box-shadow:inset 0 0 0 3px var(--gold);transform:translateY(-2px)}
-.rrpick .rn{font-size:var(--fs-xs);color:var(--body2);max-width:var(--rh);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrpick .rn{font-size:var(--fs-xs);color:var(--body2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .reel.chosen{box-shadow:inset 0 0 0 3px var(--gold),0 0 18px -4px var(--gold)}
 .reel.dim{opacity:.3;filter:grayscale(1)}
 .rr-ctrl{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
@@ -3492,6 +3493,7 @@ function rrStage(){
 }
 
 let rrRaf=0, rrStopSeen=new Set(), rrLastTick=0, rrRepaintT=0, rrPreloaded=false;
+let rrFlashNext=null;   // 정지 직후 다시 그리면 연출 요소가 바뀌므로, 다시 그린 뒤에 띄울 연출
 function rrPaint(){
   if(!RRD){
     $('app').innerHTML=topbar()+'<div class="panel" style="margin-top:16px"><p class="hint">챔피언 데이터를 불러오는 중…</p></div>';
@@ -3504,6 +3506,7 @@ function rrPaint(){
   $('app').innerHTML=topbar()+rrStage();
   wire();      // 상단(링크·소리) 버튼
   rrWire();
+  if(rrFlashNext){ const h=rrFlashNext; rrFlashNext=null; flash(h); }
   rrAnim();
 }
 function rrRepaintSoon(){ clearTimeout(rrRepaintT); rrRepaintT=setTimeout(paint,40); }
@@ -3512,7 +3515,7 @@ function rrOnStop(m){
   // 바로 확정: 오른쪽이 멈추는 순간 양쪽이 같으면 미러전 연출
   if(S.rr.pick!=='three'&&m.side===1){
     const [a,b]=S.game.cells[m.lane];
-    if(a.c!=null&&a.c===b.c){ flash(`미러전!<br><span style="font-size:.5em">${esc(rrName(a.c))}</span>`); if(sfxOn()) soldChime(); }
+    if(a.c!=null&&a.c===b.c){ rrFlashNext=`미러전!<br><span style="font-size:.5em">${esc(rrName(a.c))}</span>`; if(sfxOn()) soldChime(); }
   }
 }
 function rrAnim(){
@@ -3522,7 +3525,7 @@ function rrAnim(){
   const meta=reels.map(el=>{
     const [lane,side,ri]=el.dataset.rk.split(':'); const c=S.game.cells[lane][+side];
     return {el,strip:el.firstElementChild,n:el.firstElementChild.children.length,at:c.at,stop:c.stops[+ri],
-      key:`${S.game.n}:${lane}:${side}:${ri}:${c.v}`,lane,side:+side,last:-1};
+      key:`${lane}:${side}:${ri}:${c.at}:${c.v}`,lane,side:+side,last:-1};   // at은 회전마다 달라 새 판·피어리스 초기화 뒤에도 겹치지 않습니다
   });
   const frame=()=>{
     const t=rrNow(); let spinning=false, stopped=false;

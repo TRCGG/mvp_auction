@@ -83,6 +83,7 @@ export function checkRandpickData(d) {
     if (!xs.every(x => Array.isArray(x) && Number.isInteger(x[0]) && typeof x[1] === 'number' && d.champs[x[0]])) {
       return `${l} 목록 형식이 올바르지 않습니다`;
     }
+    if (new Set(xs.map(x => x[0])).size !== xs.length) return `${l} 목록에 같은 챔피언이 두 번 있습니다`;
     if (xs.filter(x => x[1] >= 0.5).length < LANE_MIN) return `${l}에서 읽은 챔피언이 너무 적습니다 (${xs.length}명)`;
   }
   return null;
