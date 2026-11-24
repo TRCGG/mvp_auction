@@ -1292,7 +1292,7 @@ function topbar(){
     <div class="brand">${esc(S.title)} <span class="live">LIVE</span></div>
     <div class="code">${S.code}</div>
     <div class="who">${esc(role)}</div>
-    <div class="conn">${presChip()}${me.role==='host'?`<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>${S.mode==='random'?'':`<span class="vollb ${sfxMuted?'off':''}" title="브금 음량">🎵</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bVol" min="0" max="100" step="1" value="${bgmVolToSlider(bgmVol)}" title="브금 음량 ${bgmVolToSlider(bgmVol)}%" aria-label="브금 음량">`}<span class="vollb ${sfxMuted?'off':''}" title="낙찰음·입찰음·초읽기 음량">🔔</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bSVol" min="0" max="100" step="1" value="${Math.round(sfxVol/SFX_MAX*100)}" title="연출음 음량 ${Math.round(sfxVol/SFX_MAX*100)}%" aria-label="연출음 음량">`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
+    <div class="conn">${presChip()}${me.role==='host'?`${fromAdminList()?'<button class="btn ghost sm" id="bAdmList" title="관리자 화면의 경매방 목록으로 돌아갑니다">← 관리자 목록</button>':''}<button class="btn ghost sm" id="bLinks">🔗 링크</button><button class="sfx-btn ${sfxMuted?'off':''}" id="bSfx" title="연출 소리 켜기/끄기" aria-label="소리 ${sfxMuted?'꺼짐':'켜짐'}">${sfxMuted?'🔇':'🔊'}</button>${S.mode==='random'?'':`<span class="vollb ${sfxMuted?'off':''}" title="브금 음량">🎵</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bVol" min="0" max="100" step="1" value="${bgmVolToSlider(bgmVol)}" title="브금 음량 ${bgmVolToSlider(bgmVol)}%" aria-label="브금 음량">`}<span class="vollb ${sfxMuted?'off':''}" title="낙찰음·입찰음·초읽기 음량">🔔</span><input type="range" class="volsl ${sfxMuted?'off':''}" id="bSVol" min="0" max="100" step="1" value="${Math.round(sfxVol/SFX_MAX*100)}" title="연출음 음량 ${Math.round(sfxVol/SFX_MAX*100)}%" aria-label="연출음 음량">`:''}<span class="dot ${connected?'on':''}"></span>${connected?'연결됨':'재연결 중…'}</div>
   </div>`;
 }
 
@@ -2311,6 +2311,15 @@ async function api(path,opt={}){
 
 function renderAdmin(){ store.get()?renderRooms():renderLogin(); }
 
+// 이 탭에서 관리자 목록으로 들어온 방이면 진행자 상단에 '관리자 목록' 버튼을 보여줍니다.
+// (로그인은 탭 단위 sessionStorage라, 같은 탭이면 다시 로그인하지 않고 목록이 열립니다)
+function fromAdminList(){ return !!(S&&store.get()&&(adminEntry||isAdminRoom(S.code))); }
+// 상단바는 경매·랜랜내 화면이 함께 쓰므로 버튼 연결을 위임으로 한 번만 겁니다.
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#bAdmList')) return;
+  location.hash='/admin'; location.reload();   // 소켓·브금 정리는 새로 불러오는 것으로 대신합니다
+});
+
 function renderLogin(msg){
   $('app').innerHTML=`<div class="landing" style="max-width:420px">
     <h1>관리자</h1>
@@ -2341,6 +2350,8 @@ function renderLogin(msg){
 
 async function renderRooms(){
   setupMode='admin';
+  // 목록은 언제나 #/admin 주소에 둡니다 — 북마크·새로고침·방에서 '뒤로'로 다시 올 수 있게.
+  if(location.hash!=='#/admin'){ history.replaceState(null,'','/#/admin'); routedHash='#/admin'; }
   $('app').innerHTML=`
   <div class="topbar">
     <div class="brand">관리자 <span>경매방</span></div>
@@ -2508,7 +2519,10 @@ const modePill=r=>r.mode==='random'?'<span class="pill mode-random">랜랜내</s
 function enterRoom(code,k,edit){
   pendingEdit=!!edit;
   if(adminEntry) markAdminRoom(code);
-  history.replaceState(null,'',`/#/r/${code}?k=${k}`);
+  // 관리자 목록(#/admin)에서 들어오면 기록을 쌓아 브라우저 '뒤로'로 목록에 돌아갈 수 있게 합니다.
+  // 뒤로 가면 해시가 routedHash와 달라져 hashchange가 페이지를 다시 불러 목록을 그립니다.
+  history[adminEntry&&location.hash.startsWith('#/admin')?'pushState':'replaceState'](null,'',`/#/r/${code}?k=${k}`);
+  routedHash=location.hash;
   $('app').innerHTML=`<div class="landing"><p class="hint">${edit?'수정 화면을 여는 중입니다…':'입장하는 중입니다…'}</p></div>`;
   connect(code,'k='+k);
 }
