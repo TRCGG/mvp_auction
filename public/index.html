@@ -802,6 +802,20 @@ let gameMode='auction';
 // tier=클랜티어 균형(무엇을 뽑을지 제약) · score=클랜점수(누가 언제 뽑을지 순서)
 let draftRules={tier:true,score:false};
 const anyRule=()=>draftRules.tier||draftRules.score;
+// 목표 범위 폭(점). null이면 범위 없음. 클랜점수 단독 규칙일 때만 보냅니다
+// (클랜티어 균형과 함께 켜면 서버가 범위를 쓰지 않습니다).
+// 선택지는 서버 BAND_WIDTHS와 같아야 합니다(서버는 목록에 없는 값을 '범위 없음'으로 봅니다).
+const BAND_WIDTHS=[15,20,25];
+const BAND_RECOMMENDED=20;
+let bandWidth=null;
+const bandOn=()=>draftRules.score&&!draftRules.tier;
+// 서버 scoreBand와 같은 계산. 설정 화면 미리보기용이고, 실제 범위는 방을 만들 때 서버가 정합니다.
+function bandOf(leaderScores,playerScores,width){
+  const n=leaderScores.length; if(!n) return null;
+  const top=playerScores.slice().sort((a,b)=>b-a).slice(0,n*(TEAM_SIZE-1));
+  const avg=(leaderScores.reduce((s,v)=>s+v,0)+top.reduce((s,v)=>s+v,0))/n;
+  return {avg:Math.round(avg),lo:Math.ceil(avg-width),hi:Math.floor(avg+width)};
+}
 /* 규칙 두 개를 각각 켜고 끄게 하면 네 조합의 결과를 진행자가 머릿속에서 합성해야 합니다.
    그래서 조합 자체를 선택지로 내놓고, 두 규칙이 실제로 건드리는 축(순서·제약)과
    추가로 받아야 하는 값을 카드마다 같은 자리에 적습니다. 저장 형태는 그대로 {tier,score}. */
@@ -1480,8 +1494,12 @@ function teamCard(t){
              :'<div class="slot">빈자리</div>';
   }).join('');
   const sc=scoreMode();
+  // 목표 범위는 끝난 뒤에만 벗어난 정도를 표시합니다. 진행 중 총점은 당연히 범위보다 낮습니다.
+  const band=sc&&S.draft&&S.draft.band&&S.phase==='done'?S.draft.band:null;
+  const tt=teamTotal(t);
   const ptBlock=sc
-    ? `<div class="team-pt"><b>${teamTotal(t)}</b><i>총점</i></div>`
+    ? `<div class="team-pt"><b>${tt}</b><i>${!band||(tt>=band.lo&&tt<=band.hi)?'총점'
+        :`<span style="color:var(--danger)">범위 ${tt>band.hi?'+'+(tt-band.hi):'−'+(band.lo-tt)}</span>`}</i></div>`
     : draft
     ? `<div class="team-pt"><b>${t.players.length}${S.draft?'/'+S.draft.picksPerTeam:''}</b></div>`
     : `<div class="team-pt"><b>${t.points}</b><i>POINT</i></div>`;
@@ -1663,7 +1681,8 @@ function draftBody(){
       </div>`).join('');
     }
     const anyTie=sc&&(()=>{ const seen={}; return S.teams.some(t=>{ const v=teamTotal(t); if(seen[v]) return true; seen[v]=1; return false; }); })();
-    return `<div class="lot-empty" style="padding:16px 20px">${rulesLabel(d)} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명</div>
+    return `<div class="lot-empty" style="padding:16px 20px">${rulesLabel(d)} 드래프트<br>${S.pool.length}명 · ${S.teams.length}팀 · 팀당 ${d.picksPerTeam}명${
+        d.band?`<br>목표 범위 <b style="color:var(--gold)">${d.band.lo}~${d.band.hi}점</b> (예상 평균 ${d.band.avg}점 ±${d.band.width})`:''}</div>
       <div class="row" style="align-items:center;margin-bottom:8px"><span class="lbl" style="margin:0">${sc?'첫 라운드 지명 순서 (총점 낮은 순)':'첫 지명 순서'}</span>${host&&!sc?`<button class="btn ghost sm" id="bDraw" style="margin-left:auto">🎲 추첨</button>`:''}</div>
       <div class="ord-list">${list}</div>
       ${host
@@ -1697,6 +1716,16 @@ function draftBody(){
   if(tierMode()&&t){
     const rem=[0,1,2,3,4].filter(b=>!teamBandsClient(t).has(b)).map(b=>b+1);
     need=` · 지명할 클랜티어 <b style="color:var(--gold)">${rem.join('·')}</b>`;
+  }
+  if(d.band&&t){
+    need+=` · 목표 범위 <b style="color:var(--gold)">${d.band.lo}~${d.band.hi}</b>`;
+    // forced는 서버가 '모든 팀이 범위를 지킬 수 있는 선수가 없다'고 판정한 경우입니다.
+    if(d.forced) need+=`<br><b style="color:var(--danger)">범위를 지킬 수 있는 선수가 없어, 팀 간 차이가 가장 작아지는 선수만 지명할 수 있습니다</b>`;
+    else if(Array.isArray(d.allow)&&d.allow.length<remaining().length)
+      need+=`<br>남은 ${remaining().length}명 중 <b>${d.allow.length}명</b> 지명 가능 — 나머지는 데려가면 어떤 팀이 범위를 벗어납니다`;
+    // skipped: 남은 선수로는 어떻게 해도 범위에 못 들어오는 팀. 이 팀들은 빼고 나머지 팀만 범위를 지킵니다.
+    const sk=(d.skipped||[]).map(id=>S.teams.find(x=>x.id===id)).filter(Boolean);
+    if(sk.length) need+=`<br><span style="color:var(--muted)">${sk.map(x=>esc(x.leader)).join(', ')} 팀은 범위에 들어올 수 없어 판정에서 제외했습니다</span>`;
   }
   return `<div class="lot-no">ROUND ${round}/${d.picksPerTeam} · PICK ${d.ptr+1}/${totalPicks(d)}</div>
     <div class="lot-name" style="font-size:clamp(26px,4vw,42px)">${esc(t?t.leader:'')} <span style="font-size:.5em;color:var(--muted)">팀 차례</span></div>
@@ -1740,6 +1769,8 @@ function poolPanel(){
   const curId=dLive?S.draft.seq[S.draft.ptr]:null;
   const iCanPick=dLive&&(host||me.teamId===curId);   // 지금 지명할 수 있는 사람인가
   const curTeam=curId?S.teams.find(x=>x.id===curId):null;
+  // 목표 범위가 있는 방이면 서버가 지금 차례 팀이 뽑을 수 있는 선수 목록을 내려줍니다.
+  const bandOk=dLive&&Array.isArray(S.draft.allow)?new Set(S.draft.allow):null;
   const draw=S.orderMode==='draw';
   const rem=remaining().filter(p=>p.id!==S.current);
   const posline=LINES.map(l=>`${l} ${rem.filter(p=>p.line===l).length}`).join(' · ');
@@ -1780,6 +1811,7 @@ function poolPanel(){
       // 드래프트: 내 차례(또는 진행자)면 적격 매물에 지명 버튼, 아니면 표시만.
       let eligible=iCanPick&&p.status!=='sold';
       if(eligible&&tierMode()&&curTeam){ const b=gradeBand(p.grade); eligible=b>=0&&!teamBandsClient(curTeam).has(b); }
+      if(eligible&&bandOk) eligible=bandOk.has(p.id);
       return eligible
         ? `<button class="pcard pick" data-pick="${p.id}" ${bst}>${inner}</button>`
         : `<span class="pcard" ${bst}>${inner}</span>`;
@@ -2696,6 +2728,7 @@ function seedSetupFromRoom(S0){
        :(S0.draft.balance&&S0.draft.balance!=='free'?[S0.draft.balance]:[]))
     : [];
   draftRules={tier:rl.includes('tier'),score:rl.includes('score')};
+  bandWidth=S0.draft&&S0.draft.band?S0.draft.band.width:null;
   rules={title:S0.title,group:S0.group||'',clock:S0.clock,base:S0.base,minBid:S0.minBid,order:S0.orderMode==='draw'?'draw':'random'};
   clockTouched=true;   // 모드 토글이 기존 제한시간을 기본값으로 덮지 않게
   leaders=S0.teams.map(t=>({id:t.id,name:t.leader,line:t.leaderLine||'',
@@ -2749,9 +2782,16 @@ function renderSetup(mode){
             <b>${r.name} 드래프트</b>
             <p class="rule-sum">${r.sum}</p>
             <span><i>순서</i><span>${r.ord}</span></span>
-            <span><i>제약</i><span>${r.lim}</span></span>
+            <span><i>제약</i><span>${bandOn()&&bandWidth
+              ?`<b>목표 범위</b> 예상 평균 ±${bandWidth}점`
+              :r.lim}</span></span>
             <span><i>필요</i><span>${r.req}</span></span>
           </div>`)(curRule())}
+          ${bandOn()?`<div style="margin-top:10px"><label class="lbl" for="cBand">목표 범위</label>
+            <select id="cBand">
+              <option value=""${bandWidth?'':' selected'}>사용 안 함</option>
+              ${BAND_WIDTHS.map(w=>`<option value="${w}"${bandWidth===w?' selected':''}>예상 평균 ±${w}점${w===BAND_RECOMMENDED?' (추천)':''}</option>`).join('')}
+            </select></div>`:''}
         </div>`:''}
         <div class="grid2">
           <div><label class="lbl" for="cTitle">대회 이름</label><input type="text" id="cTitle" value="${esc(rules.title)}"></div>
@@ -2773,7 +2813,9 @@ function renderSetup(mode){
           ? [
               // 순서·제약은 위 규칙 카드가 이미 설명합니다. 여기는 카드에 담기지 않는 것만 씁니다.
               draftRules.score
-                ? '비싼 매물을 데려가면 다음 라운드에 뒤로 밀립니다. 총점 상한은 없습니다. 총점이 같은 팀이 생기면 <b>진행이 멈추고</b> 진행자가 🎲 주사위(1~99, 높은 값이 먼저) 또는 <b>먼저</b> 지정으로 순서를 정합니다.'
+                ? '비싼 매물을 데려가면 다음 라운드에 뒤로 밀립니다. '+(bandOn()&&bandWidth
+                    ? '<b>목표 범위</b>를 켜면 모든 팀의 최종 총점이 예상 평균 ±범위 안에 들어올 수 있는 선수만 지명할 수 있습니다. 평소에는 거의 막지 않고, 어느 팀이 지나치게 세지거나 약해질 때만 선택지가 좁아집니다. '
+                    : '')+'총점이 같은 팀이 생기면 <b>진행이 멈추고</b> 진행자가 🎲 주사위(1~99, 높은 값이 먼저) 또는 <b>먼저</b> 지정으로 순서를 정합니다.'
                 : '',
               `시간이 지나도 자동 지명하지 않고 진행자가 대신 지명할 수 있습니다. 지명 시간은 남은 매물을 훑어볼 시간이 필요해 기본 <b>${CLOCK_DEFAULT.draft}초</b>입니다.`
             ].filter(Boolean).join('<br>')
@@ -2867,6 +2909,11 @@ function renderSetup(mode){
     syncRules(); draftRules={...draftRules,[k]:b.checked}; applyModeDefaults();
     renderSetup(setupMode); refocus('[data-rs="'+k+'"]');
   });
+  const cBand=$('cBand');
+  if(cBand) cBand.onchange=()=>{
+    syncRules(); bandWidth=cBand.value?+cBand.value:null;
+    renderSetup(setupMode); refocus('#cBand');
+  };
   $('bCreate').onclick=createRoom;
 }
 
@@ -3176,7 +3223,25 @@ function scoreReqHtml(){
   return `<div class="lbl" style="margin:14px 0 6px">첫 라운드 지명 순서 (팀장 클랜점수 낮은 순)</div>
     <div class="treqrow">${order||'<span class="hint">팀장 클랜점수를 입력하면 순서가 표시됩니다</span>'}</div>
     ${dup.size?`<p class="hint" style="color:var(--gold);margin-top:7px">클랜점수가 같은 팀장이 있어(${[...dup].join('·')}점)
-      <b>시작하면 바로 동점 정리 화면</b>이 뜹니다. 🎲 주사위나 '먼저' 지정으로 순서를 정한 뒤 진행됩니다.</p>`:''}`;
+      <b>시작하면 바로 동점 정리 화면</b>이 뜹니다. 🎲 주사위나 '먼저' 지정으로 순서를 정한 뒤 진행됩니다.</p>`:''}
+    ${bandOn()&&bandWidth?bandPreviewHtml(names):''}`;
+}
+
+// 목표 범위 미리보기. 점수가 빠진 사람이 있으면 계산하지 않습니다(어차피 방을 못 만듭니다).
+function bandPreviewHtml(names){
+  const head='<div class="lbl" style="margin:14px 0 6px">목표 범위 (현재 명단 기준)</div>';
+  const ls=names.map(l=>snum(l.score)), ps=players.map(p=>snum(p.score));
+  if(!names.length||ls.some(v=>v==='')||ps.some(v=>v===''))
+    return head+'<p class="hint">팀장·참가자 클랜점수를 모두 입력하면 범위가 계산됩니다.</p>';
+  const nums=ps.map(Number).sort((a,b)=>a-b), K=TEAM_SIZE-1;
+  const c=bandOf(ls.map(Number),nums,bandWidth);
+  // 팀장 점수만으로 범위에 닿을 수 없는 팀: 최저 4명을 받아도 넘거나, 최고 4명을 받아도 모자랍니다.
+  const low=nums.slice(0,K).reduce((s,v)=>s+v,0), high=nums.slice(-K).reduce((s,v)=>s+v,0);
+  const off=names.filter(l=>{ const v=+snum(l.score); return v+low>c.hi||v+high<c.lo; });
+  return head+`<div class="treqrow"><span class="ordchip">범위<b>${c.lo}~${c.hi}</b></span>
+      <span class="ordchip">예상 평균<b>${c.avg}</b></span></div>
+    ${off.length?`<p class="hint" style="color:var(--gold);margin-top:7px">${off.map(l=>esc(l.name)).join(', ')} 팀은 팀장 점수만으로
+      범위에 들어올 수 없어 판정에서 제외됩니다. 나머지 팀만 범위를 지키고, 이 팀은 범위 밖으로 끝납니다. 범위를 넓히거나 그대로 진행하세요.</p>`:''}`;
 }
 
 // 방을 못 만드는 이유를 모아 보여줍니다. 버튼을 누르기 전에 알 수 있어야 합니다.
@@ -3221,7 +3286,7 @@ async function createRoom(){
     }
     // 드래프트는 포인트를 안 쓰므로 base/minBid는 서버 검증만 통과할 안전값으로 보냅니다.
     const ruleList=[draftRules.tier&&'tier',draftRules.score&&'score'].filter(Boolean);
-    return submitRoom({ mode:'draft', rules:ruleList, title:rules.title.trim()||'드래프트', group:(rules.group||'').trim(),
+    return submitRoom({ mode:'draft', rules:ruleList, band:bandOn()?bandWidth:null, title:rules.title.trim()||'드래프트', group:(rules.group||'').trim(),
       base:1000, minBid:10, clock, leaders:names, pool:players });
   }
 

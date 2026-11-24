@@ -58,6 +58,143 @@ const scoreTotals = (teams, pool) => {
   for (const p of pool) if (tot.has(p.teamId)) tot.set(p.teamId, tot.get(p.teamId) + (p.score || 0));
   return tot;
 };
+// 목표 범위 폭(점) 선택지. 범위 = 예상 평균 총점 ± 폭. 목록에 없는 값은 '범위 없음'.
+// 운영 데이터 10판 기준 ±20이면 팀장이 어떻게 고르든 최고-최저 격차가 대략 40점 안에 묶였습니다.
+// 폭 W면 격차는 최대 2W까지 허용되므로, 평소 격차(약 40점)보다 넓은 ±30부터는 효과가 없어 빼었습니다.
+const BAND_WIDTHS = [15, 20, 25];
+// 예상 평균 총점 = (팀장 점수 합 + 지명될 선수 점수 합) ÷ 팀 수.
+// 매물이 지명 칸보다 많으면 누가 뽑힐지 모르므로 점수 높은 순으로 칸 수만큼을 뽑힐 선수로 봅니다.
+// 경계는 정수로 저장합니다(lo 이상 hi 이하). sum/n이 정수면 나눗셈이 정확해 경계에 오차가 끼지 않습니다.
+const scoreBand = (teams, pool, width) => {
+  const slots = teams.length * (TEAM_SIZE - 1);
+  const top = pool.map(p => p.score || 0).sort((a, b) => b - a).slice(0, slots);
+  const sum = teams.reduce((s, t) => s + (t.score || 0), 0) + top.reduce((s, v) => s + v, 0);
+  const avg = sum / teams.length;
+  return { width, target: avg, avg: Math.round(avg), lo: Math.ceil(avg - width), hi: Math.floor(avg + width) };
+};
+// 목표 범위 판정용 '시험 배분'. 남은 지명을 끝까지 채워 보고 팀마다 새로 받는 선수 점수 목록을 돌려줍니다.
+// 최적 배분을 찾는 건 무거워서 성격이 다른 두 가지 욕심쟁이 배분을 쓰고, 둘 다 범위를 못 지키면
+// 맞바꾸기로 보정합니다. 배분 하나만 쓰면 범위를 지킬 길이 있는데도 못 찾아 대부분의 지명이
+// 강제로 바뀌는 방이 생깁니다(운영 데이터: 0점 선수가 있는 방은 첫 지명부터 그랬습니다).
+//   반환: { got: Map(팀 id → [점수…]), bench: [남는 선수 점수…] }  — 매물이 칸보다 많으면 bench에 남습니다.
+// (가) 목표 맞추기: 남은 칸이 가장 많은 팀(동률이면 목표까지 부족분이 큰 팀)이
+//     (목표 − 총점) ÷ 남은 칸 에 점수가 가장 가까운 선수를 가져갑니다.
+const completeToTarget = (tot, open, rest, target) => {
+  tot = new Map(tot); open = new Map(open);
+  const left = rest.map(p => p.score || 0);
+  const got = new Map([...open.keys()].map(id => [id, []]));
+  while (left.length) {
+    let best = null;
+    for (const [id, n] of open) if (n > 0) {
+      const need = (target - tot.get(id)) / n;
+      if (!best || n > best.n || (n === best.n && need > best.need)) best = { id, n, need };
+    }
+    if (!best) break;
+    let bi = 0;
+    for (let i = 1; i < left.length; i++) if (Math.abs(left[i] - best.need) < Math.abs(left[bi] - best.need)) bi = i;
+    const v = left.splice(bi, 1)[0];
+    tot.set(best.id, tot.get(best.id) + v); open.set(best.id, best.n - 1); got.get(best.id).push(v);
+  }
+  return { got, bench: left };
+};
+// (나) 역순 짝짓기: 한 바퀴마다 남은 칸이 가장 많은 팀들을 고르고, 남은 선수 중 고르게 퍼진
+//     그 수만큼의 선수를 뽑아 총점 높은 팀에 낮은 선수를 줍니다.
+const completeInverse = (tot, open, rest) => {
+  tot = new Map(tot); open = new Map(open);
+  let left = rest.map(p => p.score || 0).sort((a, b) => a - b);
+  const got = new Map([...open.keys()].map(id => [id, []]));
+  while (left.length) {
+    const most = Math.max(...open.values());
+    if (most <= 0) break;
+    const ids = [...open.keys()].filter(id => open.get(id) === most).sort((a, b) => tot.get(b) - tot.get(a));
+    const step = left.length / ids.length;
+    const at = ids.map((_, i) => Math.min(left.length - 1, Math.floor(i * step + step / 2)));
+    ids.forEach((id, i) => {   // at은 점수 오름차순 자리, ids는 총점 내림차순
+      const v = left[at[i]];
+      tot.set(id, tot.get(id) + v); open.set(id, open.get(id) - 1); got.get(id).push(v);
+    });
+    const used = new Set(at);
+    left = left.filter((_, i) => !used.has(i));
+  }
+  return { got, bench: left };
+};
+// 맞바꾸기 보정: 시험 배분에서 두 팀(또는 팀과 남는 선수)이 선수 하나씩을 바꿔
+// 범위를 벗어난 양의 합이 줄어들면 바꿉니다. 더 줄일 수 없거나 0이 되면 멈춥니다.
+// 이미 지명된 선수는 움직이지 않습니다(새로 받을 선수만 바꿉니다).
+//   반환: 팀 id → 최종 총점
+const repairBand = (tot, plan, band, skip = new Set()) => {
+  const pen = v => Math.max(0, band.lo - v) + Math.max(0, v - band.hi);
+  const gs = [...plan.got].map(([id, arr]) => ({ id, arr: arr.slice(), t: tot.get(id) + arr.reduce((s, v) => s + v, 0) }));
+  gs.push({ id: null, arr: plan.bench.slice(), t: 0 });   // 남는 선수: 범위 제약 없음
+  const free = g => g.id === null || skip.has(g.id);       // 판정에서 뺀 팀도 제약 없음(칸 수는 1:1 교환이라 유지)
+  const P = g => free(g) ? 0 : pen(g.t);
+  for (let pass = 0; pass < 30; pass++) {
+    if (gs.every(g => P(g) === 0)) break;
+    let moved = false;
+    for (let a = 0; a < gs.length; a++) for (let b = a + 1; b < gs.length; b++) {
+      const g = gs[a], h = gs[b];
+      for (let i = 0; i < g.arr.length; i++) for (let j = 0; j < h.arr.length; j++) {
+        const d = h.arr[j] - g.arr[i];
+        if (!d) continue;
+        const before = P(g) + P(h);
+        const ng = free(g) ? 0 : pen(g.t + d), nh = free(h) ? 0 : pen(h.t - d);
+        if (ng + nh < before) {
+          [g.arr[i], h.arr[j]] = [h.arr[j], g.arr[i]];
+          g.t += d; h.t -= d; moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  return new Map(gs.filter(g => g.id !== null).map(g => [g.id, g.t]));
+};
+const finals = (tot, plan) => new Map([...tot].map(([id, v]) => [id, v + plan.got.get(id).reduce((s, x) => s + x, 0)]));
+// 목표 범위 판정. 이 선수를 데려간 뒤에도 '모든 팀'이 범위 안에서 끝나는 배분이 남아 있으면 통과입니다.
+// 자기 팀만 보면 안 됩니다 — 남겨 둔 저점·고점 선수를 다른 팀이 먼저 데려가 범위를 크게 벗어납니다.
+// 통과하는 선수가 없으면 끝까지 갔을 때 팀 간 차이가 가장 작은 선수만 허용합니다(forced).
+// 남은 선수 중 가장 낮은(높은) 점수만 받아도 범위 위(아래)로 벗어나는 팀은 어떻게 해도 범위에 못 들어오므로
+// 판정에서 뺍니다(skip). 빼지 않으면 그 한 팀 때문에 모든 후보가 실패해 모든 팀의 지명이 강제로 바뀝니다.
+//   tot: 팀 id → 현재 총점, open: 팀 id → 남은 칸, rest: 남은 선수
+const bandSkip = (tot, open, rest, band) => {
+  const asc = rest.map(p => p.score || 0).sort((a, b) => a - b);
+  const sum = arr => arr.reduce((s, v) => s + v, 0);
+  const skip = new Set();
+  for (const [id, n] of open) {
+    const t = tot.get(id);
+    if (t + sum(asc.slice(0, n)) > band.hi || t + sum(asc.slice(asc.length - n)) < band.lo) skip.add(id);
+  }
+  return skip;
+};
+const bandAllow = (teamId, tot, open, rest, band) => {
+  const skip = bandSkip(tot, open, rest, band);
+  const kept = m => [...m].filter(([id]) => !skip.has(id)).map(([, v]) => v);
+  const inBand = m => kept(m).every(x => x >= band.lo && x <= band.hi);
+  const gapOf = m => { const v = kept(m); return v.length ? Math.max(...v) - Math.min(...v) : 0; };
+  const res = rest.map(p => {
+    const t2 = new Map(tot); t2.set(teamId, t2.get(teamId) + (p.score || 0));
+    const o2 = new Map(open); o2.set(teamId, o2.get(teamId) - 1);
+    const others = rest.filter(q => q !== p);
+    const plans = [completeToTarget(t2, o2, others, band.target), completeInverse(t2, o2, others)];
+    let gap = Infinity;
+    for (const plan of plans) {
+      const f = finals(t2, plan);
+      if (inBand(f)) return { id: p.id, ok: true, gap: 0 };
+      gap = Math.min(gap, gapOf(f));
+    }
+    // 둘 다 실패했을 때만 보정합니다(가장 무거운 단계).
+    for (const plan of plans) {
+      const f = repairBand(t2, plan, band, skip);
+      if (inBand(f)) return { id: p.id, ok: true, gap: 0 };
+      gap = Math.min(gap, gapOf(f));
+    }
+    return { id: p.id, ok: false, gap };
+  });
+  const ok = res.filter(x => x.ok);
+  const skipped = [...skip];
+  if (ok.length) return { ids: ok.map(x => x.id), forced: false, skipped };
+  const least = Math.min(...res.map(x => x.gap));
+  return { ids: res.filter(x => x.gap === least).map(x => x.id), forced: true, skipped };
+};
 // 점수 드래프트 한 라운드의 지명 순서: 총점 오름차순, 동점이면 baseOrder(동점 우선순위).
 const scoreOrder = (teams, pool, baseOrder) => {
   const tot = scoreTotals(teams, pool);
@@ -532,7 +669,12 @@ function buildDraft(cfg, teams, pool) {
   // seq는 this.S 배정 뒤 resetSeq()로 채웁니다(순서 생성 규칙을 한 곳에만 두기 위해).
   // balance는 예전 방·관리자 목록 호환용 대표값입니다.
   const balance = rules.includes('score') ? 'score' : rules.includes('tier') ? 'tier' : 'free';
-  return { draft: { balance, rules, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam } };
+  // 목표 범위는 클랜점수 단독 규칙에서만 씁니다. 클랜티어 균형과 함께 켜면 남은 칸이 티어로 묶여
+  // bandComplete의 배분이 성립하지 않습니다. 값은 명단이 확정되는 이 시점에 한 번 계산해 고정합니다.
+  const width = +cfg.band;
+  const band = rules.includes('score') && !rules.includes('tier') && BAND_WIDTHS.includes(width)
+    ? scoreBand(teams, pool, width) : null;
+  return { draft: { balance, rules, baseOrder: teams.map(t => t.id), seq: [], ptr: 0, picksPerTeam, band } };
 }
 
 /* ══════════════════════════════════════════════════════ */
@@ -925,6 +1067,27 @@ export class AuctionRoom {
     for (const p of this.S.pool) if (p.teamId === t.id) { const b = gradeBand(p.grade); if (b >= 0) s.add(b); }
     return s;
   }
+  /** 목표 범위 안에서 이 팀이 지금 지명할 수 있는 선수. 범위가 없는 방이면 null.
+   *  선수마다 남은 지명 전체를 배분해 보므로 가볍지 않습니다. 같은 상태면 결과를 재사용합니다 —
+   *  브로드캐스트의 view()와 pick 검증이 같은 상태에서 연달아 부릅니다.
+   *  키에는 '누가 누구를 데려갔는지'까지 넣습니다. 되돌리기 뒤 같은 선수들을 다른 팀이 데려가면
+   *  남은 선수는 같아도 팀 총점이 달라집니다. */
+  bandAllowFor(t) {
+    const d = this.S.draft;
+    if (!d || !d.band) return null;
+    const rest = this.remaining();
+    // 판정에 쓰이는 값(범위, 팀장·선수 점수, 선수 구성, 배정)을 모두 key에 넣습니다.
+    // 배정만 넣으면 방 설정을 고친 뒤 다시 시작했을 때 예전 판정이 그대로 나옵니다.
+    const key = [t.id, d.band.lo, d.band.hi, d.band.target,
+      this.S.teams.map(x => x.id + ':' + (x.score || 0)).join(','),
+      this.S.pool.map(p => p.id + ':' + (p.score || 0) + ':' + (p.teamId || '-')).join(',')].join('|');
+    if (this.bandMemo && this.bandMemo.key === key) return this.bandMemo.res;
+    const tot = scoreTotals(this.S.teams, this.S.pool);
+    const open = new Map(this.S.teams.map(x => [x.id, this.openSlots(x)]));
+    const res = bandAllow(t.id, tot, open, rest, d.band);
+    this.bandMemo = { key, res };
+    return res;
+  }
   openSlots(t) { return this.S.size - 1 - t.players.length; }
   maxBid(t) {
     const n = this.openSlots(t);
@@ -989,6 +1152,14 @@ export class AuctionRoom {
     };
     // 추첨 모드가 아니면 순서 배열은 클라가 쓰지 않으므로 브로드캐스트에서 뺍니다.
     if (v.orderMode !== 'draw') delete v.order;
+    // 목표 범위: 지금 차례 팀이 뽑을 수 있는 선수를 서버가 정해 내려줍니다(판정 규칙은 서버 한 곳에만).
+    // 저장하지 않는 파생값이라 S.draft를 건드리지 않고 사본에만 붙입니다.
+    const d = this.S.draft;
+    if (d && d.band && this.S.phase === 'live' && !d.tie) {
+      const t = this.team(d.seq[d.ptr]);
+      const a = t && this.bandAllowFor(t);
+      if (a) v.draft = { ...d, allow: a.ids, forced: a.forced, skipped: a.skipped };
+    }
     return v;
   }
 
@@ -1286,6 +1457,12 @@ export class AuctionRoom {
           const b = gradeBand(p.grade);
           if (b < 0) return deny('클랜티어가 없는 선수는 클랜티어 균형 드래프트에서 지명할 수 없습니다');
           if (this.teamBands(t).has(b)) return deny(`${t.name}은 이미 클랜티어 ${b + 1}을 채웠습니다`);
+        }
+        const ba = this.bandAllowFor(t);
+        if (ba && !ba.ids.includes(p.id)) {
+          return deny(ba.forced
+            ? `목표 범위(${d.band.lo}~${d.band.hi}점)를 모든 팀이 지킬 수 있는 선수가 없어, 팀 간 차이가 가장 작아지는 선수만 지명할 수 있습니다`
+            : `${p.name}을 지명하면 모든 팀이 목표 범위(${d.band.lo}~${d.band.hi}점) 안에 들어올 수 없습니다`);
         }
         await this.snapshot();
         p.status = 'sold'; p.teamId = t.id; p.price = 0;
