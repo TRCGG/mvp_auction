@@ -1587,28 +1587,34 @@ function picksUntilMyTurn(d){
   return 0;
 }
 
-// 대진 패널 — 팀 구성이 끝난 뒤(done) 무작위 1:1 대진을 보여줍니다. 추첨·재추첨은 진행자만.
+// 대진 패널 — 팀 구성이 끝난 뒤(done) 1:1 대진을 보여줍니다. 추첨·재추첨은 진행자만.
+// 클랜점수 드래프트면 '무작위'와 '점수 비슷한 팀끼리' 중 고를 수 있습니다.
 function bracketPanel(){
-  const host=me.role==='host';
-  if(!S.bracket){
+  const host=me.role==='host', sc=scoreMode();
+  const br=S.bracket, byScore=br&&br.mode==='score';
+  if(!br){
     if(!host||S.teams.length<2) return '';
-    return `<div class="row mt-2"><button class="btn gold" id="bBracket" style="flex:1">🎲 대진 추첨</button></div>`;
+    return `<div class="row mt-2"><button class="btn gold" id="bBracket" style="flex:1">🎲 무작위 대진</button>
+      ${sc?`<button class="btn gold" id="bBracketScore" style="flex:1">⚖️ 점수 비슷한 팀끼리</button>`:''}</div>`;
   }
-  const rows=S.bracket.pairs.map(([a,b],i)=>`<div class="match-row" style="--i:${i}">
+  // 점수 대진이면 이름 옆에 총점을 붙여 왜 이렇게 붙었는지 보이게 합니다.
+  const nm=id=>{ const t=S.teams.find(x=>x.id===id); return esc(teamName(id))+(byScore&&t?` <small style="color:var(--muted)">${teamTotal(t)}</small>`:''); };
+  const rows=br.pairs.map(([a,b],i)=>`<div class="match-row" style="--i:${i}">
       <i class="match-no">${i+1}</i>
-      <span class="match-t${me.teamId===a?' me':''}">${esc(teamName(a))}</span>
+      <span class="match-t${me.teamId===a?' me':''}">${nm(a)}</span>
       <b class="match-vs">VS</b>
-      <span class="match-t r${me.teamId===b?' me':''}">${esc(teamName(b))}</span>
+      <span class="match-t r${me.teamId===b?' me':''}">${nm(b)}</span>
     </div>`).join('');
-  const bye=S.bracket.bye?`<div class="match-row bye" style="--i:${S.bracket.pairs.length}">
+  const bye=br.bye?`<div class="match-row bye" style="--i:${br.pairs.length}">
       <i class="match-no">·</i>
-      <span class="match-t${me.teamId===S.bracket.bye?' me':''}">${esc(teamName(S.bracket.bye))}</span>
+      <span class="match-t${me.teamId===br.bye?' me':''}">${nm(br.bye)}</span>
       <b class="match-vs">부전승</b>
     </div>`:'';
   return `<div class="mt-3">
-    <div class="lbl" style="margin-bottom:6px">대진표</div>
+    <div class="lbl" style="margin-bottom:6px">대진표${byScore?' · 점수 비슷한 팀끼리':sc?' · 무작위':''}</div>
     ${rows}${bye}
-    ${host?`<div class="row end"><button class="btn ghost sm" id="bBracket">🎲 다시 추첨</button></div>`:''}
+    ${host?`<div class="row end"><button class="btn ghost sm" id="bBracket">🎲 무작위로 다시</button>
+      ${sc?`<button class="btn ghost sm" id="bBracketScore">⚖️ 점수 비슷한 팀끼리 다시</button>`:''}</div>`:''}
   </div>`;
 }
 
@@ -1948,12 +1954,14 @@ function saveResultImage(){
   });
   if(br){
     let by=headH+rowsN*cardH+(rowsN-1)*gap+14;
-    x.fillStyle=C.gold; x.font='700 13px sans-serif'; x.fillText('대진표',pad,by); by+=22;
+    // 점수 대진이면 화면과 같이 이름 옆에 총점을 붙입니다.
+    const brName=id=>{ const t=br.mode==='score'&&S.teams.find(q=>q.id===id); return teamName(id)+(t?` (${teamTotal(t)})`:''); };
+    x.fillStyle=C.gold; x.font='700 13px sans-serif'; x.fillText(br.mode==='score'?'대진표 · 점수 비슷한 팀끼리':'대진표',pad,by); by+=22;
     br.pairs.forEach(([a,b],i)=>{
       x.fillStyle=C.text; x.font='13px sans-serif';
-      x.fillText(`${i+1}.  ${teamName(a)}   VS   ${teamName(b)}`,pad,by,W-pad*2); by+=26;
+      x.fillText(`${i+1}.  ${brName(a)}   VS   ${brName(b)}`,pad,by,W-pad*2); by+=26;
     });
-    if(br.bye){ x.fillStyle=C.muted; x.font='13px sans-serif'; x.fillText(`·  ${teamName(br.bye)} — 부전승`,pad,by,W-pad*2); }
+    if(br.bye){ x.fillStyle=C.muted; x.font='13px sans-serif'; x.fillText(`·  ${brName(br.bye)} — 부전승`,pad,by,W-pad*2); }
   }
   cv.toBlob(b=>{
     if(!b) return toast('이미지를 만들지 못했습니다',true);
@@ -1993,12 +2001,14 @@ function wire(){
     send('startdraft',{order:draftOrder});
   });
   on('bEdit',openRoomEdit);
-  on('bBracket',()=>{
+  const drawBracket=mode=>{
     if(S.bracket){
       askConfirm({title:'대진을 다시 추첨할까요?',msg:'현재 대진표가 지워지고 새로 추첨됩니다.\n(직후 되돌리기로 이전 대진을 복구할 수 있습니다.)',confirmLabel:'다시 추첨'})
-        .then(ok=>{ if(ok) send('bracket'); });
-    } else send('bracket');
-  });
+        .then(ok=>{ if(ok) send('bracket',{mode}); });
+    } else send('bracket',{mode});
+  };
+  on('bBracket',()=>drawBracket('random'));
+  on('bBracketScore',()=>drawBracket('score'));
   on('bDraw',()=>send('draworder'));
   on('bLinks',openLinksModal);
   // 음량은 onclick이 아니라 oninput으로 받습니다 — 끌면서 바로 귀로 확인해야 맞출 수 있습니다.

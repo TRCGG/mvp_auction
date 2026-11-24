@@ -1523,14 +1523,26 @@ export class AuctionRoom {
         return this.broadcast({ event: { kind: 'tiebreak', rolled, roll: result } });
       }
       case 'bracket': {
-        // 대진 추첨: 팀 구성이 끝난 뒤 진행자가 무작위 1:1 대진을 만듭니다. 홀수 팀이면 마지막 팀 부전승.
+        // 대진 추첨: 팀 구성이 끝난 뒤 진행자가 1:1 대진을 만듭니다.
+        //   mode 'random'(기본): 무작위. 홀수 팀이면 마지막 팀 부전승.
+        //   mode 'score': 클랜점수 드래프트에서만. 총점 순으로 세워 이웃끼리 붙입니다(점수 비슷한 팀끼리).
         if (hostOnly()) return;
         if (this.S.phase !== 'done') return deny('팀 구성이 끝난 뒤에만 대진을 추첨할 수 있습니다');
+        const byScore = m.mode === 'score';
+        if (byScore && !(this.S.mode === 'draft' && draftHas(this.S.draft, 'score')))
+          return deny('점수 비슷한 팀끼리 대진은 클랜점수 드래프트에서만 쓸 수 있습니다');
         await this.snapshot();   // 재추첨을 '되돌리기'로 복구할 수 있게
-        const ids = shuffled(this.S.teams.map(t => t.id));
+        // 총점이 같은 팀끼리는 먼저 섞어 두어, 다시 추첨하면 동점 팀의 짝이 바뀔 수 있게 합니다.
+        // 홀수 팀이면 두 방식 모두 부전승 팀은 무작위입니다(섞인 목록의 마지막 팀).
+        let ids = shuffled(this.S.teams.map(t => t.id)), bye = null;
+        if (ids.length % 2) bye = ids.pop();
+        if (byScore) {
+          const tot = scoreTotals(this.S.teams, this.S.pool);
+          ids.sort((a, b) => tot.get(b) - tot.get(a));
+        }
         const pairs = [];
         for (let i = 0; i + 1 < ids.length; i += 2) pairs.push([ids[i], ids[i + 1]]);
-        this.S.bracket = { pairs, bye: ids.length % 2 ? ids[ids.length - 1] : null, at: Date.now() };
+        this.S.bracket = { pairs, bye, mode: byScore ? 'score' : 'random', at: Date.now() };
         await this.save();
         return this.broadcast({ event: { kind: 'bracket' } });
       }
